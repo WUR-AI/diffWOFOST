@@ -1,0 +1,17 @@
+# YAML 1.2
+---
+cff-version: "1.2.0"
+title: "diffwofost"
+authors:
+  - family-names:
+    given-names:
+    orcid: ""
+date-released: 2025-07-11
+version: "0.1.0"
+repository-code: "https://github.com/WUR-AI/diffwofost"
+keywords:
+  - "pytorch"
+  - "differentiable"
+  - "crop"
+  - "optimization"
+message: "If you use this software, please cite it using these metadata."
