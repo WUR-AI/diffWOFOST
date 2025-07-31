@@ -24,6 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "torch",
+    "pcse@git+https://github.com/ajwdewit/pcse.git@master",
 ]
 description = "Differentiable WOFOST"
 keywords = ["pytorch"," differentiable"," crop"," optimization"]
