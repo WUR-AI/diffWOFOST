@@ -25,6 +25,9 @@ from pcse.agromanager import AgroManager
 from pcse.timer import Timer
 from pcse import signals
 
+import logging
+logging.disable(logging.CRITICAL)
+
 this_dir = os.path.dirname(__file__)
 
 
