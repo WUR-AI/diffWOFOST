@@ -127,6 +127,8 @@ class TestLeafDynamics:
                 for var, precision in expected_precision.items()
             )
 
+
+class TestDiffLeafDynamics_TDWI:
     def test_gradients_TDWI_LAI_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
@@ -160,3 +162,39 @@ class TestLeafDynamics:
 
         assert grads is not None, "Gradients for TDWI should not be None"
         torch.testing.assert_close(grads, torch.tensor(5.7904, dtype=torch.float32), rtol=1e-4, atol=1e-4)
+
+
+class TestDiffLeafDynamics_SPAN:
+    def test_gradients_SPAN_LAI_leaf_dynamics(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        params, wdp, agro, external_states = prepare_engine_input(test_data_path)
+        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # create a model and optimizer
+        model = Diff_Leaf_Dynamics(params, wdp, agro, config_path, external_states)
+        span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float32))
+        output = model({"SPAN": span})
+        lai = output[0, :, 0]
+        loss = lai.sum()
+        grads = torch.autograd.grad(loss, span)[0]  # this is ∂loss/∂span
+
+        assert grads is not None, "Gradients for SPAN should not be None"
+        torch.testing.assert_close(grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4)
+
+    def test_gradients_SPAN_TWLV_leaf_dynamics(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        params, wdp, agro, external_states = prepare_engine_input(test_data_path)
+        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # create a model and optimizer
+        model = Diff_Leaf_Dynamics(params, wdp, agro, config_path, external_states)
+        span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float32))
+        output = model({"SPAN": span})
+        twlv = output[0, :, 0]
+        loss = twlv.sum()
+        grads = torch.autograd.grad(loss, span)[0]  # this is ∂loss/∂span
+
+        assert grads is not None, "Gradients for SPAN should not be None"
+        torch.testing.assert_close(grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4)
