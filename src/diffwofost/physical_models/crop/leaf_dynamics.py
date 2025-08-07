@@ -3,8 +3,8 @@ import numpy as np
 
 from pcse.traitlets import Any
 from pcse.decorators import prepare_rates, prepare_states
-from pcse.util import limit, Afgen
-from pcse.base import StatesTemplate, RatesTemplate, SimulationObject
+from pcse.util import limit, AfgenTrait
+from pcse.base import ParamTemplate, StatesTemplate, RatesTemplate, SimulationObject
 import torch
 
 
@@ -109,18 +109,14 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     LAI, TWLV
     """
 
-    class TorchParameters(torch.nn.Module):
-        def __init__(self, params):
-            super().__init__()
-            self.SPAN   = torch.nn.Parameter(torch.tensor(params["SPAN"], dtype=DTYPE))
-            self.TDWI   = torch.nn.Parameter(torch.tensor(params["TDWI"], dtype=DTYPE))
-            self.TBASE  = torch.nn.Parameter(torch.tensor(params["TBASE"], dtype=DTYPE))
-            self.PERDL  = torch.nn.Parameter(torch.tensor(params["PERDL"], dtype=DTYPE))
-            self.RGRLAI = torch.nn.Parameter(torch.tensor(params["RGRLAI"], dtype=DTYPE))
-
-            # FIXME these two parameters are in type AfgenTrait (interpolation)
-            self.SLATB = Afgen(params["SLATB"])
-            self.KDIFTB = Afgen(params["KDIFTB"])
+    class Parameters(ParamTemplate):
+        RGRLAI = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
+        SPAN   = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
+        TBASE  = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
+        PERDL  = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
+        TDWI   = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
+        SLATB  = AfgenTrait()
+        KDIFTB = AfgenTrait()
 
     class StateVariables(StatesTemplate):
         LV     = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
@@ -156,28 +152,30 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
                 key/value pairs
         """
         self.kiosk  = kiosk
-        self._params = self.TorchParameters(parvalues)  #`_params` because `params` is a reserved word in PCSE
+        # TODO check if parvalues are already torch.nn.Parameters
+        self.params = self.Parameters(parvalues)
         self.rates  = self.RateVariables(kiosk)
 
         # CALCULATE INITIAL STATE VARIABLES
         # check for required external variables
         _exist_required_external_variables(self.kiosk)
+        # TODO check if external variables are already torch tensors
 
         FL  = self.kiosk["FL"]
         FR  = self.kiosk["FR"]
         DVS = self.kiosk["DVS"]
 
-        params = self._params
+        params = self.params
 
         # Initial leaf biomass
         WLV  = (params.TDWI * (1-FR)) * FL
-        DWLV = 0.
+        DWLV = torch.tensor(0., dtype=DTYPE)
         TWLV = WLV + DWLV
 
         # First leaf class (SLA, age and weight)
         SLA   = torch.tensor([params.SLATB(DVS)], dtype=DTYPE)
         LVAGE = torch.tensor([0.], dtype=DTYPE)
-        LV    = torch.tensor([WLV], dtype=DTYPE)
+        LV    = torch.stack([WLV])
 
         # Initial values for leaf area
         LAIEM  = LV[0] * SLA[0]
@@ -203,7 +201,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     def calc_rates(self, day, drv):
         r = self.rates
         s = self.states
-        p = self._params  # Converted parameters to torch parameters
+        p = self.params
         k = self.kiosk
 
         # Growth rate leaves
@@ -269,7 +267,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
     @prepare_states
     def integrate(self, day, delt=1.0):
-
         rates = self.rates
         states = self.states
 
@@ -290,7 +287,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
                     tSLA = tSLA[:-1]
                 else: # Decrease value of oldest (rightmost) leave class
                     tLV[-1] = tLV[-1] - tDRLV
-                    tDRLV = 0.
+                    tDRLV = torch.tensor(0., dtype=DTYPE)
             else:
                 break
 
@@ -299,7 +296,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # --------- leave growth ---------
         # new leaves in class 1
-        tLV = torch.cat((torch.tensor([rates.GRLV ], dtype=DTYPE), tLV))
+        tLV = torch.cat((torch.tensor([rates.GRLV], dtype=DTYPE), tLV))
         tSLA = torch.cat((torch.tensor([rates.SLAT], dtype=DTYPE), tSLA))
         tLVAGE = torch.cat((torch.tensor([0.], dtype=DTYPE), tLVAGE))
 
@@ -322,7 +319,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.states.LVAGE = tLVAGE
 
     @prepare_states
-    def _set_variable_LAI(self, nLAI):
+    def _set_variable_LAI(self, nLAI):   # FIXEME
         """Updates the value of LAI to to the new value provided as input.
 
         Related state variables will be updated as well and the increments
@@ -347,8 +344,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # LAI Adjustment factor for leaf biomass LV (rLAI)
         if adj_oLAI > 0:
-            rLAI = adj_nLAI/adj_oLAI
-            LV = [lv*rLAI for lv in states.LV]
+            rLAI = adj_nLAI / adj_oLAI
+            LV = [lv * rLAI for lv in states.LV]
         # If adj_oLAI == 0 then add the leave biomass directly to the
         # youngest leave age class (LV[0])
         else:
