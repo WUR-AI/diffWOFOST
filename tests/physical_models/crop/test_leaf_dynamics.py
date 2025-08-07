@@ -43,6 +43,7 @@ def get_test_data(file_path):
     inputs = yaml.safe_load(open(file_path))
     return inputs["ModelResults"], inputs["Precision"]
 
+
 class DiffLeafDynamics(torch.nn.Module):
     def __init__(self, params, wdp, agro, config_path, external_states):
         super().__init__()
@@ -200,11 +201,11 @@ class TestDiffLeafDynamicsSPAN:
         model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
         span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float32))
         output = model({"SPAN": span})
-        twlv = output[0, :, 0]
+        twlv = output[0, :, 1]
         loss = twlv.sum()
         grads = torch.autograd.grad(loss, span)[0]  # this is ∂loss/∂span
 
         assert grads is not None, "Gradients for SPAN should not be None"
         torch.testing.assert_close(
-            grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4
+            grads, torch.tensor(-0.2426, dtype=torch.float32), rtol=1e-4, atol=1e-4
         )
