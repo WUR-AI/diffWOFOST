@@ -1,12 +1,15 @@
 
-import numpy as np
 
-from pcse.traitlets import Any
-from pcse.decorators import prepare_rates, prepare_states
-from pcse.util import limit, AfgenTrait
-from pcse.base import ParamTemplate, StatesTemplate, RatesTemplate, SimulationObject
 import torch
-
+from pcse.base import ParamTemplate
+from pcse.base import RatesTemplate
+from pcse.base import SimulationObject
+from pcse.base import StatesTemplate
+from pcse.decorators import prepare_rates
+from pcse.decorators import prepare_states
+from pcse.traitlets import Any
+from pcse.util import AfgenTrait
+from pcse.util import limit
 
 DTYPE = torch.float32  # Default data type for tensors in this module
 
@@ -145,7 +148,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         GLASOL = Any(default_value=torch.tensor(-99., dtype=DTYPE))
 
     def initialize(self, day, kiosk, parvalues):
-        """
+        """Initialize the WOFOST_Leaf_Dynamics simulation object.
+
         :param day: start date of the simulation
         :param kiosk: variable kiosk of this PCSE  instance
         :param parvalues: `ParameterProvider` object providing parameters as
@@ -199,6 +203,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
     @prepare_rates
     def calc_rates(self, day, drv):
+        """Calculate the rates of change for the leaf dynamics."""
         r = self.rates
         s = self.states
         p = self.params
@@ -234,11 +239,11 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         DALV = torch.tensor(0., dtype=DTYPE)
         if p.SPAN.requires_grad:  # replacing hard threshold `if lvage > p.SPAN``
             sharpness = 1000.0  # FIXEME
-            for lv, lvage in zip(s.LV, s.LVAGE):
+            for lv, lvage in zip(s.LV, s.LVAGE, strict=False):
                 weight = torch.sigmoid((lvage - p.SPAN) * sharpness)
                 DALV = DALV + weight * lv
         else:
-            for lv, lvage in zip(s.LV, s.LVAGE):
+            for lv, lvage in zip(s.LV, s.LVAGE, strict=False):
                 if lvage > p.SPAN:
                     DALV = DALV + lv
 
@@ -274,6 +279,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
     @prepare_states
     def integrate(self, day, delt=1.0):
+        """Integrate the leaf dynamics state variables."""
         rates = self.rates
         states = self.states
 
@@ -308,7 +314,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         tLVAGE = torch.cat((torch.tensor([0.], dtype=DTYPE), tLVAGE))
 
         # calculation of new leaf area
-        states.LASUM = torch.sum(torch.stack([lv * sla for lv, sla in zip(tLV, tSLA)]))
+        states.LASUM = torch.sum(
+            torch.stack([lv * sla for lv, sla in zip(tLV, tSLA, strict=False)])
+        )
         states.LAI = self._calc_LAI()
         states.LAIMAX = torch.max(states.LAI, states.LAIMAX)
 
@@ -359,7 +367,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             LV = [nLAI/states.SLA[0]]
 
         states.LASUM = torch.sum(
-            torch.tensor([lv*sla for lv, sla in zip(LV, states.SLA)],
+            torch.tensor([lv*sla for lv, sla in zip(LV, states.SLA, strict=False)],
                          dtype=DTYPE)
         )
         states.LV = LV
@@ -383,5 +391,6 @@ def _exist_required_external_variables(kiosk):
         if var not in kiosk:
             raise ValueError(
                 f"Required external variables '{var}' is missing in the kiosk."
-                f" Ensure that all required variables {required_external_vars_at_init} are provided."
+                f" Ensure that all required variables {required_external_vars_at_init}"
+                " are provided."
                 )

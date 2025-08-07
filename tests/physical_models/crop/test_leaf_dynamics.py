@@ -1,16 +1,16 @@
+from unittest.mock import patch
 import pytest
 import torch
-import yaml
-
-from tests.physical_models.pcse_test_code import TestEngine, TestWeatherDataProvider
-from pcse.base.parameter_providers import ParameterProvider
-from pcse.models import Wofost72_PP
-from pcse.engine import Engine
-from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
-from diffwofost.physical_models.conf import phy_conf_folder
-from .. import phy_data_folder
-from unittest.mock import patch
 import torch.testing
+import yaml
+from pcse.base.parameter_providers import ParameterProvider
+from pcse.engine import Engine
+from pcse.models import Wofost72_PP
+from diffwofost.physical_models.conf import phy_conf_folder
+from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
+from tests.physical_models.pcse_test_code import TestEngine
+from tests.physical_models.pcse_test_code import TestWeatherDataProvider
+from .. import phy_data_folder
 
 
 def prepare_engine_input(file_path):
@@ -43,7 +43,7 @@ def get_test_data(file_path):
     inputs = yaml.safe_load(open(file_path))
     return inputs["ModelResults"], inputs["Precision"]
 
-class Diff_Leaf_Dynamics(torch.nn.Module):
+class DiffLeafDynamics(torch.nn.Module):
     def __init__(self, params, wdp, agro, config_path, external_states):
         super().__init__()
         self.params = params
@@ -57,7 +57,9 @@ class Diff_Leaf_Dynamics(torch.nn.Module):
         for name, value in params_dict.items():
             self.params.set_override(name, value, check=False)
 
-        engine = TestEngine(self.params, self.wdp, self.agro, self.config_path, self.external_states)
+        engine = TestEngine(
+            self.params, self.wdp, self.agro, self.config_path, self.external_states
+            )
         engine.run_till_terminate()
         results = engine.get_output()
 
@@ -67,7 +69,7 @@ class Diff_Leaf_Dynamics(torch.nn.Module):
 
 
 class TestLeafDynamics:
-    def test_leaf_dynamics_with_TestEngine(self):
+    def test_leaf_dynamics_with_testengine(self):
         """TestEngine and not Engine because it allows to specify `external_states`."""
 
         # prepare model input
@@ -84,14 +86,14 @@ class TestLeafDynamics:
 
         assert len(actual_results) == len(expected_results)
 
-        for reference, model in zip(expected_results, actual_results):
+        for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
             assert all(
                 abs(reference[var] - model[var]) < precision
                 for var, precision in expected_precision.items()
             )
 
-    def test_leaf_dynamics_with_Engine(self):
+    def test_leaf_dynamics_with_engine(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, _ = prepare_engine_input(test_data_path)
@@ -100,7 +102,7 @@ class TestLeafDynamics:
 
         # Engine does not allows to specify `external_states`
         with pytest.raises(ValueError):
-            engine = Engine(params, wdp, agro, config_path)
+            Engine(params, wdp, agro, config_path)
 
     def test_wofost_pp_with_leaf_dynamics(self):
         # prepare model input
@@ -120,7 +122,7 @@ class TestLeafDynamics:
 
         assert len(actual_results) == len(expected_results)
 
-        for reference, model in zip(expected_results, actual_results):
+        for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
             assert all(
                 abs(reference[var] - model[var]) < precision
@@ -128,15 +130,15 @@ class TestLeafDynamics:
             )
 
 
-class TestDiffLeafDynamics_TDWI:
-    def test_gradients_TDWI_LAI_leaf_dynamics(self):
+class TestDiffLeafDynamicsTDWI:
+    def test_gradients_tdwi_lai_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
         config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
-        model = Diff_Leaf_Dynamics(params, wdp, agro, config_path, external_states)
+        model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
         output = model({"TDWI": tdwi})
         lai = output[0, :, 0]
@@ -144,16 +146,18 @@ class TestDiffLeafDynamics_TDWI:
         grads = torch.autograd.grad(loss, tdwi)[0]  # this is ∂loss/∂tdwi
 
         assert grads is not None, "Gradients for TDWI should not be None"
-        torch.testing.assert_close(grads, torch.tensor(0.0013, dtype=torch.float32), rtol=1e-4, atol=1e-4)
+        torch.testing.assert_close(
+            grads, torch.tensor(0.0013, dtype=torch.float32), rtol=1e-4, atol=1e-4
+        )
 
-    def test_gradients_TDWI_TWLV_leaf_dynamics(self):
+    def test_gradients_tdwi_twlv_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
         config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
-        model = Diff_Leaf_Dynamics(params, wdp, agro, config_path, external_states)
+        model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
         output = model({"TDWI": tdwi})
         twlv = output[0, :, 1]
@@ -161,18 +165,20 @@ class TestDiffLeafDynamics_TDWI:
         grads = torch.autograd.grad(loss, tdwi)[0]  # this is ∂loss/∂tdwi
 
         assert grads is not None, "Gradients for TDWI should not be None"
-        torch.testing.assert_close(grads, torch.tensor(5.7904, dtype=torch.float32), rtol=1e-4, atol=1e-4)
+        torch.testing.assert_close(
+            grads, torch.tensor(5.7904, dtype=torch.float32), rtol=1e-4, atol=1e-4
+        )
 
 
-class TestDiffLeafDynamics_SPAN:
-    def test_gradients_SPAN_LAI_leaf_dynamics(self):
+class TestDiffLeafDynamicsSPAN:
+    def test_gradients_span_lai_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
         config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
-        model = Diff_Leaf_Dynamics(params, wdp, agro, config_path, external_states)
+        model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
         span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float32))
         output = model({"SPAN": span})
         lai = output[0, :, 0]
@@ -180,16 +186,18 @@ class TestDiffLeafDynamics_SPAN:
         grads = torch.autograd.grad(loss, span)[0]  # this is ∂loss/∂span
 
         assert grads is not None, "Gradients for SPAN should not be None"
-        torch.testing.assert_close(grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4)
+        torch.testing.assert_close(
+            grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4
+        )
 
-    def test_gradients_SPAN_TWLV_leaf_dynamics(self):
+    def test_gradients_span_twlv_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
         config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
-        model = Diff_Leaf_Dynamics(params, wdp, agro, config_path, external_states)
+        model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
         span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float32))
         output = model({"SPAN": span})
         twlv = output[0, :, 0]
@@ -197,4 +205,6 @@ class TestDiffLeafDynamics_SPAN:
         grads = torch.autograd.grad(loss, span)[0]  # this is ∂loss/∂span
 
         assert grads is not None, "Gradients for SPAN should not be None"
-        torch.testing.assert_close(grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4)
+        torch.testing.assert_close(
+            grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4
+        )
