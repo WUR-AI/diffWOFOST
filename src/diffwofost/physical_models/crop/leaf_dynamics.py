@@ -115,8 +115,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         TBASE  = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
         PERDL  = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
         TDWI   = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        SLATB  = AfgenTrait()
-        KDIFTB = AfgenTrait()
+        SLATB  = AfgenTrait()  # FIXEME
+        KDIFTB = AfgenTrait()  # FIXEME
 
     class StateVariables(StatesTemplate):
         LV     = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
@@ -232,9 +232,16 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
         DALV = torch.tensor(0., dtype=DTYPE)
-        for lv, lvage in zip(s.LV, s.LVAGE):
-            if lvage > p.SPAN:
-                DALV = DALV + lv
+        if p.SPAN.requires_grad:  # replacing hard threshold `if lvage > p.SPAN``
+            sharpness = 1000.0  # FIXEME
+            for lv, lvage in zip(s.LV, s.LVAGE):
+                weight = torch.sigmoid((lvage - p.SPAN) * sharpness)
+                DALV = DALV + weight * lv
+        else:
+            for lv, lvage in zip(s.LV, s.LVAGE):
+                if lvage > p.SPAN:
+                    DALV = DALV + lv
+
         r.DALV = DALV
 
         # Total death rate leaves
