@@ -1,4 +1,4 @@
-
+"""Leaf dynamics for the WOFOST crop model."""
 
 import torch
 from pcse.base import ParamTemplate
