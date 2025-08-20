@@ -7,8 +7,8 @@ from pcse.base.parameter_providers import ParameterProvider
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
-from tests.physical_models.pcse_test_code import TestEngine
-from tests.physical_models.pcse_test_code import TestWeatherDataProvider
+from tests.physical_models.pcse_test_code import EngineTestHelper
+from tests.physical_models.pcse_test_code import WeatherDataProviderTestHelper
 from .. import phy_data_folder
 
 
@@ -17,7 +17,7 @@ def prepare_engine_input(file_path):
     agro = inputs["AgroManagement"]
     cropd = inputs["ModelParameters"]
 
-    wdp = TestWeatherDataProvider(inputs["WeatherVariables"])
+    wdp = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
     params = ParameterProvider(cropdata=cropd)
     external_states = inputs["ExternalStates"]
 
@@ -57,7 +57,7 @@ class DiffLeafDynamics(torch.nn.Module):
         for name, value in params_dict.items():
             self.params.set_override(name, value, check=False)
 
-        engine = TestEngine(
+        engine = EngineTestHelper(
             self.params, self.wdp, self.agro, self.config_path, self.external_states
             )
         engine.run_till_terminate()
@@ -70,14 +70,14 @@ class DiffLeafDynamics(torch.nn.Module):
 
 class TestLeafDynamics:
     def test_leaf_dynamics_with_testengine(self):
-        """TestEngine and not Engine because it allows to specify `external_states`."""
+        """EngineTestHelper and not Engine because it allows to specify `external_states`."""
 
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
-        engine = TestEngine(params, wdp, agro, config_path, external_states)
+        engine = EngineTestHelper(params, wdp, agro, config_path, external_states)
         engine.run_till_terminate()
         actual_results = engine.get_output()
 

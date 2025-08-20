@@ -1,31 +1,33 @@
-# -*- coding: utf-8 -*-
 # Copyright (c) 2004-2018 Wageningen Environmental Sciences, Wageningen-UR
 # Allard de Wit (allard.dewit@wur.nl), January 2018
 """This file contains code that is required to run the YAML unit tests.
 
 It contains:
-    - TestSimulationObject: a simobj that wraps the simulation object to be tested.
-    - TestVariableKiosk: A subclass of the VariableKiosk that can use externally forced states/rates
-    - TestConfigurationLoader: An subclass of ConfigurationLoader that allows to specify the simbojects to be
-      test dynamically
-    - TestEngine: engine specifically for running the YAML tests.
-    - TestWeatherDataProvider: a weatherdata provides that takes the weather inputs from the YAML file.
+    - SimulationObjectTestHelper: a simobj that wraps the simulation object to be tested.
+    - VariableKioskTestHelper: A subclass of the VariableKiosk that can use externally
+      forced states/rates
+    - ConfigurationLoaderTestHelper: An subclass of ConfigurationLoader that allows to
+      specify the simbojects to be test dynamically
+    - EngineTestHelper: engine specifically for running the YAML tests.
+    - WeatherDataProviderTestHelper: a weatherdata provides that takes the weather
+      inputs from the YAML file.
 
 Note that the code here is *not* python2 compatible.
 """
-import os, sys
-
-from pcse.engine import Engine, BaseEngine
-from pcse.base.weather import WeatherDataProvider, WeatherDataContainer
-from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.simulationobject import SimulationObject
-from pcse.base import ConfigurationLoader
-from pcse.traitlets import Instance
-from pcse.agromanager import AgroManager
-from pcse.timer import Timer
-from pcse import signals
-
 import logging
+import os
+from pcse import signals
+from pcse.agromanager import AgroManager
+from pcse.base import ConfigurationLoader
+from pcse.base.simulationobject import SimulationObject
+from pcse.base.variablekiosk import VariableKiosk
+from pcse.base.weather import WeatherDataContainer
+from pcse.base.weather import WeatherDataProvider
+from pcse.engine import BaseEngine
+from pcse.engine import Engine
+from pcse.timer import Timer
+from pcse.traitlets import Instance
+
 logging.disable(logging.CRITICAL)
 
 this_dir = os.path.dirname(__file__)
@@ -35,7 +37,7 @@ def nothing(*args, **kwargs):
     pass
 
 
-class TestSimulationObject(SimulationObject):
+class SimulationObjectTestHelper(SimulationObject):
     """This wraps the SimulationObject for testing to ensure that the computations are not
     carried out before crop emergence (e.g. DVS >= 0). The latter does not apply for the
     phenology simobject itself which simulates emergence. The phenology simobject is recognized
@@ -62,7 +64,8 @@ class TestSimulationObject(SimulationObject):
                 self.subsimobject.zerofy()
 
     def integrate(self, day, delt=1.0):
-        # If the simobject is callable, we do not need integration so we use the `nothing()` function.
+        # If the simobject is callable, we do not need integration so we use the
+        # `nothing()` function.
         func = nothing if callable(self.subsimobject) else self.subsimobject.integrate
         if not self.kiosk.is_external_state("DVS"):
             func(day, delt)
@@ -73,7 +76,7 @@ class TestSimulationObject(SimulationObject):
                 self.subsimobject.touch()
 
 
-class TestVariableKiosk(VariableKiosk):
+class VariableKioskTestHelper(VariableKiosk):
     """Variable Kiosk for testing purposes which allows to use external states.
     """
     external_state_list = None
@@ -95,7 +98,8 @@ class TestVariableKiosk(VariableKiosk):
         if self.external_state_list is not None:
             current_externals = self.external_state_list.pop(0)
             forcing_day = current_externals.pop("DAY")
-            assert forcing_day == day, "Failure updating VariableKiosk with external states: days are not matching!"
+            msg = "Failure updating VariableKiosk with external states: days are not matching!"
+            assert forcing_day == day, msg
             self.current_externals.clear()
             self.current_externals.update(current_externals)
             if len(self.external_state_list) == 0:
@@ -127,7 +131,7 @@ class TestVariableKiosk(VariableKiosk):
         return key in self.current_externals or dict.__contains__(self, key)
 
 
-class TestConfigurationLoader(ConfigurationLoader):
+class ConfigurationLoaderTestHelper(ConfigurationLoader):
 
     def __init__(self, YAML_test_inputs, simobject, waterbalance=None):
         self.model_config_file = "Test config"
@@ -143,10 +147,17 @@ class TestConfigurationLoader(ConfigurationLoader):
         self.TERMINAL_OUTPUT_VARS = []
 
 
-class TestEngine(Engine):
+class EngineTestHelper(Engine):
     """An engine which is purely for running the YAML unit tests
     """
-    def __init__(self, parameterprovider, weatherdataprovider, agromanagement, test_config, external_states=None):
+    def __init__(
+            self,
+            parameterprovider,
+            weatherdataprovider,
+            agromanagement,
+            test_config,
+            external_states=None
+        ):
         BaseEngine.__init__(self)
 
         # Load the model configuration
@@ -154,7 +165,7 @@ class TestEngine(Engine):
         self.parameterprovider = parameterprovider
 
         # Variable kiosk for registering and publishing variables
-        self.kiosk = TestVariableKiosk(external_states)
+        self.kiosk = VariableKioskTestHelper(external_states)
 
         # Placeholder for variables to be saved during a model run
         self._saved_output = list()
@@ -200,7 +211,7 @@ class TestEngine(Engine):
         # Update timer
         self.day, delt = self.timer()
 
-        # When the list of external states is exhausted the TestVariableKiosk will
+        # When the list of external states is exhausted the VariableKioskTestHelper will
         # return True signalling the end of the test
         stop_test = self.kiosk(self.day)
         if stop_test:
@@ -224,7 +235,7 @@ class TestEngine(Engine):
             self._terminate_simulation(self.day)
 
 
-class TestWeatherDataProvider(WeatherDataProvider):
+class WeatherDataProviderTestHelper(WeatherDataProvider):
     """A WeatherDataProvider which stores the weatherdata contained within the YAML tests
         """
 
