@@ -6,7 +6,6 @@ import yaml
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
-from diffwofost.physical_models.conf import phy_conf_folder
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from tests.physical_models.pcse_test_code import TestEngine
 from tests.physical_models.pcse_test_code import TestWeatherDataProvider
@@ -76,7 +75,7 @@ class TestLeafDynamics:
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
-        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         engine = TestEngine(params, wdp, agro, config_path, external_states)
         engine.run_till_terminate()
@@ -99,7 +98,7 @@ class TestLeafDynamics:
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, _ = prepare_engine_input(test_data_path)
 
-        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Engine does not allows to specify `external_states`
         with pytest.raises(ValueError):
@@ -136,7 +135,7 @@ class TestDiffLeafDynamicsTDWI:
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
-        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
         model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
@@ -155,7 +154,7 @@ class TestDiffLeafDynamicsTDWI:
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
-        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
         model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
@@ -176,7 +175,7 @@ class TestDiffLeafDynamicsSPAN:
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
-        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
         model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
@@ -195,7 +194,7 @@ class TestDiffLeafDynamicsSPAN:
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
         params, wdp, agro, external_states = prepare_engine_input(test_data_path)
-        config_path = str(phy_conf_folder / "WOFOST_Leaf_Dynamics.conf")
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # create a model and optimizer
         model = DiffLeafDynamics(params, wdp, agro, config_path, external_states)
