@@ -143,12 +143,19 @@ class TestDiffLeafDynamicsTDWI:
         output = model({"TDWI": tdwi})
         lai = output[0, :, 0]
         loss = lai.sum()
-        grads = torch.autograd.grad(loss, tdwi)[0]  # this is ∂loss/∂tdwi
+        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]  # this is ∂loss/∂tdwi
 
         assert grads is not None, "Gradients for TDWI should not be None"
         torch.testing.assert_close(
             grads, torch.tensor(0.0013, dtype=torch.float32), rtol=1e-4, atol=1e-4
         )
+
+        tdwi.grad = None  # clear any existing gradient
+        loss.backward()
+        grad_backward = tdwi.grad
+
+        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
+        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
 
     def test_gradients_tdwi_twlv_leaf_dynamics(self):
         # prepare model input
@@ -162,12 +169,19 @@ class TestDiffLeafDynamicsTDWI:
         output = model({"TDWI": tdwi})
         twlv = output[0, :, 1]
         loss = twlv.sum()
-        grads = torch.autograd.grad(loss, tdwi)[0]  # this is ∂loss/∂tdwi
+        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]  # this is ∂loss/∂tdwi
 
         assert grads is not None, "Gradients for TDWI should not be None"
         torch.testing.assert_close(
             grads, torch.tensor(5.7904, dtype=torch.float32), rtol=1e-4, atol=1e-4
         )
+
+        tdwi.grad = None  # clear any existing gradient
+        loss.backward()
+        grad_backward = tdwi.grad
+
+        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
+        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
 
 
 class TestDiffLeafDynamicsSPAN:
@@ -183,12 +197,19 @@ class TestDiffLeafDynamicsSPAN:
         output = model({"SPAN": span})
         lai = output[0, :, 0]
         loss = lai.sum()
-        grads = torch.autograd.grad(loss, span)[0]  # this is ∂loss/∂span
+        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]  # this is ∂loss/∂span
 
         assert grads is not None, "Gradients for SPAN should not be None"
         torch.testing.assert_close(
             grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4
         )
+
+        span.grad = None  # clear any existing gradient
+        loss.backward()
+        grad_backward = span.grad
+
+        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
+        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
 
     def test_gradients_span_twlv_leaf_dynamics(self):
         # prepare model input
@@ -202,9 +223,16 @@ class TestDiffLeafDynamicsSPAN:
         output = model({"SPAN": span})
         twlv = output[0, :, 1]
         loss = twlv.sum()
-        grads = torch.autograd.grad(loss, span)[0]  # this is ∂loss/∂span
+        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]  # this is ∂loss/∂span
 
         assert grads is not None, "Gradients for SPAN should not be None"
         torch.testing.assert_close(
             grads, torch.tensor(-0.2426, dtype=torch.float32), rtol=1e-4, atol=1e-4
         )
+
+        span.grad = None  # clear any existing gradient
+        loss.backward()
+        grad_backward = span.grad
+
+        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
+        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
