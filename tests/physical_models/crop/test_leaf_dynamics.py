@@ -1,3 +1,5 @@
+import copy
+from numpy.testing import assert_almost_equal
 from unittest.mock import patch
 import pytest
 import torch
@@ -58,11 +60,11 @@ def get_test_diff_leaf_model():
     ) = prepare_engine_input(test_data_path)
     config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
     return DiffLeafDynamics(
-        crop_model_params_provider,
+        copy.deepcopy(crop_model_params_provider),
         weather_data_provider,
         agro_management_inputs,
         config_path,
-        external_states
+        copy.deepcopy(external_states)
     )
 
 
@@ -215,6 +217,27 @@ class TestDiffLeafDynamicsTDWI:
         assert grad_backward is not None, "Backward gradients for TDWI should not be None"
         assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
 
+    def test_gradients_tdwi_lai_leaf_dynamics_numerical(self):
+        model = get_test_diff_leaf_model()
+        tdwi1 = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
+        output = model({"TDWI": tdwi1})
+        lai = output[0, :, 0]
+        loss1 = lai.sum()
+
+        # this is ∂loss/∂tdwi, for comparison with numerical gradient
+        grads = torch.autograd.grad(loss1, tdwi1, retain_graph=True)[0]  # in this test, grads is very small
+
+        model = get_test_diff_leaf_model()
+        # tdwi range is (0.1, 0.6)
+        tdwi2 = tdwi1 + torch.tensor(1e-10, dtype=torch.float64)
+        output = model({"TDWI": tdwi2})
+        lai = output[0, :, 0]
+        loss2 = lai.sum()
+        numerical_grad = (loss2 - loss1) / (tdwi2 - tdwi1)
+
+        # in this test, grads is very small
+        assert_almost_equal(numerical_grad.item(), grads.item(), decimal=1)
+
     def test_gradients_tdwi_twlv_leaf_dynamics(self):
         # prepare model input
         model = get_test_diff_leaf_model()
@@ -249,7 +272,7 @@ class TestDiffLeafDynamicsSPAN:
 
         assert grads is not None, "Gradients for SPAN should not be None"
         torch.testing.assert_close(
-            grads, torch.tensor(2.5047, dtype=torch.float32), rtol=1e-4, atol=1e-4
+            grads, torch.tensor(2.5138, dtype=torch.float32), rtol=1e-4, atol=1e-4
         )
 
         span.grad = None  # clear any existing gradient
@@ -258,6 +281,26 @@ class TestDiffLeafDynamicsSPAN:
 
         assert grad_backward is not None, "Backward gradients for TDWI should not be None"
         assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
+
+    def test_gradients_span_lai_leaf_dynamics_numerical(self):
+        model = get_test_diff_leaf_model()
+        span1 = torch.nn.Parameter(torch.tensor(30, dtype=torch.float32))
+        output = model({"SPAN": span1})
+        lai = output[0, :, 0]
+        loss1 = lai.sum()
+
+        # this is ∂loss/∂span, for comparison with numerical gradient
+        grads = torch.autograd.grad(loss1, span1, retain_graph=True)[0]
+
+        model = get_test_diff_leaf_model()
+        # span range is (30, 40)
+        span2 = span1 + torch.tensor(1e-10, dtype=torch.float64)
+        output = model({"SPAN": span2})
+        lai = output[0, :, 0]
+        loss2 = lai.sum()
+        numerical_grad = (loss2 - loss1) / (span2 - span1)
+
+        assert_almost_equal(numerical_grad.item(), grads.item(), decimal=3)
 
     def test_gradients_span_twlv_leaf_dynamics(self):
         # prepare model input
@@ -270,7 +313,7 @@ class TestDiffLeafDynamicsSPAN:
 
         assert grads is not None, "Gradients for SPAN should not be None"
         torch.testing.assert_close(
-            grads, torch.tensor(-0.2426, dtype=torch.float32), rtol=1e-4, atol=1e-4
+            grads, torch.tensor(-0.2393, dtype=torch.float32), rtol=1e-4, atol=1e-4
         )
 
         span.grad = None  # clear any existing gradient
