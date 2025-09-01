@@ -11,7 +11,7 @@ from pcse.traitlets import Any
 from pcse.util import AfgenTrait
 from pcse.util import limit
 
-DTYPE = torch.float32  # Default data type for tensors in this module
+DTYPE = torch.float64  # Default data type for tensors in this module
 
 
 class WOFOST_Leaf_Dynamics(SimulationObject):
