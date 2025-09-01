@@ -31,17 +31,14 @@ def prepare_engine_input(file_path):
 
     # convert external states to tensors
     tensor_external_states = [
-        {
-            k: v if k == 'DAY' else torch.tensor(v, dtype=torch.float32)
-            for k, v in item.items()
-        }
+        {k: v if k == "DAY" else torch.tensor(v, dtype=torch.float32) for k, v in item.items()}
         for item in external_states
     ]
     return (
         crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
-        tensor_external_states
+        tensor_external_states,
     )
 
 
@@ -52,31 +49,28 @@ def get_test_data(file_path):
 
 def get_test_diff_leaf_model():
     test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
-    (
-        crop_model_params_provider,
-        weather_data_provider,
-        agro_management_inputs,
-        external_states
-    ) = prepare_engine_input(test_data_path)
+    (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
+        prepare_engine_input(test_data_path)
+    )
     config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
     return DiffLeafDynamics(
         copy.deepcopy(crop_model_params_provider),
         weather_data_provider,
         agro_management_inputs,
         config_path,
-        copy.deepcopy(external_states)
+        copy.deepcopy(external_states),
     )
 
 
 class DiffLeafDynamics(torch.nn.Module):
     def __init__(
-            self,
-            crop_model_params_provider,
-            weather_data_provider,
-            agro_management_inputs,
-            config_path,
-            external_states
-        ):
+        self,
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        config_path,
+        external_states,
+    ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
         self.weather_data_provider = weather_data_provider
@@ -94,13 +88,13 @@ class DiffLeafDynamics(torch.nn.Module):
             self.weather_data_provider,
             self.agro_management_inputs,
             self.config_path,
-            self.external_states
+            self.external_states,
         )
         engine.run_till_terminate()
         results = engine.get_output()
 
         return torch.stack(
-            [torch.stack([item['LAI'], item['TWLV']]) for item in results]
+            [torch.stack([item["LAI"], item["TWLV"]]) for item in results]
         ).unsqueeze(0)  # shape: [1, time_steps, 2]
 
 
@@ -114,7 +108,7 @@ class TestLeafDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states
+            external_states,
         ) = prepare_engine_input(test_data_path)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
@@ -123,7 +117,7 @@ class TestLeafDynamics:
             weather_data_provider,
             agro_management_inputs,
             config_path,
-            external_states
+            external_states,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -143,12 +137,9 @@ class TestLeafDynamics:
     def test_leaf_dynamics_with_engine(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
-        (
-            crop_model_params_provider,
-            weather_data_provider,
-            agro_management_inputs,
-            _
-        ) = prepare_engine_input(test_data_path)
+        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            prepare_engine_input(test_data_path)
+        )
 
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
@@ -158,27 +149,19 @@ class TestLeafDynamics:
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                config_path
+                config_path,
             )
 
     def test_wofost_pp_with_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
-        (
-            crop_model_params_provider,
-            weather_data_provider,
-            agro_management_inputs,
-            _
-        ) = prepare_engine_input(test_data_path)
+        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            prepare_engine_input(test_data_path)
+        )
 
-        with patch(
-            'pcse.crop.leaf_dynamics.WOFOST_Leaf_Dynamics',
-            WOFOST_Leaf_Dynamics
-            ):
+        with patch("pcse.crop.leaf_dynamics.WOFOST_Leaf_Dynamics", WOFOST_Leaf_Dynamics):
             model = Wofost72_PP(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs
+                crop_model_params_provider, weather_data_provider, agro_management_inputs
             )
             model.run_till_terminate()
             actual_results = model.get_output()

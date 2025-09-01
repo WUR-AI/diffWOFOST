@@ -113,39 +113,39 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     """
 
     class Parameters(ParamTemplate):
-        RGRLAI = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        SPAN   = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        TBASE  = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        PERDL  = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        TDWI   = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        SLATB  = AfgenTrait()  # FIXEME
+        RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        SPAN = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        TBASE = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        PERDL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        SLATB = AfgenTrait()  # FIXEME
         KDIFTB = AfgenTrait()  # FIXEME
 
     class StateVariables(StatesTemplate):
-        LV     = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        SLA    = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        LVAGE  = Any(default_value=[torch.tensor(-99., dtype=DTYPE)])
-        LAIEM  = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        LASUM  = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        LAIEXP = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        LAIMAX = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        LAI    = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        WLV    = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        DWLV   = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        TWLV   = Any(default_value=torch.tensor(-99., dtype=DTYPE))
+        LV = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        SLA = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        LVAGE = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        LAIEM = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        LASUM = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        LAIEXP = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        LAIMAX = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        LAI = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        WLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        DWLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        TWLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
 
     class RateVariables(RatesTemplate):
-        GRLV  = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        DSLV1 = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        DSLV2 = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        DSLV3 = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        DSLV  = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        DALV  = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        DRLV  = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        SLAT  = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        FYSAGE = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        GLAIEX = Any(default_value=torch.tensor(-99., dtype=DTYPE))
-        GLASOL = Any(default_value=torch.tensor(-99., dtype=DTYPE))
+        GRLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        DSLV1 = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        DSLV2 = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        DSLV3 = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        DSLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        DALV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        DRLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        SLAT = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        FYSAGE = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        GLAIEX = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        GLASOL = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
 
     def initialize(self, day, kiosk, parvalues):
         """Initialize the WOFOST_Leaf_Dynamics simulation object.
@@ -155,44 +155,55 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         :param parvalues: `ParameterProvider` object providing parameters as
                 key/value pairs
         """
-        self.kiosk  = kiosk
+        self.kiosk = kiosk
         # TODO check if parvalues are already torch.nn.Parameters
         self.params = self.Parameters(parvalues)
-        self.rates  = self.RateVariables(kiosk)
+        self.rates = self.RateVariables(kiosk)
 
         # CALCULATE INITIAL STATE VARIABLES
         # check for required external variables
         _exist_required_external_variables(self.kiosk)
         # TODO check if external variables are already torch tensors
 
-        FL  = self.kiosk["FL"]
-        FR  = self.kiosk["FR"]
+        FL = self.kiosk["FL"]
+        FR = self.kiosk["FR"]
         DVS = self.kiosk["DVS"]
 
         params = self.params
 
         # Initial leaf biomass
-        WLV  = (params.TDWI * (1-FR)) * FL
-        DWLV = torch.tensor(0., dtype=DTYPE)
+        WLV = (params.TDWI * (1 - FR)) * FL
+        DWLV = torch.tensor(0.0, dtype=DTYPE)
         TWLV = WLV + DWLV
 
         # First leaf class (SLA, age and weight)
-        SLA   = torch.tensor([params.SLATB(DVS)], dtype=DTYPE)
-        LVAGE = torch.tensor([0.], dtype=DTYPE)
-        LV    = torch.stack([WLV])
+        SLA = torch.tensor([params.SLATB(DVS)], dtype=DTYPE)
+        LVAGE = torch.tensor([0.0], dtype=DTYPE)
+        LV = torch.stack([WLV])
 
         # Initial values for leaf area
-        LAIEM  = LV[0] * SLA[0]
-        LASUM  = LAIEM
+        LAIEM = LV[0] * SLA[0]
+        LASUM = LAIEM
         LAIEXP = LAIEM
         LAIMAX = LAIEM
-        LAI    = LASUM + self.kiosk["SAI"] + self.kiosk["PAI"]
+        LAI = LASUM + self.kiosk["SAI"] + self.kiosk["PAI"]
 
         # Initialize StateVariables object
-        self.states = self.StateVariables(kiosk, publish=["LAI","TWLV","WLV"],
-                                          LV=LV, SLA=SLA, LVAGE=LVAGE, LAIEM=LAIEM,
-                                          LASUM=LASUM, LAIEXP=LAIEXP, LAIMAX=LAIMAX,
-                                          LAI=LAI, WLV=WLV, DWLV=DWLV, TWLV=TWLV)
+        self.states = self.StateVariables(
+            kiosk,
+            publish=["LAI", "TWLV", "WLV"],
+            LV=LV,
+            SLA=SLA,
+            LVAGE=LVAGE,
+            LAIEM=LAIEM,
+            LASUM=LASUM,
+            LAIEXP=LAIEXP,
+            LAIMAX=LAIMAX,
+            LAI=LAI,
+            WLV=WLV,
+            DWLV=DWLV,
+            TWLV=TWLV,
+        )
 
     def _calc_LAI(self):
         # Total leaf area Index as sum of leaf, pod and stem area
@@ -214,19 +225,19 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.GRLV = k.ADMI * k.FL
 
         # death of leaves due to water/oxygen stress
-        r.DSLV1 = s.WLV * (1. - k.RFTRA) * p.PERDL
+        r.DSLV1 = s.WLV * (1.0 - k.RFTRA) * p.PERDL
 
         # death due to self shading cause by high LAI
         DVS = self.kiosk["DVS"]
         LAICR = 3.2 / p.KDIFTB(DVS)
-        r.DSLV2 = s.WLV * limit(0., 0.03, 0.03 * (s.LAI - LAICR) / LAICR)
+        r.DSLV2 = s.WLV * limit(0.0, 0.03, 0.03 * (s.LAI - LAICR) / LAICR)
 
         # Death of leaves due to frost damage as determined by
         # Reduction Factor Frost "RF_FROST"
         if "RF_FROST" in self.kiosk:
             r.DSLV3 = s.WLV * k.RF_FROST
         else:
-            r.DSLV3 = torch.tensor(0., dtype=DTYPE)
+            r.DSLV3 = torch.tensor(0.0, dtype=DTYPE)
 
         # leaf death equals maximum of water stress, shading and frost
         r.DSLV = torch.max(torch.stack([r.DSLV1, r.DSLV2, r.DSLV3]))
@@ -236,7 +247,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # in DALV.
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
-        DALV = torch.tensor(0., dtype=DTYPE)
+        DALV = torch.tensor(0.0, dtype=DTYPE)
         if p.SPAN.requires_grad:  # replacing hard threshold `if lvage > p.SPAN``
             sharpness = 1000.0  # FIXEME
             for lv, lvage in zip(s.LV, s.LVAGE, strict=False):
@@ -253,28 +264,22 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.DRLV = torch.max(r.DSLV, r.DALV)
 
         # physiologic ageing of leaves per time step
-        FYSAGE = (drv.TEMP - p.TBASE)/(35. - p.TBASE)
-        r.FYSAGE = torch.max(
-            torch.tensor(0., dtype=DTYPE),
-            FYSAGE
-        )
+        FYSAGE = (drv.TEMP - p.TBASE) / (35.0 - p.TBASE)
+        r.FYSAGE = torch.max(torch.tensor(0.0, dtype=DTYPE), FYSAGE)
 
         # specific leaf area of leaves per time step
         r.SLAT = torch.tensor(p.SLATB(DVS), dtype=DTYPE)
 
         # leaf area not to exceed exponential growth curve
-        if s.LAIEXP < 6.:
-            DTEFF = torch.max(
-                torch.tensor(0., dtype=DTYPE),
-                drv.TEMP - p.TBASE
-            )
+        if s.LAIEXP < 6.0:
+            DTEFF = torch.max(torch.tensor(0.0, dtype=DTYPE), drv.TEMP - p.TBASE)
             r.GLAIEX = s.LAIEXP * p.RGRLAI * DTEFF
             # source-limited increase in leaf area
             r.GLASOL = r.GRLV * r.SLAT
             # sink-limited increase in leaf area
             GLA = torch.min(r.GLAIEX, r.GLASOL)
             # adjustment of specific leaf area of youngest leaf class
-            if r.GRLV > 0.:
+            if r.GRLV > 0.0:
                 r.SLAT = GLA / r.GRLV
 
     @prepare_states
@@ -292,15 +297,15 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # leaf death is imposed on leaves by removing leave classes from the
         # right side.
         for LVweigth in reversed(states.LV):
-            if tDRLV > 0.:
-                if tDRLV >= LVweigth: # remove complete leaf class
+            if tDRLV > 0.0:
+                if tDRLV >= LVweigth:  # remove complete leaf class
                     tDRLV = tDRLV - LVweigth
                     tLV = tLV[:-1]  # Remove last element
                     tLVAGE = tLVAGE[:-1]
                     tSLA = tSLA[:-1]
-                else: # Decrease value of oldest (rightmost) leave class
+                else:  # Decrease value of oldest (rightmost) leave class
                     tLV[-1] = tLV[-1] - tDRLV
-                    tDRLV = torch.tensor(0., dtype=DTYPE)
+                    tDRLV = torch.tensor(0.0, dtype=DTYPE)
             else:
                 break
 
@@ -311,7 +316,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # new leaves in class 1
         tLV = torch.cat((torch.tensor([rates.GRLV], dtype=DTYPE), tLV))
         tSLA = torch.cat((torch.tensor([rates.SLAT], dtype=DTYPE), tSLA))
-        tLVAGE = torch.cat((torch.tensor([0.], dtype=DTYPE), tLVAGE))
+        tLVAGE = torch.cat((torch.tensor([0.0], dtype=DTYPE), tLVAGE))
 
         # calculation of new leaf area
         states.LASUM = torch.sum(
@@ -324,7 +329,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         states.LAIEXP = states.LAIEXP + rates.GLAIEX
 
         # Update leaf biomass states
-        states.WLV  = torch.sum(tLV)
+        states.WLV = torch.sum(tLV)
         states.DWLV = states.DWLV + rates.DRLV
         states.TWLV = states.WLV + states.DWLV
 
@@ -334,7 +339,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.states.LVAGE = tLVAGE
 
     @prepare_states
-    def _set_variable_LAI(self, nLAI):   # FIXEME
+    def _set_variable_LAI(self, nLAI):  # FIXEME
         """Updates the value of LAI to to the new value provided as input.
 
         Related state variables will be updated as well and the increments
@@ -354,8 +359,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # anyway
         SAI = self.kiosk["SAI"]
         PAI = self.kiosk["PAI"]
-        adj_nLAI = torch.max(nLAI - SAI - PAI, 0.)
-        adj_oLAI = torch.max(oLAI - SAI - PAI, 0.)
+        adj_nLAI = torch.max(nLAI - SAI - PAI, 0.0)
+        adj_oLAI = torch.max(oLAI - SAI - PAI, 0.0)
 
         # LAI Adjustment factor for leaf biomass LV (rLAI)
         if adj_oLAI > 0:
@@ -364,33 +369,32 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # If adj_oLAI == 0 then add the leave biomass directly to the
         # youngest leave age class (LV[0])
         else:
-            LV = [nLAI/states.SLA[0]]
+            LV = [nLAI / states.SLA[0]]
 
         states.LASUM = torch.sum(
-            torch.tensor([lv*sla for lv, sla in zip(LV, states.SLA, strict=False)],
-                         dtype=DTYPE)
+            torch.tensor([lv * sla for lv, sla in zip(LV, states.SLA, strict=False)], dtype=DTYPE)
         )
         states.LV = LV
         states.LAI = self._calc_LAI()
         states.WLV = torch.sum(states.LV)
         states.TWLV = states.WLV + states.DWLV
 
-        increments = {"LAI": states.LAI - oLAI,
-                      "LAISUM":states.LASUM - oLASUM,
-                      "WLV": states.WLV - oWLV,
-                      "TWLV": states.TWLV - oTWLV}
+        increments = {
+            "LAI": states.LAI - oLAI,
+            "LAISUM": states.LASUM - oLASUM,
+            "WLV": states.WLV - oWLV,
+            "TWLV": states.TWLV - oTWLV,
+        }
         return increments
 
 
 def _exist_required_external_variables(kiosk):
     """Check if all required external variables are available in the kiosk."""
-    required_external_vars_at_init = [
-        "DVS", "FL", "FR", "SAI", "PAI"
-    ]
+    required_external_vars_at_init = ["DVS", "FL", "FR", "SAI", "PAI"]
     for var in required_external_vars_at_init:
         if var not in kiosk:
             raise ValueError(
                 f"Required external variables '{var}' is missing in the kiosk."
                 f" Ensure that all required variables {required_external_vars_at_init}"
                 " are provided."
-                )
+            )

@@ -14,6 +14,7 @@ It contains:
 
 Note that the code here is *not* python2 compatible.
 """
+
 import logging
 import os
 from pcse import signals
@@ -77,8 +78,8 @@ class SimulationObjectTestHelper(SimulationObject):
 
 
 class VariableKioskTestHelper(VariableKiosk):
-    """Variable Kiosk for testing purposes which allows to use external states.
-    """
+    """Variable Kiosk for testing purposes which allows to use external states."""
+
     external_state_list = None
 
     def __init__(self, external_state_list):
@@ -112,16 +113,14 @@ class VariableKioskTestHelper(VariableKiosk):
         return item in self.current_externals
 
     def __getattr__(self, item):
-        """Allow use of attribute notation (eg "kiosk.LAI") on published rates or states.
-        """
+        """Allow use of attribute notation (eg "kiosk.LAI") on published rates or states."""
         if item in self.current_externals:
             return self.current_externals[item]
         else:
             return dict.__getitem__(self, item)
 
     def __getitem__(self, item):
-        """Override __getitem__ to first look in external states
-        """
+        """Override __getitem__ to first look in external states"""
         if item in self.current_externals:
             return self.current_externals[item]
         else:
@@ -132,7 +131,6 @@ class VariableKioskTestHelper(VariableKiosk):
 
 
 class ConfigurationLoaderTestHelper(ConfigurationLoader):
-
     def __init__(self, YAML_test_inputs, simobject, waterbalance=None):
         self.model_config_file = "Test config"
         self.description = "Configuration loader for running YAML tests"
@@ -148,16 +146,16 @@ class ConfigurationLoaderTestHelper(ConfigurationLoader):
 
 
 class EngineTestHelper(Engine):
-    """An engine which is purely for running the YAML unit tests
-    """
+    """An engine which is purely for running the YAML unit tests"""
+
     def __init__(
-            self,
-            parameterprovider,
-            weatherdataprovider,
-            agromanagement,
-            test_config,
-            external_states=None
-        ):
+        self,
+        parameterprovider,
+        weatherdataprovider,
+        agromanagement,
+        test_config,
+        external_states=None,
+    ):
         BaseEngine.__init__(self)
 
         # Load the model configuration
@@ -205,9 +203,7 @@ class EngineTestHelper(Engine):
         self.calc_rates(self.day, self.drv)
 
     def _run(self):
-        """Make one time step of the simulation.
-        """
-
+        """Make one time step of the simulation."""
         # Update timer
         self.day, delt = self.timer()
 
@@ -215,9 +211,9 @@ class EngineTestHelper(Engine):
         # return True signalling the end of the test
         stop_test = self.kiosk(self.day)
         if stop_test:
-            self._send_signal(signal=signals.crop_finish,
-                              day=self.day, finish_type="maturity",
-                              crop_delete=False)
+            self._send_signal(
+                signal=signals.crop_finish, day=self.day, finish_type="maturity", crop_delete=False
+            )
 
         # State integration and update to forced variables
         self.integrate(self.day, delt)
@@ -236,8 +232,7 @@ class EngineTestHelper(Engine):
 
 
 class WeatherDataProviderTestHelper(WeatherDataProvider):
-    """A WeatherDataProvider which stores the weatherdata contained within the YAML tests
-        """
+    """A WeatherDataProvider which stores the weatherdata contained within the YAML tests"""
 
     def __init__(self, yaml_weather):
         super().__init__()
