@@ -14,18 +14,18 @@ from .. import phy_data_folder
 
 def prepare_engine_input(file_path):
     inputs = yaml.safe_load(open(file_path))
-    agro = inputs["AgroManagement"]
+    agro_management_inputs = inputs["AgroManagement"]
     cropd = inputs["ModelParameters"]
 
-    wdp = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
-    params = ParameterProvider(cropdata=cropd)
+    weather_data_provider = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
+    crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = inputs["ExternalStates"]
 
     # convert parameters to tensors
-    params.clear_override()
+    crop_model_params_provider.clear_override()
     for name in ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]:
-        value = torch.tensor(params[name], dtype=torch.float32)
-        params.set_override(name, value, check=False)
+        value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
+        crop_model_params_provider.set_override(name, value, check=False)
 
     # convert external states to tensors
     tensor_external_states = [
@@ -35,7 +35,12 @@ def prepare_engine_input(file_path):
         }
         for item in external_states
     ]
-    return params, wdp, agro, tensor_external_states
+    return (
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        tensor_external_states
+    )
 
 
 def get_test_data(file_path):
@@ -45,30 +50,50 @@ def get_test_data(file_path):
 
 def get_test_diff_leaf_model():
     test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
-    params, wdp, agro, external_states = prepare_engine_input(test_data_path)
+    (
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        external_states
+    ) = prepare_engine_input(test_data_path)
     config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
-    return DiffLeafDynamics(params, wdp, agro, config_path, external_states)
-
-
+    return DiffLeafDynamics(
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        config_path,
+        external_states
+    )
 
 
 class DiffLeafDynamics(torch.nn.Module):
-    def __init__(self, params, wdp, agro, config_path, external_states):
+    def __init__(
+            self,
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states
+        ):
         super().__init__()
-        self.params = params
-        self.wdp = wdp
-        self.agro = agro
+        self.crop_model_params_provider = crop_model_params_provider
+        self.weather_data_provider = weather_data_provider
+        self.agro_management_inputs = agro_management_inputs
         self.config_path = config_path
         self.external_states = external_states
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
-            self.params.set_override(name, value, check=False)
+            self.crop_model_params_provider.set_override(name, value, check=False)
 
         engine = EngineTestHelper(
-            self.params, self.wdp, self.agro, self.config_path, self.external_states
-            )
+            self.crop_model_params_provider,
+            self.weather_data_provider,
+            self.agro_management_inputs,
+            self.config_path,
+            self.external_states
+        )
         engine.run_till_terminate()
         results = engine.get_output()
 
@@ -83,10 +108,21 @@ class TestLeafDynamics:
 
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
-        params, wdp, agro, external_states = prepare_engine_input(test_data_path)
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states
+        ) = prepare_engine_input(test_data_path)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
-        engine = EngineTestHelper(params, wdp, agro, config_path, external_states)
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states
+        )
         engine.run_till_terminate()
         actual_results = engine.get_output()
 
@@ -105,24 +141,43 @@ class TestLeafDynamics:
     def test_leaf_dynamics_with_engine(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
-        params, wdp, agro, _ = prepare_engine_input(test_data_path)
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            _
+        ) = prepare_engine_input(test_data_path)
 
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Engine does not allows to specify `external_states`
         with pytest.raises(ValueError):
-            Engine(params, wdp, agro, config_path)
+            Engine(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs,
+                config_path
+            )
 
     def test_wofost_pp_with_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
-        params, wdp, agro, _ = prepare_engine_input(test_data_path)
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            _
+        ) = prepare_engine_input(test_data_path)
 
         with patch(
             'pcse.crop.leaf_dynamics.WOFOST_Leaf_Dynamics',
             WOFOST_Leaf_Dynamics
             ):
-            model = Wofost72_PP(params, wdp, agro)
+            model = Wofost72_PP(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs
+            )
             model.run_till_terminate()
             actual_results = model.get_output()
 
