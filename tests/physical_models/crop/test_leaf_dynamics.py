@@ -1,10 +1,10 @@
 import copy
-from numpy.testing import assert_almost_equal
 from unittest.mock import patch
 import pytest
 import torch
 import torch.testing
 import yaml
+from numpy.testing import assert_almost_equal
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
@@ -203,7 +203,10 @@ class TestDiffLeafDynamicsTDWI:
         output = model({"TDWI": tdwi})
         lai = output[0, :, 0]
         loss = lai.sum()
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]  # this is ∂loss/∂tdwi
+
+        # this is ∂loss/∂tdwi without calling loss.backward().
+        # this is called forward gradient here because it is calculated without backpropagation.
+        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
 
         assert grads is not None, "Gradients for TDWI should not be None"
         torch.testing.assert_close(
@@ -212,6 +215,8 @@ class TestDiffLeafDynamicsTDWI:
 
         tdwi.grad = None  # clear any existing gradient
         loss.backward()
+
+        # this is ∂loss/∂tdwi calculated using backpropagation
         grad_backward = tdwi.grad
 
         assert grad_backward is not None, "Backward gradients for TDWI should not be None"
@@ -225,7 +230,8 @@ class TestDiffLeafDynamicsTDWI:
         loss1 = lai.sum()
 
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss1, tdwi1, retain_graph=True)[0]  # in this test, grads is very small
+        # in this test, ∂loss/∂tdwi is very small
+        grads = torch.autograd.grad(loss1, tdwi1, retain_graph=True)[0]
 
         model = get_test_diff_leaf_model()
         # tdwi range is (0.1, 0.6)
@@ -245,7 +251,10 @@ class TestDiffLeafDynamicsTDWI:
         output = model({"TDWI": tdwi})
         twlv = output[0, :, 1]
         loss = twlv.sum()
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]  # this is ∂loss/∂tdwi
+
+        # this is ∂loss/∂tdwi
+        # this is called forward gradient here because it is calculated without backpropagation.
+        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
 
         assert grads is not None, "Gradients for TDWI should not be None"
         torch.testing.assert_close(
@@ -254,6 +263,8 @@ class TestDiffLeafDynamicsTDWI:
 
         tdwi.grad = None  # clear any existing gradient
         loss.backward()
+
+        # this is ∂loss/∂tdwi calculated using backpropagation
         grad_backward = tdwi.grad
 
         assert grad_backward is not None, "Backward gradients for TDWI should not be None"
@@ -268,7 +279,10 @@ class TestDiffLeafDynamicsSPAN:
         output = model({"SPAN": span})
         lai = output[0, :, 0]
         loss = lai.sum()
-        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]  # this is ∂loss/∂span
+
+        # this is ∂loss/∂span
+        # this is called forward gradient here because it is calculated without backpropagation.
+        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
 
         assert grads is not None, "Gradients for SPAN should not be None"
         torch.testing.assert_close(
@@ -277,6 +291,8 @@ class TestDiffLeafDynamicsSPAN:
 
         span.grad = None  # clear any existing gradient
         loss.backward()
+
+        # this is ∂loss/∂span calculated using backpropagation
         grad_backward = span.grad
 
         assert grad_backward is not None, "Backward gradients for TDWI should not be None"
@@ -309,7 +325,10 @@ class TestDiffLeafDynamicsSPAN:
         output = model({"SPAN": span})
         twlv = output[0, :, 1]
         loss = twlv.sum()
-        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]  # this is ∂loss/∂span
+
+        # this is ∂loss/∂span
+        # this is called forward gradient here because it is calculated without backpropagation.
+        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
 
         assert grads is not None, "Gradients for SPAN should not be None"
         torch.testing.assert_close(
@@ -318,6 +337,8 @@ class TestDiffLeafDynamicsSPAN:
 
         span.grad = None  # clear any existing gradient
         loss.backward()
+
+        # this is ∂loss/∂span calculated using backpropagation
         grad_backward = span.grad
 
         assert grad_backward is not None, "Backward gradients for TDWI should not be None"
