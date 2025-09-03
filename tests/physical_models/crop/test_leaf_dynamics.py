@@ -278,8 +278,8 @@ class TestDiffLeafDynamicsSPAN:
         # this is ∂loss/∂span calculated using backpropagation
         grad_backward = span.grad
 
-        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
-        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
+        assert grad_backward is not None, "Backward gradients for SPAN should not be None"
+        assert grad_backward == grads, "Forward and backward gradients for SPAN should match"
 
     def test_gradients_span_lai_leaf_dynamics_numerical(self):
         model = get_test_diff_leaf_model()
@@ -324,5 +324,5 @@ class TestDiffLeafDynamicsSPAN:
         # this is ∂loss/∂span calculated using backpropagation
         grad_backward = span.grad
 
-        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
-        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
+        assert grad_backward is not None, "Backward gradients for SPAN should not be None"
+        assert grad_backward == grads, "Forward and backward gradients for SPAN should match"
