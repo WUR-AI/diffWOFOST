@@ -289,9 +289,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         states = self.states
 
         # --------- leave death ---------
-        tLV = states.LV.detach().clone()
-        tSLA = states.SLA.detach().clone()
-        tLVAGE = states.LVAGE.detach().clone()
+        tLV = states.LV.clone()
+        tSLA = states.SLA.clone()
+        tLVAGE = states.LVAGE.clone()
         tDRLV = rates.DRLV
 
         # leaf death is imposed on leaves by removing leave classes from the
