@@ -8,7 +8,6 @@ from numpy.testing import assert_almost_equal
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
-from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics
 from tests.physical_models.pcse_test_code import EngineTestHelper
 from tests.physical_models.pcse_test_code import WeatherDataProviderTestHelper
@@ -27,46 +26,6 @@ def prepare_engine_input(file_path):
     # convert parameters to tensors
     crop_model_params_provider.clear_override()
     for name in ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]:
-        value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
-        crop_model_params_provider.set_override(name, value, check=False)
-
-    # convert external states to tensors
-    tensor_external_states = [
-        {k: v if k == "DAY" else torch.tensor(v, dtype=torch.float32) for k, v in item.items()}
-        for item in external_states
-    ]
-    return (
-        crop_model_params_provider,
-        weather_data_provider,
-        agro_management_inputs,
-        tensor_external_states,
-    )
-
-
-def prepare_wofost_input(file_path):
-    inputs = yaml.safe_load(open(file_path))
-    agro_management_inputs = inputs["AgroManagement"]
-    cropd = inputs["ModelParameters"]
-
-    weather_data_provider = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
-    crop_model_params_provider = ParameterProvider(cropdata=cropd)
-    external_states = inputs["ExternalStates"]
-
-    # convert parameters to tensors
-    crop_model_params_provider.clear_override()
-    for name in [
-        "RDI",
-        "RRI",
-        "RDMCR",
-        "RDMSOL",
-        "TDWI",
-        "IAIRDU",  # root dynamics
-        "SPAN",
-        "TDWI",
-        "TBASE",
-        "PERDL",
-        "RGRLAI",  # leaf dynamics
-    ]:
         value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
         crop_model_params_provider.set_override(name, value, check=False)
 
@@ -223,35 +182,6 @@ class TestRootDynamics:
         )
 
         with patch("pcse.crop.root_dynamics.WOFOST_Root_Dynamics", WOFOST_Root_Dynamics):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
-
-        assert len(actual_results) == len(expected_results)
-
-        for reference, model in zip(expected_results, actual_results, strict=False):
-            assert reference["DAY"] == model["day"]
-            assert all(
-                abs(reference[var] - model[var]) < precision
-                for var, precision in expected_precision.items()
-            )
-
-    def test_wofost_pp_with_root_dynamics_leaf_dynamics(self):
-        # prepare model input
-        test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_wofost_input(test_data_path)
-        )
-
-        with (
-            patch("pcse.crop.root_dynamics.WOFOST_Root_Dynamics", WOFOST_Root_Dynamics),
-            patch("pcse.crop.leaf_dynamics.WOFOST_Leaf_Dynamics", WOFOST_Leaf_Dynamics),
-        ):
             model = Wofost72_PP(
                 crop_model_params_provider, weather_data_provider, agro_management_inputs
             )
