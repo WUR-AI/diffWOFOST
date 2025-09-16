@@ -5,11 +5,11 @@ from pcse.base import SimulationObject
 from pcse.base import StatesTemplate
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
-from pcse.traitlets import Float
 from pcse.traitlets import Any
 from pcse.util import AfgenTrait
 
 DTYPE = torch.float64  # Default data type for tensors in this module
+
 
 class WOFOST_Root_Dynamics(SimulationObject):
     """Root biomass dynamics and rooting depth.
@@ -86,6 +86,7 @@ class WOFOST_Root_Dynamics(SimulationObject):
     - RD, TWRT
 
     """
+
     """
     IMPORTANT NOTICE
     Currently root development is linear and depends only on the fraction of assimilates
@@ -112,91 +113,103 @@ class WOFOST_Root_Dynamics(SimulationObject):
     """
 
     class Parameters(ParamTemplate):
-        RDI    = Float(-99.)
-        RRI    = Float(-99.)
-        RDMCR  = Float(-99.)
-        RDMSOL = Float(-99.)
-        TDWI   = Float(-99.)
-        IAIRDU = Float(-99)
-        RDRRTB = AfgenTrait() # FIXEME
+        RDI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RRI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RDMCR = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RDMSOL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        IAIRDU = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RDRRTB = AfgenTrait()  # FIXEME
 
     class RateVariables(RatesTemplate):
-        RR   = Float(-99.)
-        GRRT = Float(-99.)
-        DRRT = Float(-99.)
-        GWRT = Float(-99.)
+        RR = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        GRRT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        DRRT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        GWRT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
 
     class StateVariables(StatesTemplate):
-        RD   = Float(-99.)
-        RDM  = Float(-99.)
-        WRT  = Float(-99.)
-        DWRT = Float(-99.)
-        TWRT = Float(-99.)
+        RD = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RDM = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        WRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        DWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        TWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
 
     def initialize(self, day, kiosk, parvalues):
-        """
+        """Initialize the model.
+
         :param day: start date of the simulation
         :param kiosk: variable kiosk of this PCSE  instance
         :param parvalues: `ParameterProvider` object providing parameters as
                 key/value pairs
         """
-
         self.params = self.Parameters(parvalues)
         self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
         self.kiosk = kiosk
 
         # INITIAL STATES
         params = self.params
+
         # Initial root depth states
-        rdmax = max(params.RDI, min(params.RDMCR, params.RDMSOL))
+        rdmax = torch.max(params.RDI, torch.min(params.RDMCR, params.RDMSOL))
         RDM = rdmax
         RD = params.RDI
+
         # initial root biomass states
-        WRT  = params.TDWI * self.kiosk.FR
-        DWRT = 0.
+        WRT = params.TDWI * self.kiosk.FR
+        DWRT = torch.tensor(0.0, dtype=DTYPE)
         TWRT = WRT + DWRT
 
-        self.states = self.StateVariables(kiosk, publish=["RD","WRT", "TWRT"],
-                                          RD=RD, RDM=RDM, WRT=WRT, DWRT=DWRT,
-                                          TWRT=TWRT)
+        self.states = self.StateVariables(
+            kiosk, publish=["RD", "WRT", "TWRT"], RD=RD, RDM=RDM, WRT=WRT, DWRT=DWRT, TWRT=TWRT
+        )
 
     @prepare_rates
     def calc_rates(self, day, drv):
+        """Calculate the rates of change of the state variables."""
         p = self.params
         r = self.rates
         s = self.states
         k = self.kiosk
 
+        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
+        # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
+        DVS = torch.as_tensor(k["DVS"], dtype=DTYPE)
+        mask = (DVS >= 0).to(dtype=DTYPE)
+
         # Increase in root biomass
-        r.GRRT = k.FR * k.DMI
-        r.DRRT = s.WRT * p.RDRRTB(k.DVS)
+        r.GRRT = mask * k.FR * k.DMI
+        r.DRRT = mask * s.WRT * p.RDRRTB(k.DVS)
         r.GWRT = r.GRRT - r.DRRT
 
         # Increase in root depth
-        r.RR = min((s.RDM - s.RD), p.RRI)
+        r.RR = mask * torch.min((s.RDM - s.RD), p.RRI)
+
         # Do not let the roots growth if partioning to the roots
         # (variable FR) is zero.
-        if k.FR == 0.:
-            r.RR = 0.
+        FR = torch.as_tensor(k["FR"], dtype=DTYPE)
+        mask = (FR > 0.0).to(dtype=DTYPE)
+        r.RR = r.RR * mask
 
     @prepare_states
     def integrate(self, day, delt=1.0):
+        """Integrate the state variables using the rates of change."""
         rates = self.rates
         states = self.states
 
         # Dry weight of living roots
-        states.WRT += rates.GWRT
+        states.WRT = states.WRT + rates.GWRT
+
         # Dry weight of dead roots
-        states.DWRT += rates.DRRT
+        states.DWRT = states.DWRT + rates.DRRT
+
         # Total weight dry + living roots
         states.TWRT = states.WRT + states.DWRT
 
         # New root depth
-        states.RD += rates.RR
-
+        states.RD = states.RD + rates.RR
 
     @prepare_states
-    def _set_variable_WRT(self, nWRT):
+    def _set_variable_WRT(self, nWRT):  # FIXEME
         """Updates the value of WRT to to the new value provided as input.
 
         Related state variables will be updated as well and the increments
@@ -212,6 +225,5 @@ class WOFOST_Root_Dynamics(SimulationObject):
         states.WRT = nWRT
         states.TWRT = states.WRT + states.DWRT
 
-        increments = {"WRT": states.WRT - oWRT,
-                      "TWLRT": states.TWRT - oTWRT}
+        increments = {"WRT": states.WRT - oWRT, "TWLRT": states.TWRT - oTWRT}
         return increments
