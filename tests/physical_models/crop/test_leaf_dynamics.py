@@ -181,6 +181,9 @@ class TestLeafDynamics:
             prepare_engine_input(test_data_path)
         )
 
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
         with patch("pcse.crop.leaf_dynamics.WOFOST_Leaf_Dynamics", WOFOST_Leaf_Dynamics):
             model = Wofost72_PP(
                 crop_model_params_provider, weather_data_provider, agro_management_inputs
@@ -188,17 +191,14 @@ class TestLeafDynamics:
             model.run_till_terminate()
             actual_results = model.get_output()
 
-        # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+            assert len(actual_results) == len(expected_results)
 
-        assert len(actual_results) == len(expected_results)
-
-        for reference, model in zip(expected_results, actual_results, strict=False):
-            assert reference["DAY"] == model["day"]
-            assert all(
-                abs(reference[var] - model[var]) < precision
-                for var, precision in expected_precision.items()
-            )
+            for reference, model in zip(expected_results, actual_results, strict=False):
+                assert reference["DAY"] == model["day"]
+                assert all(
+                    abs(reference[var] - model[var]) < precision
+                    for var, precision in expected_precision.items()
+                )
 
 
 class TestDiffLeafDynamicsTDWI:
