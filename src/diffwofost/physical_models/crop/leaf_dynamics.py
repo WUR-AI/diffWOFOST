@@ -290,7 +290,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     @prepare_states
     def integrate(self, day, delt=1.0):
         """Integrate the leaf dynamics state variables."""
-        #TODO check if DVS < 0 and skip integration needed
+        # TODO check if DVS < 0 and skip integration needed
         rates = self.rates
         states = self.states
 
