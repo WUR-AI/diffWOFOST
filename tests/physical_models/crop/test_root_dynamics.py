@@ -25,12 +25,7 @@ def prepare_engine_input(file_path):
 
     # convert parameters to tensors
     crop_model_params_provider.clear_override()
-    # The following line raises an error:
-    # parameter_names = [n for n in crop_model_params_provider.keys()]
-    # E   TypeError: iter() returned non-iterator of type 'ParameterProvider'
-    # We therefore use the protected member instead
-    parameter_names = crop_model_params_provider._unique_parameters
-    for name in parameter_names:
+    for name in ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]:
         value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
         crop_model_params_provider.set_override(name, value, check=False)
 
@@ -99,7 +94,7 @@ class DiffRootDynamics(torch.nn.Module):
         results = engine.get_output()
 
         return torch.stack(
-            [torch.stack([item["LAI"], item["TWLV"]]) for item in results]
+            [torch.stack([item["RD"], item["TWRT"]]) for item in results]
         ).unsqueeze(0)  # shape: [1, time_steps, 2]
 
 
