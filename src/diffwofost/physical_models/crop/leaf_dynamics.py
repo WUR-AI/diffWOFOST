@@ -135,17 +135,17 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         TWLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
 
     class RateVariables(RatesTemplate):
-        GRLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        DSLV1 = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        DSLV2 = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        DSLV3 = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        DSLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        DALV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        DRLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        SLAT = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        FYSAGE = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        GLAIEX = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        GLASOL = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        GRLV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        DSLV1 = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        DSLV2 = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        DSLV3 = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        DSLV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        DALV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        DRLV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        SLAT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        FYSAGE = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        GLAIEX = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        GLASOL = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
 
     def initialize(self, day, kiosk, parvalues):
         """Initialize the WOFOST_Leaf_Dynamics simulation object.
@@ -220,22 +220,27 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         p = self.params
         k = self.kiosk
 
+        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
+        # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
+        DVS = torch.as_tensor(k["DVS"], dtype=DTYPE)
+        mask = (DVS >= 0).to(dtype=DTYPE)
+
         # Growth rate leaves
         # weight of new leaves
-        r.GRLV = k.ADMI * k.FL
+        r.GRLV = mask * k.ADMI * k.FL
 
         # death of leaves due to water/oxygen stress
-        r.DSLV1 = s.WLV * (1.0 - k.RFTRA) * p.PERDL
+        r.DSLV1 = mask * s.WLV * (1.0 - k.RFTRA) * p.PERDL
 
         # death due to self shading cause by high LAI
         DVS = self.kiosk["DVS"]
         LAICR = 3.2 / p.KDIFTB(DVS)
-        r.DSLV2 = s.WLV * limit(0.0, 0.03, 0.03 * (s.LAI - LAICR) / LAICR)
+        r.DSLV2 = mask * s.WLV * limit(0.0, 0.03, 0.03 * (s.LAI - LAICR) / LAICR)
 
         # Death of leaves due to frost damage as determined by
         # Reduction Factor Frost "RF_FROST"
         if "RF_FROST" in self.kiosk:
-            r.DSLV3 = s.WLV * k.RF_FROST
+            r.DSLV3 = mask * s.WLV * k.RF_FROST
         else:
             r.DSLV3 = torch.tensor(0.0, dtype=DTYPE)
 
@@ -265,10 +270,10 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # physiologic ageing of leaves per time step
         FYSAGE = (drv.TEMP - p.TBASE) / (35.0 - p.TBASE)
-        r.FYSAGE = torch.max(torch.tensor(0.0, dtype=DTYPE), FYSAGE)
+        r.FYSAGE = mask * torch.max(torch.tensor(0.0, dtype=DTYPE), FYSAGE)
 
         # specific leaf area of leaves per time step
-        r.SLAT = torch.tensor(p.SLATB(DVS), dtype=DTYPE)
+        r.SLAT = mask * torch.tensor(p.SLATB(DVS), dtype=DTYPE)
 
         # leaf area not to exceed exponential growth curve
         if s.LAIEXP < 6.0:
@@ -285,6 +290,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     @prepare_states
     def integrate(self, day, delt=1.0):
         """Integrate the leaf dynamics state variables."""
+        #TODO check if DVS < 0 and skip integration needed
         rates = self.rates
         states = self.states
 
