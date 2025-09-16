@@ -271,6 +271,7 @@ class TestDiffLeafDynamicsTDWI:
 
         assert_almost_equal(numerical_grad, grads.item(), decimal=3)
 
+
 class TestDiffLeafDynamicsSPAN:
     def test_gradients_span_lai_leaf_dynamics(self):
         # prepare model input
