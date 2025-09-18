@@ -24,6 +24,7 @@ classifiers = [
 ]
 dependencies = [
     "torch",
+    "pcse@git+https://github.com/ajwdewit/pcse.git@master",
 ]
 description = "Differentiable WOFOST"
 keywords = ["pytorch"," differentiable"," crop"," optimization"]
@@ -66,7 +67,7 @@ command_line = "-m pytest"
 
 
 [tool.ruff]
-line-length = 88
+line-length = 100
 output-format = "concise"
 extend-exclude = ["docs", "build"]
 
@@ -102,6 +103,10 @@ ignore = [
     "D203", # 1 blank line required before class docstring
     "D213", # Multi-line docstring summary should start at the second line
     "D413", # Missing blank line after last section
+    "N806", # Variable name should be lowercase
+    "N803", # Argument name should be lowercase
+    "N802", # Function name should be lowercase
+    "N801", # Class name should use CapWords convention
 ]
 pydocstyle.convention = "google"
 

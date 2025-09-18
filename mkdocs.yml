@@ -8,7 +8,6 @@ nav:
 
 theme:
   name: material
-  custom_dir: docs/assets
   features:
     - navigation.instant
     - navigation.tabs
