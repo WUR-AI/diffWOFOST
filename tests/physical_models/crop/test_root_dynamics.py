@@ -184,7 +184,7 @@ class TestRootDynamics:
         # get expected results from YAML test data
         expected_results, expected_precision = get_test_data(test_data_path)
 
-        with patch("pcse.crop.root_dynamics.WOFOST_Root_Dynamics", WOFOST_Root_Dynamics):
+        with patch("pcse.crop.wofost72.Root_Dynamics", WOFOST_Root_Dynamics):
             model = Wofost72_PP(
                 crop_model_params_provider, weather_data_provider, agro_management_inputs
             )
