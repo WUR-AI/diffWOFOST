@@ -334,4 +334,12 @@ class TestDiffLeafDynamicsSPAN:
         span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float64))
         numerical_grad = calculate_numerical_grad("SPAN", span, "TWLV")  # this is Δloss/Δspan
 
+        model = get_test_diff_leaf_model()
+        output = model({"SPAN": span})
+        twlv = output[0, :, 1]
+        loss = twlv.sum()
+        # this is ∂loss/∂tdwi, for comparison with numerical gradient
+        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
+
         assert numerical_grad == 0.0
+        assert_almost_equal(numerical_grad, grads.item(), decimal=3)
