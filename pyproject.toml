@@ -15,7 +15,6 @@ classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
@@ -24,7 +23,7 @@ classifiers = [
 ]
 dependencies = [
     "torch",
-    "pcse@git+https://github.com/ajwdewit/pcse.git@master",
+    "pcse",
 ]
 description = "Differentiable WOFOST"
 keywords = ["pytorch"," differentiable"," crop"," optimization"]
@@ -32,7 +31,7 @@ license = {file = "LICENSE"}
 name = "diffwofost"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"
-version = "0.1.0"
+version = "0.1.1"
 
 [project.optional-dependencies]
 dev = [
