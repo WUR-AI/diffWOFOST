@@ -3,54 +3,22 @@ from unittest.mock import patch
 import pytest
 import torch
 import torch.testing
-import yaml
 from numpy.testing import assert_almost_equal
-from pcse.base.parameter_providers import ParameterProvider
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
-from tests.physical_models.pcse_test_code import EngineTestHelper
-from tests.physical_models.pcse_test_code import WeatherDataProviderTestHelper
+from tests.physical_models.utils import EngineTestHelper
+from tests.physical_models.utils import calculate_numerical_grad
+from tests.physical_models.utils import get_test_data
+from tests.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
-
-
-def prepare_engine_input(file_path):
-    inputs = yaml.safe_load(open(file_path))
-    agro_management_inputs = inputs["AgroManagement"]
-    cropd = inputs["ModelParameters"]
-
-    weather_data_provider = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
-    crop_model_params_provider = ParameterProvider(cropdata=cropd)
-    external_states = inputs["ExternalStates"]
-
-    # convert parameters to tensors
-    crop_model_params_provider.clear_override()
-    for name in ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]:
-        value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
-        crop_model_params_provider.set_override(name, value, check=False)
-
-    # convert external states to tensors
-    tensor_external_states = [
-        {k: v if k == "DAY" else torch.tensor(v, dtype=torch.float32) for k, v in item.items()}
-        for item in external_states
-    ]
-    return (
-        crop_model_params_provider,
-        weather_data_provider,
-        agro_management_inputs,
-        tensor_external_states,
-    )
-
-
-def get_test_data(file_path):
-    inputs = yaml.safe_load(open(file_path))
-    return inputs["ModelResults"], inputs["Precision"]
 
 
 def get_test_diff_leaf_model():
     test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+    crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data_path)
+        prepare_engine_input(test_data_path, crop_model_params)
     )
     config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
     return DiffLeafDynamics(
@@ -98,40 +66,19 @@ class DiffLeafDynamics(torch.nn.Module):
         ).unsqueeze(0)  # shape: [1, time_steps, 2]
 
 
-def calculate_numerical_grad(param_name, param_value, output_name):
-    delta = 1e-6
-    p_plus = param_value.item() + delta
-    p_minus = param_value.item() - delta
-
-    model = get_test_diff_leaf_model()
-    output = model({param_name: torch.nn.Parameter(torch.tensor(p_plus, dtype=torch.float64))})
-    if output_name == "LAI":
-        loss_plus = output[0, :, 0].sum()
-    elif output_name == "TWLV":
-        loss_plus = output[0, :, 1].sum()
-
-    model = get_test_diff_leaf_model()
-    output = model({param_name: torch.nn.Parameter(torch.tensor(p_minus, dtype=torch.float64))})
-    if output_name == "LAI":
-        loss_minus = output[0, :, 0].sum()
-    elif output_name == "TWLV":
-        loss_minus = output[0, :, 1].sum()
-
-    return (loss_plus.item() - loss_minus.item()) / (2 * delta)
-
-
 class TestLeafDynamics:
     def test_leaf_dynamics_with_testengine(self):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
 
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path)
+        ) = prepare_engine_input(test_data_path, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         engine = EngineTestHelper(
@@ -159,8 +106,9 @@ class TestLeafDynamics:
     def test_leaf_dynamics_with_engine(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path)
+            prepare_engine_input(test_data_path, crop_model_params)
         )
 
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
@@ -177,8 +125,9 @@ class TestLeafDynamics:
     def test_wofost_pp_with_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path)
+            prepare_engine_input(test_data_path, crop_model_params)
         )
 
         # get expected results from YAML test data
@@ -225,11 +174,14 @@ class TestDiffLeafDynamicsTDWI:
     def test_gradients_tdwi_lai_leaf_dynamics_numerical(self):
         # first check if the numerical gradient isnot zero i.e. the parameter has an effect
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        numerical_grad = calculate_numerical_grad("TDWI", tdwi, "LAI")  # this is Δloss/Δtdwi
+        output_index = 0  # LAI is at index 0
+        numerical_grad = calculate_numerical_grad(
+            get_test_diff_leaf_model, "TDWI", tdwi, output_index
+        )  # this is Δloss/Δtdwi
 
         model = get_test_diff_leaf_model()
         output = model({"TDWI": tdwi})
-        lai = output[0, :, 0]
+        lai = output[0, :, output_index]
         loss = lai.sum()
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
@@ -260,11 +212,14 @@ class TestDiffLeafDynamicsTDWI:
     def test_gradients_tdwi_twlv_leaf_dynamics_numerical(self):
         # first check if the numerical gradient isnot zero i.e. the parameter has an effect
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        numerical_grad = calculate_numerical_grad("TDWI", tdwi, "TWLV")  # this is Δloss/Δtdwi
+        output_index = 1  # TWLV is at index 1
+        numerical_grad = calculate_numerical_grad(
+            get_test_diff_leaf_model, "TDWI", tdwi, output_index
+        )  # this is Δloss/Δtdwi
 
         model = get_test_diff_leaf_model()
         output = model({"TDWI": tdwi})
-        twlv = output[0, :, 1]
+        twlv = output[0, :, output_index]
         loss = twlv.sum()
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
@@ -297,11 +252,14 @@ class TestDiffLeafDynamicsSPAN:
     def test_gradients_span_lai_leaf_dynamics_numerical(self):
         # first check if the numerical gradient isnot zero i.e. the parameter has an effect
         span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float64))
-        numerical_grad = calculate_numerical_grad("SPAN", span, "LAI")  # this is Δloss/Δspan
+        output_index = 0  # LAI is at index 0
+        numerical_grad = calculate_numerical_grad(
+            get_test_diff_leaf_model, "SPAN", span, output_index
+        )  # this is Δloss/Δspan
 
         model = get_test_diff_leaf_model()
         output = model({"SPAN": span})
-        lai = output[0, :, 0]
+        lai = output[0, :, output_index]
         loss = lai.sum()
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
@@ -332,11 +290,14 @@ class TestDiffLeafDynamicsSPAN:
     def test_gradients_span_twlv_leaf_dynamics_numerical(self):
         # first check if the numerical gradient isnot zero i.e. the parameter has an effect
         span = torch.nn.Parameter(torch.tensor(30, dtype=torch.float64))
-        numerical_grad = calculate_numerical_grad("SPAN", span, "TWLV")  # this is Δloss/Δspan
+        output_index = 1  # TWLV is at index 1
+        numerical_grad = calculate_numerical_grad(
+            get_test_diff_leaf_model, "SPAN", span, output_index
+        )  # this is Δloss/Δspan
 
         model = get_test_diff_leaf_model()
         output = model({"SPAN": span})
-        twlv = output[0, :, 1]
+        twlv = output[0, :, output_index]
         loss = twlv.sum()
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, span, retain_graph=True)[0]

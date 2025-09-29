@@ -2,54 +2,22 @@ import copy
 from unittest.mock import patch
 import pytest
 import torch
-import yaml
 from numpy.testing import assert_almost_equal
-from pcse.base.parameter_providers import ParameterProvider
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics
-from tests.physical_models.pcse_test_code import EngineTestHelper
-from tests.physical_models.pcse_test_code import WeatherDataProviderTestHelper
+from tests.physical_models.utils import EngineTestHelper
+from tests.physical_models.utils import calculate_numerical_grad
+from tests.physical_models.utils import get_test_data
+from tests.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
-
-
-def prepare_engine_input(file_path):
-    inputs = yaml.safe_load(open(file_path))
-    agro_management_inputs = inputs["AgroManagement"]
-    cropd = inputs["ModelParameters"]
-
-    weather_data_provider = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
-    crop_model_params_provider = ParameterProvider(cropdata=cropd)
-    external_states = inputs["ExternalStates"]
-
-    # convert parameters to tensors
-    crop_model_params_provider.clear_override()
-    for name in ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]:
-        value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
-        crop_model_params_provider.set_override(name, value, check=False)
-
-    # convert external states to tensors
-    tensor_external_states = [
-        {k: v if k == "DAY" else torch.tensor(v, dtype=torch.float32) for k, v in item.items()}
-        for item in external_states
-    ]
-    return (
-        crop_model_params_provider,
-        weather_data_provider,
-        agro_management_inputs,
-        tensor_external_states,
-    )
-
-
-def get_test_data(file_path):
-    inputs = yaml.safe_load(open(file_path))
-    return inputs["ModelResults"], inputs["Precision"]
 
 
 def get_test_diff_root_model():
     test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+    crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data_path)
+        prepare_engine_input(test_data_path, crop_model_params)
     )
     config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
     return DiffRootDynamics(
@@ -97,40 +65,19 @@ class DiffRootDynamics(torch.nn.Module):
         )  # shape: [1, time_steps, 2]
 
 
-def calculate_numerical_grad(param_name, param_value, output_name):
-    delta = 1e-6
-    p_plus = param_value.item() + delta
-    p_minus = param_value.item() - delta
-
-    model = get_test_diff_root_model()
-    output = model({param_name: torch.nn.Parameter(torch.tensor(p_plus, dtype=torch.float64))})
-    if output_name == "RD":
-        loss_plus = output[0, :, 0].sum()
-    elif output_name == "TWRT":
-        loss_plus = output[0, :, 1].sum()
-
-    model = get_test_diff_root_model()
-    output = model({param_name: torch.nn.Parameter(torch.tensor(p_minus, dtype=torch.float64))})
-    if output_name == "RD":
-        loss_minus = output[0, :, 0].sum()
-    elif output_name == "TWRT":
-        loss_minus = output[0, :, 1].sum()
-
-    return (loss_plus.item() - loss_minus.item()) / (2 * delta)
-
-
 class TestRootDynamics:
     def test_root_dynamics_with_testengine(self):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
 
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path)
+        ) = prepare_engine_input(test_data_path, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         engine = EngineTestHelper(
@@ -158,8 +105,9 @@ class TestRootDynamics:
     def test_root_dynamics_with_engine(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path)
+            prepare_engine_input(test_data_path, crop_model_params)
         )
 
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
@@ -176,8 +124,9 @@ class TestRootDynamics:
     def test_wofost_pp_with_root_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path)
+            prepare_engine_input(test_data_path, crop_model_params)
         )
 
         # get expected results from YAML test data
@@ -225,11 +174,14 @@ class TestDiffRootDynamicsTDWI:
 
     def test_gradients_tdwi_rd_root_dynamics_numerical(self):
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        numerical_grad = calculate_numerical_grad("TDWI", tdwi, "RD")
+        output_index = 0  # Index 0 is "RD"
+        numerical_grad = calculate_numerical_grad(
+            get_test_diff_root_model, "TDWI", tdwi, output_index
+        )
 
         model = get_test_diff_root_model()
         output = model({"TDWI": tdwi})
-        rd = output[0, :, 0]  # Index 0 is "RD" 
+        rd = output[0, :, output_index]  # Index 0 is "RD"
         loss = rd.sum()
 
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
@@ -243,7 +195,7 @@ class TestDiffRootDynamicsTDWI:
         model = get_test_diff_root_model()
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
         output = model({"TDWI": tdwi})
-        twlv = output[0, :, 1]  # Index 1 is "TWRT" 
+        twlv = output[0, :, 1]  # Index 1 is "TWRT"
         loss = twlv.sum()
 
         # this is ∂loss/∂tdwi
@@ -263,11 +215,14 @@ class TestDiffRootDynamicsTDWI:
 
     def test_gradients_tdwi_twrt_root_dynamics_numerical(self):
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        numerical_grad = calculate_numerical_grad("TDWI", tdwi, "TWRT")
+        output_index = 1  # Index 1 is "TWRT"
+        numerical_grad = calculate_numerical_grad(
+            get_test_diff_root_model, "TDWI", tdwi, output_index
+        )
 
         model = get_test_diff_root_model()
         output = model({"TDWI": tdwi})
-        twrt = output[0, :, 1]
+        twrt = output[0, :, output_index]
         loss = twrt.sum()
 
         # this is ∂loss/∂tdwi, for comparison with numerical gradient

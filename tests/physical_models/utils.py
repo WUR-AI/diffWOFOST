@@ -17,9 +17,12 @@ Note that the code here is *not* python2 compatible.
 
 import logging
 import os
+import torch
+import yaml
 from pcse import signals
 from pcse.agromanager import AgroManager
 from pcse.base import ConfigurationLoader
+from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.simulationobject import SimulationObject
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
@@ -241,3 +244,52 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
                 weather.pop("SNOWDEPTH")
             wdc = WeatherDataContainer(**weather)
             self._store_WeatherDataContainer(wdc, wdc.DAY)
+
+
+def prepare_engine_input(file_path, crop_model_params):
+    inputs = yaml.safe_load(open(file_path))
+    agro_management_inputs = inputs["AgroManagement"]
+    cropd = inputs["ModelParameters"]
+
+    weather_data_provider = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
+    crop_model_params_provider = ParameterProvider(cropdata=cropd)
+    external_states = inputs["ExternalStates"]
+
+    # convert parameters to tensors
+    crop_model_params_provider.clear_override()
+    for name in crop_model_params:
+        value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
+        crop_model_params_provider.set_override(name, value, check=False)
+
+    # convert external states to tensors
+    tensor_external_states = [
+        {k: v if k == "DAY" else torch.tensor(v, dtype=torch.float32) for k, v in item.items()}
+        for item in external_states
+    ]
+    return (
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        tensor_external_states,
+    )
+
+
+def get_test_data(file_path):
+    inputs = yaml.safe_load(open(file_path))
+    return inputs["ModelResults"], inputs["Precision"]
+
+
+def calculate_numerical_grad(get_model_fn, param_name, param_value, output_index):
+    delta = 1e-6
+    p_plus = param_value.item() + delta
+    p_minus = param_value.item() - delta
+
+    model = get_model_fn()
+    output = model({param_name: torch.nn.Parameter(torch.tensor(p_plus, dtype=torch.float64))})
+    loss_plus = output[0, :, output_index].sum()
+
+    model = get_model_fn()
+    output = model({param_name: torch.nn.Parameter(torch.tensor(p_minus, dtype=torch.float64))})
+    loss_minus = output[0, :, output_index].sum()
+
+    return (loss_plus.item() - loss_minus.item()) / (2 * delta)
