@@ -229,7 +229,7 @@ class TestDiffRootDynamicsTDWI:
 
         model = get_test_diff_root_model()
         output = model({"TDWI": tdwi})
-        rd = output[0, :, 0]
+        rd = output[0, :, 0]  # Index 0 is "RD" 
         loss = rd.sum()
 
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
