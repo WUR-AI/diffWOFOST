@@ -2,7 +2,6 @@ import copy
 from unittest.mock import patch
 import pytest
 import torch
-import torch.testing
 import yaml
 from numpy.testing import assert_almost_equal
 from pcse.base.parameter_providers import ParameterProvider
