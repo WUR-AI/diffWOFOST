@@ -195,8 +195,8 @@ class TestDiffRootDynamicsTDWI:
         model = get_test_diff_root_model()
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
         output = model({"TDWI": tdwi})
-        twlv = output[0, :, 1]  # Index 1 is "TWRT"
-        loss = twlv.sum()
+        twrt = output[0, :, 1]  # Index 1 is "TWRT"
+        loss = twrt.sum()
 
         # this is ∂loss/∂tdwi
         # this is called forward gradient here because it is calculated without backpropagation.
