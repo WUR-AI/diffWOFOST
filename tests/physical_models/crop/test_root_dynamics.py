@@ -6,10 +6,10 @@ from numpy.testing import assert_almost_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics
-from tests.physical_models.utils import EngineTestHelper
-from tests.physical_models.utils import calculate_numerical_grad
-from tests.physical_models.utils import get_test_data
-from tests.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.utils import EngineTestHelper
+from diffwofost.physical_models.utils import calculate_numerical_grad
+from diffwofost.physical_models.utils import get_test_data
+from diffwofost.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
 
 
