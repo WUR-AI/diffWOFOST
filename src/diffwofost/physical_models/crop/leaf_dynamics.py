@@ -258,7 +258,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # in DALV.
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
-        sharpness = torch.tensor(1000., dtype=DTYPE)  # FIXME
+        sharpness = torch.tensor(1000.0, dtype=DTYPE)  # FIXME
         weight = torch.sigmoid((s.LVAGE - p.SPAN) * sharpness)
         r.DALV = torch.sum(weight * s.LV)
 
@@ -303,21 +303,21 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         weight_cumsum = tLV.cumsum(0) - tDRLV
         is_dead = weight_cumsum < 0
         # Adjust value of oldest leaf class (first non-zero weights)
-        idx_alive, = (~is_dead).nonzero(as_tuple=True)
+        (idx_alive,) = (~is_dead).nonzero(as_tuple=True)
         idx_oldest = idx_alive[0]
         tLV[idx_oldest] = weight_cumsum[idx_oldest]
         # Zero out all dead leaf classes
-        tLV = tLV.where(~is_dead, 0.)
+        tLV = tLV.where(~is_dead, 0.0)
         # Integration of physiological age
         tLVAGE = tLVAGE + rates.FYSAGE
-        tLVAGE = tLVAGE.where(~is_dead, 0.)
-        tSLA = tSLA.where(~is_dead, 0.)
+        tLVAGE = tLVAGE.where(~is_dead, 0.0)
+        tSLA = tSLA.where(~is_dead, 0.0)
 
         # --------- leave growth ---------
         idx = int((day - self.START_DATE).days / delt)
         tLV[idx] = rates.GRLV
         tSLA[idx] = rates.SLAT
-        tLVAGE[idx] = 0.
+        tLVAGE[idx] = 0.0
 
         # calculation of new leaf area
         states.LASUM = torch.sum(tLV * tSLA)
