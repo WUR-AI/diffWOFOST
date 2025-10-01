@@ -1,5 +1,3 @@
-# Copyright (c) 2004-2018 Wageningen Environmental Sciences, Wageningen-UR
-# Allard de Wit (allard.dewit@wur.nl), January 2018
 """This file contains code that is required to run the YAML unit tests.
 
 It contains:
@@ -38,24 +36,28 @@ this_dir = os.path.dirname(__file__)
 
 
 def nothing(*args, **kwargs):
+    """A function that does nothing."""
     pass
 
 
 class SimulationObjectTestHelper(SimulationObject):
-    """This wraps the SimulationObject for testing to ensure that the computations are not
-    carried out before crop emergence (e.g. DVS >= 0). The latter does not apply for the
-    phenology simobject itself which simulates emergence. The phenology simobject is recognized
-    because the variable DVS is not an external variable.
+    """This wraps the SimulationObject for testing.
 
+    This ensuree that the computations are not carried out before crop emergence
+    (e.g. DVS >= 0). The latter does not apply for the phenology simobject
+    itself which simulates emergence. The phenology simobject is recognized
+    because the variable DVS is not an external variable.
     """
 
     test_class = None
     subsimobject = Instance(SimulationObject)
 
     def initialize(self, day, kiosk, parvalues):
+        """Initialize the subsimobject."""
         self.subsimobject = self.test_class(day, kiosk, parvalues)
 
     def calc_rates(self, day, drv):
+        """Calculate the rates of the subsimobject."""
         # some simobject do not provide a `calc_rates()` function but are directly callable
         # here we check for those cases.
         func = self.subsimobject if callable(self.subsimobject) else self.subsimobject.calc_rates
@@ -68,6 +70,7 @@ class SimulationObjectTestHelper(SimulationObject):
                 self.subsimobject.zerofy()
 
     def integrate(self, day, delt=1.0):
+        """Integrate the states of the subsimobject."""
         # If the simobject is callable, we do not need integration so we use the
         # `nothing()` function.
         func = nothing if callable(self.subsimobject) else self.subsimobject.integrate
@@ -94,10 +97,8 @@ class VariableKioskTestHelper(VariableKiosk):
     def __call__(self, day):
         """Sets the external state/rate variables for the current day.
 
-        Returns True if the list of external state/rate variables is exhausted, otherwise False.
-
-        :param day:
-        :return: True|False
+        Returns True if the list of external state/rate variables is exhausted,
+        otherwise False.
         """
         if self.external_state_list is not None:
             current_externals = self.external_state_list.pop(0)
@@ -112,24 +113,28 @@ class VariableKioskTestHelper(VariableKiosk):
         return False
 
     def is_external_state(self, item):
-        "Returns True if the item is an external state"
+        """Returns True if the item is an external state."""
         return item in self.current_externals
 
     def __getattr__(self, item):
-        """Allow use of attribute notation (eg "kiosk.LAI") on published rates or states."""
+        """Allow use of attribute notation.
+
+        eg "kiosk.LAI" on published rates or states.
+        """
         if item in self.current_externals:
             return self.current_externals[item]
         else:
             return dict.__getitem__(self, item)
 
     def __getitem__(self, item):
-        """Override __getitem__ to first look in external states"""
+        """Override __getitem__ to first look in external states."""
         if item in self.current_externals:
             return self.current_externals[item]
         else:
             return dict.__getitem__(self, item)
 
     def __contains__(self, key):
+        """Override __contains__ to first look in external states."""
         return key in self.current_externals or dict.__contains__(self, key)
 
 
@@ -149,7 +154,7 @@ class ConfigurationLoaderTestHelper(ConfigurationLoader):
 
 
 class EngineTestHelper(Engine):
-    """An engine which is purely for running the YAML unit tests"""
+    """An engine which is purely for running the YAML unit tests."""
 
     def __init__(
         self,
@@ -235,7 +240,7 @@ class EngineTestHelper(Engine):
 
 
 class WeatherDataProviderTestHelper(WeatherDataProvider):
-    """A WeatherDataProvider which stores the weatherdata contained within the YAML tests"""
+    """It stores the weatherdata contained within the YAML tests."""
 
     def __init__(self, yaml_weather):
         super().__init__()
@@ -247,6 +252,7 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
 
 
 def prepare_engine_input(file_path, crop_model_params):
+    """Prepare the inputs for the engine from the YAML file."""
     inputs = yaml.safe_load(open(file_path))
     agro_management_inputs = inputs["AgroManagement"]
     cropd = inputs["ModelParameters"]
@@ -275,11 +281,13 @@ def prepare_engine_input(file_path, crop_model_params):
 
 
 def get_test_data(file_path):
+    """Get the test data from the YAML file."""
     inputs = yaml.safe_load(open(file_path))
     return inputs["ModelResults"], inputs["Precision"]
 
 
 def calculate_numerical_grad(get_model_fn, param_name, param_value, output_index):
+    """Calculate the numerical gradient of output with respect to a parameter."""
     delta = 1e-6
     p_plus = param_value.item() + delta
     p_minus = param_value.item() - delta
