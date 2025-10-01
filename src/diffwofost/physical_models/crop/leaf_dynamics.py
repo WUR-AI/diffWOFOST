@@ -9,7 +9,6 @@ from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from pcse.util import AfgenTrait
-from pcse.util import limit
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
@@ -113,6 +112,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     LAI, TWLV
     """
 
+    START_DATE = None
+    MAX_DAYS = 300
+
     class Parameters(ParamTemplate):
         RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         SPAN = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -156,6 +158,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         :param parvalues: `ParameterProvider` object providing parameters as
                 key/value pairs
         """
+        self.START_DATE = day
         self.kiosk = kiosk
         # TODO check if parvalues are already torch.nn.Parameters
         self.params = self.Parameters(parvalues)
@@ -177,10 +180,12 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         DWLV = torch.tensor(0.0, dtype=DTYPE)
         TWLV = WLV + DWLV
 
-        # First leaf class (SLA, age and weight)
-        SLA = torch.tensor([params.SLATB(DVS)], dtype=DTYPE)
-        LVAGE = torch.tensor([0.0], dtype=DTYPE)
-        LV = torch.stack([WLV])
+        # Initialize leaf classes (SLA, age and weight)
+        SLA = torch.zeros(self.MAX_DAYS, dtype=DTYPE)
+        LVAGE = torch.zeros(self.MAX_DAYS, dtype=DTYPE)
+        LV = torch.zeros(self.MAX_DAYS, dtype=DTYPE)
+        SLA[0] = params.SLATB(DVS)
+        LV[0] = WLV
 
         # Initial values for leaf area
         LAIEM = LV[0] * SLA[0]
@@ -236,14 +241,14 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # death due to self shading cause by high LAI
         DVS = self.kiosk["DVS"]
         LAICR = 3.2 / p.KDIFTB(DVS)
-        r.DSLV2 = mask * s.WLV * limit(0.0, 0.03, 0.03 * (s.LAI - LAICR) / LAICR)
+        r.DSLV2 = mask * s.WLV * torch.clamp(0.03 * (s.LAI - LAICR) / LAICR, 0.0, 0.03)
 
         # Death of leaves due to frost damage as determined by
         # Reduction Factor Frost "RF_FROST"
         if "RF_FROST" in self.kiosk:
             r.DSLV3 = mask * s.WLV * k.RF_FROST
         else:
-            r.DSLV3 = torch.tensor(0.0, dtype=DTYPE)
+            r.DSLV3 = torch.zeros_like(s.WLV, dtype=DTYPE)
 
         # leaf death equals maximum of water stress, shading and frost
         r.DSLV = torch.max(torch.stack([r.DSLV1, r.DSLV2, r.DSLV3]))
@@ -253,18 +258,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # in DALV.
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
-        DALV = torch.tensor(0.0, dtype=DTYPE)
-        if p.SPAN.requires_grad:  # replacing hard threshold `if lvage > p.SPAN``
-            sharpness = 1000.0  # FIXEME
-            for lv, lvage in zip(s.LV, s.LVAGE, strict=False):
-                weight = torch.sigmoid((lvage - p.SPAN) * sharpness)
-                DALV = DALV + weight * lv
-        else:
-            for lv, lvage in zip(s.LV, s.LVAGE, strict=False):
-                if lvage > p.SPAN:
-                    DALV = DALV + lv
-
-        r.DALV = DALV
+        sharpness = torch.tensor(1000., dtype=DTYPE)  # FIXME
+        weight = torch.sigmoid((s.LVAGE - p.SPAN) * sharpness)
+        r.DALV = torch.sum(weight * s.LV)
 
         # Total death rate leaves
         r.DRLV = torch.max(r.DSLV, r.DALV)
@@ -301,34 +297,30 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         tLVAGE = states.LVAGE.clone()
         tDRLV = rates.DRLV
 
-        # leaf death is imposed on leaves by removing leave classes from the
-        # right side.
-        for LVweigth in reversed(states.LV):
-            if tDRLV > 0.0:
-                if tDRLV >= LVweigth:  # remove complete leaf class
-                    tDRLV = tDRLV - LVweigth
-                    tLV = tLV[:-1]  # Remove last element
-                    tLVAGE = tLVAGE[:-1]
-                    tSLA = tSLA[:-1]
-                else:  # Decrease value of oldest (rightmost) leave class
-                    tLV[-1] = tLV[-1] - tDRLV
-                    tDRLV = torch.tensor(0.0, dtype=DTYPE)
-            else:
-                break
-
+        # Leaf death is imposed on leaves from the oldest ones.
+        # Calculate the cumulative sum of weights after leaf death, and
+        # find out which leaf classes are dead (negative weights)
+        weight_cumsum = tLV.cumsum(0) - tDRLV
+        is_dead = weight_cumsum < 0
+        # Adjust value of oldest leaf class (first non-zero weights)
+        idx_alive, = (~is_dead).nonzero(as_tuple=True)
+        idx_oldest = idx_alive[0]
+        tLV[idx_oldest] = weight_cumsum[idx_oldest]
+        # Zero out all dead leaf classes
+        tLV = tLV.where(~is_dead, 0.)
         # Integration of physiological age
-        tLVAGE = torch.tensor([age + rates.FYSAGE for age in tLVAGE], dtype=DTYPE)
+        tLVAGE = tLVAGE + rates.FYSAGE
+        tLVAGE = tLVAGE.where(~is_dead, 0.)
+        tSLA = tSLA.where(~is_dead, 0.)
 
         # --------- leave growth ---------
-        # new leaves in class 1
-        tLV = torch.cat((torch.tensor([rates.GRLV], dtype=DTYPE), tLV))
-        tSLA = torch.cat((torch.tensor([rates.SLAT], dtype=DTYPE), tSLA))
-        tLVAGE = torch.cat((torch.tensor([0.0], dtype=DTYPE), tLVAGE))
+        idx = int((day - self.START_DATE).days / delt)
+        tLV[idx] = rates.GRLV
+        tSLA[idx] = rates.SLAT
+        tLVAGE[idx] = 0.
 
         # calculation of new leaf area
-        states.LASUM = torch.sum(
-            torch.stack([lv * sla for lv, sla in zip(tLV, tSLA, strict=False)])
-        )
+        states.LASUM = torch.sum(tLV * tSLA)
         states.LAI = self._calc_LAI()
         states.LAIMAX = torch.max(states.LAI, states.LAIMAX)
 
