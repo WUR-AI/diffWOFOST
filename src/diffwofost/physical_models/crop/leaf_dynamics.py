@@ -402,6 +402,11 @@ def _exist_required_external_variables(kiosk):
 
 def _broadcast_to(x, shape):
     """Create a view of tensor X with the given shape."""
-    # The last dimension has size equal to the number of integration steps
+    if x.dim() == 0:
+        # For 0-d tensors, we simply broadcast to the given shape
+        return torch.broadcast_to(x, shape)
+    # The given shape should match x in all but the last axis, which represents
+    # the dimension along which the time integration is carried out
     *dims, n_steps = shape
-    return x.view(*dims, -1).expand((*dims, n_steps))
+    # We first append an axis to x, then expand the last axis
+    return x.unsqueeze(-1).expand((*dims, n_steps))
