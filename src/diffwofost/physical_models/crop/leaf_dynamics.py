@@ -259,7 +259,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # in DALV.
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
-        tSPAN = _broadcast_to(p.SPAN, s.LVAGE.shape) # Broadcast to same shape
+        tSPAN = _broadcast_to(p.SPAN, s.LVAGE.shape)  # Broadcast to same shape
         sharpness = torch.tensor(1000.0, dtype=DTYPE)  # FIXME
         weight = torch.sigmoid((s.LVAGE - tSPAN) * sharpness)
         r.DALV = torch.sum(weight * s.LV, dim=-1)
@@ -398,6 +398,7 @@ def _exist_required_external_variables(kiosk):
                 f" Ensure that all required variables {required_external_vars_at_init}"
                 " are provided."
             )
+
 
 def _broadcast_to(x, shape):
     """Create a view of tensor X with the given shape."""
