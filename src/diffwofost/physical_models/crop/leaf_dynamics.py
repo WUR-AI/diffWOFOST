@@ -181,14 +181,15 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         TWLV = WLV + DWLV
 
         # Initialize leaf classes (SLA, age and weight)
-        SLA = torch.zeros(self.MAX_DAYS, dtype=DTYPE)
-        LVAGE = torch.zeros(self.MAX_DAYS, dtype=DTYPE)
-        LV = torch.zeros(self.MAX_DAYS, dtype=DTYPE)
-        SLA[0] = params.SLATB(DVS)
-        LV[0] = WLV
+        dims = WLV.shape
+        SLA = torch.zeros((*dims, self.MAX_DAYS), dtype=DTYPE)
+        LVAGE = torch.zeros((*dims, self.MAX_DAYS), dtype=DTYPE)
+        LV = torch.zeros((*dims, self.MAX_DAYS), dtype=DTYPE)
+        SLA[..., 0] = params.SLATB(DVS)
+        LV[..., 0] = WLV
 
         # Initial values for leaf area
-        LAIEM = LV[0] * SLA[0]
+        LAIEM = LV[..., 0] * SLA[..., 0]
         LASUM = LAIEM
         LAIEXP = LAIEM
         LAIMAX = LAIEM
@@ -251,38 +252,38 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             r.DSLV3 = torch.zeros_like(s.WLV, dtype=DTYPE)
 
         # leaf death equals maximum of water stress, shading and frost
-        r.DSLV = torch.max(torch.stack([r.DSLV1, r.DSLV2, r.DSLV3]))
+        r.DSLV = torch.maximum(torch.maximum(r.DSLV1, r.DSLV2), r.DSLV3)
 
         # Determine how much leaf biomass classes have to die in states.LV,
         # given the a life span > SPAN, these classes will be accumulated
         # in DALV.
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
+        tSPAN = _broadcast_to(p.SPAN, s.LVAGE.shape) # Broadcast to same shape
         sharpness = torch.tensor(1000.0, dtype=DTYPE)  # FIXME
-        weight = torch.sigmoid((s.LVAGE - p.SPAN) * sharpness)
-        r.DALV = torch.sum(weight * s.LV)
+        weight = torch.sigmoid((s.LVAGE - tSPAN) * sharpness)
+        r.DALV = torch.sum(weight * s.LV, dim=-1)
 
         # Total death rate leaves
-        r.DRLV = torch.max(r.DSLV, r.DALV)
+        r.DRLV = torch.maximum(r.DSLV, r.DALV)
 
         # physiologic ageing of leaves per time step
         FYSAGE = (drv.TEMP - p.TBASE) / (35.0 - p.TBASE)
-        r.FYSAGE = mask * torch.max(torch.tensor(0.0, dtype=DTYPE), FYSAGE)
+        r.FYSAGE = mask * torch.clamp(FYSAGE, 0.0)
 
         # specific leaf area of leaves per time step
         r.SLAT = mask * torch.tensor(p.SLATB(DVS), dtype=DTYPE)
 
         # leaf area not to exceed exponential growth curve
-        if s.LAIEXP < 6.0:
-            DTEFF = torch.max(torch.tensor(0.0, dtype=DTYPE), drv.TEMP - p.TBASE)
-            r.GLAIEX = s.LAIEXP * p.RGRLAI * DTEFF
-            # source-limited increase in leaf area
-            r.GLASOL = r.GRLV * r.SLAT
-            # sink-limited increase in leaf area
-            GLA = torch.min(r.GLAIEX, r.GLASOL)
-            # adjustment of specific leaf area of youngest leaf class
-            if r.GRLV > 0.0:
-                r.SLAT = GLA / r.GRLV
+        is_lai_exp = s.LAIEXP < 6.0
+        DTEFF = torch.clamp(drv.TEMP - p.TBASE, 0.0)
+        r.GLAIEX = torch.where(is_lai_exp, s.LAIEXP * p.RGRLAI * DTEFF, r.GLAIEX)
+        # source-limited increase in leaf area
+        r.GLASOL = torch.where(is_lai_exp, r.GRLV * r.SLAT, r.GLASOL)
+        # sink-limited increase in leaf area
+        GLA = torch.minimum(r.GLAIEX, r.GLASOL)
+        # adjustment of specific leaf area of youngest leaf class
+        r.SLAT = torch.where(is_lai_exp & (r.GRLV > 0.0), GLA / r.GRLV, r.SLAT)
 
     @prepare_states
     def integrate(self, day, delt=1.0):
@@ -295,34 +296,34 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         tLV = states.LV.clone()
         tSLA = states.SLA.clone()
         tLVAGE = states.LVAGE.clone()
-        tDRLV = rates.DRLV
+        tDRLV = _broadcast_to(rates.DRLV, tLV.shape)
 
         # Leaf death is imposed on leaves from the oldest ones.
         # Calculate the cumulative sum of weights after leaf death, and
         # find out which leaf classes are dead (negative weights)
-        weight_cumsum = tLV.cumsum(0) - tDRLV
+        weight_cumsum = tLV.cumsum(dim=-1) - tDRLV
         is_dead = weight_cumsum < 0
         # Adjust value of oldest leaf class (first non-zero weights)
-        (idx_alive,) = (~is_dead).nonzero(as_tuple=True)
+        (idx_alive, *_) = (~is_dead).nonzero(as_tuple=True)
         idx_oldest = idx_alive[0]
         tLV[idx_oldest] = weight_cumsum[idx_oldest]
         # Zero out all dead leaf classes
-        tLV = tLV.where(~is_dead, 0.0)
+        tLV = torch.where(~is_dead, tLV, 0.0)
         # Integration of physiological age
         tLVAGE = tLVAGE + rates.FYSAGE
-        tLVAGE = tLVAGE.where(~is_dead, 0.0)
-        tSLA = tSLA.where(~is_dead, 0.0)
+        tLVAGE = torch.where(~is_dead, tLVAGE, 0.0)
+        tSLA = torch.where(~is_dead, tSLA, 0.0)
 
         # --------- leave growth ---------
         idx = int((day - self.START_DATE).days / delt)
-        tLV[idx] = rates.GRLV
-        tSLA[idx] = rates.SLAT
-        tLVAGE[idx] = 0.0
+        tLV[..., idx] = rates.GRLV
+        tSLA[..., idx] = rates.SLAT
+        tLVAGE[..., idx] = 0.0
 
         # calculation of new leaf area
-        states.LASUM = torch.sum(tLV * tSLA)
+        states.LASUM = torch.sum(tLV * tSLA, dim=-1)
         states.LAI = self._calc_LAI()
-        states.LAIMAX = torch.max(states.LAI, states.LAIMAX)
+        states.LAIMAX = torch.maximum(states.LAI, states.LAIMAX)
 
         # exponential growth curve
         states.LAIEXP = states.LAIEXP + rates.GLAIEX
@@ -397,3 +398,9 @@ def _exist_required_external_variables(kiosk):
                 f" Ensure that all required variables {required_external_vars_at_init}"
                 " are provided."
             )
+
+def _broadcast_to(x, shape):
+    """Create a view of tensor X with the given shape."""
+    # The last dimension has size equal to the number of integration steps
+    *dims, n_steps = shape
+    return x.view(*dims, -1).expand((*dims, n_steps))
