@@ -121,8 +121,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         TBASE = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         PERDL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        SLATB = AfgenTrait()  # FIXEME
-        KDIFTB = AfgenTrait()  # FIXEME
+        SLATB = AfgenTrait()  # FIXME
+        KDIFTB = AfgenTrait()  # FIXME
 
     class StateVariables(StatesTemplate):
         LV = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -338,7 +338,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.states.LVAGE = tLVAGE
 
     @prepare_states
-    def _set_variable_LAI(self, nLAI):  # FIXEME
+    def _set_variable_LAI(self, nLAI):  # FIXME
         """Updates the value of LAI to to the new value provided as input.
 
         Related state variables will be updated as well and the increments
