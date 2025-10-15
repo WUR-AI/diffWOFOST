@@ -4,7 +4,9 @@ repo_name: diffWOFOST
 
 nav:
   - Introduction: intro.md
+  - Example notebooks:
   - Contributing guide: CONTRIBUTING.md
+  - API Reference: api_reference.md
 
 theme:
   name: material
@@ -35,6 +37,31 @@ theme:
 plugins:
 - include-markdown
 - search
+- mkdocs-jupyter:
+      include_source: True
+- mkdocstrings:
+    handlers:
+      python:
+        options:
+          docstring_style: numpy
+          docstring_options:
+            ignore_init_summary: true
+          merge_init_into_class: true
+          docstring_section_style: list
+          show_submodules: true
+          show_root_heading: true
+          show_source: true
+          heading_level: 3
+          relative_crossrefs: true
+          parameter_headings: false
+          separate_signature: true
+          show_bases: true
+          show_signature_annotations: true
+          show_symbol_type_heading: true
+          signature_crossrefs: true
+          summary: true
+          backlinks: tree
+          scoped_crossrefs: true
 
 markdown_extensions:
   - pymdownx.highlight:
