@@ -338,55 +338,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.states.SLA = tSLA
         self.states.LVAGE = tLVAGE
 
-    @prepare_states
-    def _set_variable_LAI(self, nLAI):  # FIXME
-        """Updates the value of LAI to to the new value provided as input.
-
-        Related state variables will be updated as well and the increments
-        to all adjusted state variables will be returned as a dict.
-        """
-        states = self.states
-
-        # Store old values of states
-        oWLV = states.WLV
-        oLAI = states.LAI
-        oTWLV = states.TWLV
-        oLASUM = states.LASUM
-
-        # Reduce oLAI for pod and stem area. SAI and PAI will not be adjusted
-        # because this is often only a small component of the total leaf
-        # area. For all current crop files in WOFOST SPA and SSA are zero
-        # anyway
-        SAI = self.kiosk["SAI"]
-        PAI = self.kiosk["PAI"]
-        adj_nLAI = torch.max(nLAI - SAI - PAI, 0.0)
-        adj_oLAI = torch.max(oLAI - SAI - PAI, 0.0)
-
-        # LAI Adjustment factor for leaf biomass LV (rLAI)
-        if adj_oLAI > 0:
-            rLAI = adj_nLAI / adj_oLAI
-            LV = [lv * rLAI for lv in states.LV]
-        # If adj_oLAI == 0 then add the leave biomass directly to the
-        # youngest leave age class (LV[0])
-        else:
-            LV = [nLAI / states.SLA[0]]
-
-        states.LASUM = torch.sum(
-            torch.tensor([lv * sla for lv, sla in zip(LV, states.SLA, strict=False)], dtype=DTYPE)
-        )
-        states.LV = LV
-        states.LAI = self._calc_LAI()
-        states.WLV = torch.sum(states.LV)
-        states.TWLV = states.WLV + states.DWLV
-
-        increments = {
-            "LAI": states.LAI - oLAI,
-            "LAISUM": states.LASUM - oLASUM,
-            "WLV": states.WLV - oWLV,
-            "TWLV": states.TWLV - oTWLV,
-        }
-        return increments
-
 
 def _exist_required_external_variables(kiosk):
     """Check if all required external variables are available in the kiosk."""
