@@ -122,6 +122,196 @@ class TestLeafDynamics:
                 config_path,
             )
 
+    def test_leaf_dynamics_with_one_parameter_vector(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # Setting a vector (with one value) for the TDWI parameter
+        param = "TDWI"
+        repeated = crop_model_params_provider[param].repeat(10)
+        crop_model_params_provider.set_override(param, repeated, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                all(abs(reference[var] - model[var]) < precision)
+                for var, precision in expected_precision.items()
+            )
+
+    def test_leaf_dynamics_with_different_parameter_values(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # Setting a vector with multiple values for the TDWI parameter
+        param = "TDWI"
+        test_value = crop_model_params_provider[param]
+        # We set the value for which test data are available as the last element
+        param_vec = torch.tensor([test_value - 0.1, test_value + 0.1, test_value])
+        crop_model_params_provider.set_override(param, param_vec, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                # The value for which test data are available is the last element
+                abs(reference[var] - model[var][-1]) < precision
+                for var, precision in expected_precision.items()
+            )
+
+    def test_leaf_dynamics_with_multiple_parameter_vectors(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # Setting a vector (with one value) for the TDWI and SPAN parameters
+        for param in ("TDWI", "SPAN"):
+            repeated = crop_model_params_provider[param].repeat(10)
+            crop_model_params_provider.set_override(param, repeated, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                all(abs(reference[var] - model[var]) < precision)
+                for var, precision in expected_precision.items()
+            )
+
+    def test_leaf_dynamics_with_multiple_parameter_arrays(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # Setting an array with arbitrary shape (and one value) for the
+        # TDWI and SPAN parameters
+        for param in ("TDWI", "SPAN"):
+            repeated = crop_model_params_provider[param].broadcast_to((30, 5))
+            crop_model_params_provider.set_override(param, repeated, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                torch.all(abs(reference[var] - model[var]) < precision)
+                for var, precision in expected_precision.items()
+            )
+
+    def test_leaf_dynamics_with_incompatible_parameter_vectors(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # Setting a vector (with one value) for the TDWI and SPAN parameters,
+        # but with different lengths
+        crop_model_params_provider.set_override(
+            "TDWI", crop_model_params_provider["TDWI"].repeat(10), check=False
+        )
+        crop_model_params_provider.set_override(
+            "SPAN", crop_model_params_provider["SPAN"].repeat(5), check=False
+        )
+
+        with pytest.raises(RuntimeError):
+            EngineTestHelper(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs,
+                config_path,
+                external_states,
+            )
+
     def test_wofost_pp_with_leaf_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
