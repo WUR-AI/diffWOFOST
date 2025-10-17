@@ -303,10 +303,11 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # find out which leaf classes are dead (negative weights)
         weight_cumsum = tLV.cumsum(dim=-1) - tDRLV
         is_dead = weight_cumsum < 0
-        # Adjust value of oldest leaf class (first non-zero weights)
-        (idx_alive, *_) = (~is_dead).nonzero(as_tuple=True)
+        # Adjust value of oldest leaf class, i.e. the first non-zero
+        # weight along the time axis (the last one)
+        (*_, idx_alive) = (~is_dead).nonzero(as_tuple=True)
         idx_oldest = idx_alive[0]
-        tLV[idx_oldest] = weight_cumsum[idx_oldest]
+        tLV[..., idx_oldest] = weight_cumsum[..., idx_oldest]
         # Zero out all dead leaf classes
         tLV = torch.where(~is_dead, tLV, 0.0)
         # Integration of physiological age
@@ -329,7 +330,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         states.LAIEXP = states.LAIEXP + rates.GLAIEX
 
         # Update leaf biomass states
-        states.WLV = torch.sum(tLV)
+        states.WLV = torch.sum(tLV, dim=-1)
         states.DWLV = states.DWLV + rates.DRLV
         states.TWLV = states.WLV + states.DWLV
 
