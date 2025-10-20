@@ -4,16 +4,19 @@ repo_name: diffWOFOST
 
 nav:
   - Introduction: intro.md
-  - Example notebooks:
+  - Getting started: getting_started.md
   - Contributing guide: CONTRIBUTING.md
   - API Reference: api_reference.md
 
 theme:
   name: material
+  custom_dir: docs/download_button
+  logo: logo/diffwofost.png
   features:
     - navigation.instant
     - navigation.tabs
     - navigation.tabs.sticky
+    - content.code.copy
   icon:
     repo: fontawesome/brands/github-alt
 
@@ -23,7 +26,7 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
-      primary: light blue
+      primary: green
       accent: blue
 
     # Palette toggle for dark mode
@@ -31,7 +34,7 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to light mode
-      primary: blue grey
+      primary: green
       accent: teal
 
 plugins:
@@ -66,6 +69,8 @@ plugins:
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.superfences
   - pymdownx.details
   - admonition
@@ -75,3 +80,7 @@ markdown_extensions:
 
 extra:
   generator: false
+  math: mathjax
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
