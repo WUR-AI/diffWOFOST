@@ -101,15 +101,3 @@ The package is structured as follows:
         ├── soil/
         ├── utils.py  # helpers
 ```
-
-## Citation
-
-to be added.
-
-## Acknowledgements
-
-to be added.
-
-## License
-
-to be added.
