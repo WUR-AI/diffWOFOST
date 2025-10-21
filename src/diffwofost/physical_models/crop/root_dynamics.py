@@ -103,7 +103,7 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
     We conclude that our current knowledge on root development is insufficient to propose a
     better and more biophysical approach to root development in WOFOST.
-    """ # noqa: E501
+    """  # noqa: E501
 
     class Parameters(ParamTemplate):
         RDI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -127,11 +127,9 @@ class WOFOST_Root_Dynamics(SimulationObject):
         DWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         TWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
 
-    def initialize(self,
-                   day: datetime.date,
-                   kiosk: VariableKiosk,
-                   parvalues: ParameterProvider
-        ) -> None:
+    def initialize(
+        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+    ) -> None:
         """Initialize the model.
 
         Args:
