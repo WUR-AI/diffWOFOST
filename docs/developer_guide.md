@@ -31,7 +31,7 @@ review from another team member before merging your pull request.
 - The testing framework used is [PyTest](https://pytest.org)
 - The project uses [GitHub action workflows](https://docs.github.com/en/actions)
   to automatically run tests on GitHub infrastructure against multiple Python
-  versions. Workflows can be found in [`.github/workflows`](.github/workflows/)
+  versions. Workflows can be found in `.github/workflows` directory.
 - [Relevant section in the
   guide](https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=testing)
 - To run the tests locally, you need to make sure that you have installed the
@@ -68,7 +68,7 @@ ruff format --check . --diff
 
 ## Documentation page
 
-- Documentation should be put in the [`docs/`](docs/) directory.
+- Documentation should be put in the `docs/` directory.
 - We recommend writing the documentation using Google style docstrings.
 - The documentation is set up with the [MkDocs](https://www.mkdocs.org/).
   - `.mkdocs.yml` is the [MkDocs](https://www.mkdocs.org/) configuration file. When MkDocs is building the documentation this package and its development dependencies are installed so the API reference can be rendered.

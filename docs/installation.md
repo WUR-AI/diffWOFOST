@@ -21,5 +21,5 @@ cd diffWOFOST
 pip install -e .[dev]
 ```
 
-If you are a contributer, please follwo the instructions in the `contribution
-guide` in the documentation.
+If you are a contributer, follow the instructions in the `How to Contribute` in
+the documentation.

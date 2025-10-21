@@ -12,7 +12,7 @@ nav:
     - Installation: installation.md
     - How to run a model: run_model.md
     - Example notebooks: examples.md
-  - Geeting involved in development:
+  - How to Contribute:
     - Contributing guide: CONTRIBUTING.md
     - Developer guide: developer_guide.md
   - API Reference: api_reference.md

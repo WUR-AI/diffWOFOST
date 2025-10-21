@@ -1,5 +1,7 @@
 #
 
+{% include-markdown "../README.md" end="# diffWOFOST" %}
+
 ## diffWOFOST: Differentiable WOFOST
 
 The package diffWOFOST contains a differentiable implementation of the WOFOST
