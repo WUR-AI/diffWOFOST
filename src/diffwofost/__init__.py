@@ -1,9 +1,9 @@
 """Documentation about diffwofost."""
 
 import logging
+from diffwofost.physical_models import utils
 from diffwofost.physical_models.crop import leaf_dynamics
 from diffwofost.physical_models.crop import root_dynamics
-from diffwofost.physical_models import utils
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
 
