@@ -1,8 +1,12 @@
+from datetime import datetime
 import torch
 from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base import StatesTemplate
+from pcse.base.parameter_providers import ParameterProvider
+from pcse.base.variablekiosk import VariableKiosk
+from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
@@ -28,44 +32,34 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
     **Simulation parameters**
 
-    =======  ============================================= =======  ============
-     Name     Description                                   Type     Unit
-    =======  ============================================= =======  ============
-    RDI      Initial rooting depth                          SCr      cm
-    RRI      Daily increase in rooting depth                SCr      |cm day-1|
-    RDMCR    Maximum rooting depth of the crop              SCR      cm
-    RDMSOL   Maximum rooting depth of the soil              SSo      cm
-    TDWI     Initial total crop dry weight                  SCr      |kg ha-1|
-    IAIRDU   Presence of air ducts in the root (1) or       SCr      -
-             not (0)
-    RDRRTB   Relative death rate of roots as a function     TCr      -
-             of development stage
-    =======  ============================================= =======  ============
-
+    | Name   | Description                                         | Type | Unit      |
+    |--------|-----------------------------------------------------|------|-----------|
+    | RDI    | Initial rooting depth                               | SCr  | cm        |
+    | RRI    | Daily increase in rooting depth                     | SCr  | cm day⁻¹  |
+    | RDMCR  | Maximum rooting depth of the crop                   | SCR  | cm        |
+    | RDMSOL | Maximum rooting depth of the soil                   | SSo  | cm        |
+    | TDWI   | Initial total crop dry weight                       | SCr  | kg ha⁻¹   |
+    | IAIRDU | Presence of air ducts in the root (1) or not (0)    | SCr  | -         |
+    | RDRRTB | Relative death rate of roots as a function of development stage | TCr | - |
 
     **State variables**
 
-    =======  ================================================= ==== ============
-     Name     Description                                      Pbl      Unit
-    =======  ================================================= ==== ============
-    RD       Current rooting depth                              Y     cm
-    RDM      Maximum attainable rooting depth at the minimum    N     cm
-             of the soil and crop maximum rooting depth
-    WRT      Weight of living roots                             Y     |kg ha-1|
-    DWRT     Weight of dead roots                               N     |kg ha-1|
-    TWRT     Total weight of roots                              Y     |kg ha-1|
-    =======  ================================================= ==== ============
+    | Name | Description                                                                  | Pbl | Unit     |
+    |------|------------------------------------------------------------------------------|-----|----------|
+    | RD   | Current rooting depth                                                        | Y   | cm       |
+    | RDM  | Maximum attainable rooting depth at the minimum of the soil and crop maximum rooting depth | N | cm |
+    | WRT  | Weight of living roots                                                       | Y   | kg ha⁻¹  |
+    | DWRT | Weight of dead roots                                                         | N   | kg ha⁻¹  |
+    | TWRT | Total weight of roots                                                        | Y   | kg ha⁻¹  |
 
     **Rate variables**
 
-    =======  ================================================= ==== ============
-     Name     Description                                      Pbl      Unit
-    =======  ================================================= ==== ============
-    RR       Growth rate root depth                             N    cm
-    GRRT     Growth rate root biomass                           N   |kg ha-1 d-1|
-    DRRT     Death rate root biomass                            N   |kg ha-1 d-1|
-    GWRT     Net change in root biomass                         N   |kg ha-1 d-1|
-    =======  ================================================= ==== ============
+    | Name | Description                 | Pbl | Unit         |
+    |------|-----------------------------|-----|--------------|
+    | RR   | Growth rate root depth      | N   | cm           |
+    | GRRT | Growth rate root biomass    | N   | kg ha⁻¹ d⁻¹  |
+    | DRRT | Death rate root biomass     | N   | kg ha⁻¹ d⁻¹  |
+    | GWRT | Net change in root biomass  | N   | kg ha⁻¹ d⁻¹  |
 
     **Signals send or handled**
 
@@ -73,22 +67,21 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
     **External dependencies:**
 
-    =======  =================================== =================  ============
-     Name     Description                         Provided by         Unit
-    =======  =================================== =================  ============
-    DVS      Crop development stage              DVS_Phenology       -
-    DMI      Total dry matter                    CropSimulation     |kg ha-1 d-1|
-             increase
-    FR       Fraction biomass to roots           DVS_Partitioning    -
-    =======  =================================== =================  ============
+    | Name | Description               | Provided by      | Unit         |
+    |------|---------------------------|------------------|--------------|
+    | DVS  | Crop development stage    | DVS_Phenology    | -            |
+    | DMI  | Total dry matter increase | CropSimulation   | kg ha⁻¹ d⁻¹  |
+    | FR   | Fraction biomass to roots | DVS_Partitioning | -            |
 
     **Outputs:**
-    - RD, TWRT
 
-    """
+    | Name | Description             | Provided by      | Unit         |
+    |------|-------------------------|------------------|--------------|
+    | RD   | Current rooting depth   | Y                | cm           |
+    | TWRT | Total weight of roots   | Y                | kg ha⁻¹      |
 
-    """
-    IMPORTANT NOTICE
+    **IMPORTANT NOTICE**
+
     Currently root development is linear and depends only on the fraction of assimilates
     send to the roots (FR) and not on the amount of assimilates itself. This means that
     roots also grow through the winter when there is no assimilation due to low
@@ -110,7 +103,7 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
     We conclude that our current knowledge on root development is insufficient to propose a
     better and more biophysical approach to root development in WOFOST.
-    """
+    """ # noqa: E501
 
     class Parameters(ParamTemplate):
         RDI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -134,13 +127,24 @@ class WOFOST_Root_Dynamics(SimulationObject):
         DWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         TWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
 
-    def initialize(self, day, kiosk, parvalues):
+    def initialize(self,
+                   day: datetime.date,
+                   kiosk: VariableKiosk,
+                   parvalues: ParameterProvider
+        ) -> None:
         """Initialize the model.
 
-        :param day: start date of the simulation
-        :param kiosk: variable kiosk of this PCSE  instance
-        :param parvalues: `ParameterProvider` object providing parameters as
-                key/value pairs
+        Args:
+            day (datetime.date): The starting date of the simulation.
+            kiosk (VariableKiosk): A container for registering and publishing
+                (internal and external) state variables. See PCSE documentation for
+                details.
+            parvalues (ParameterProvider): A dictionary-like container holding
+                all parameter sets (crop, soil, site) as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+
+        Returns:
+            None: This method initializes the model and does not return anything.
         """
         self.params = self.Parameters(parvalues)
         self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
@@ -164,8 +168,19 @@ class WOFOST_Root_Dynamics(SimulationObject):
         )
 
     @prepare_rates
-    def calc_rates(self, day, drv):
-        """Calculate the rates of change of the state variables."""
+    def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
+        """Calculate the rates of change of the state variables.
+
+        Args:
+            day (datetime.date): The current date of the simulation.
+            drv (WeatherDataContainer): A dictionary-like container holding
+                weather data elements as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+
+        Returns:
+            None: This method calculates the rates and does not return anything.
+
+        """
         p = self.params
         r = self.rates
         s = self.states
@@ -191,8 +206,17 @@ class WOFOST_Root_Dynamics(SimulationObject):
         r.RR = r.RR * mask
 
     @prepare_states
-    def integrate(self, day, delt=1.0):
-        """Integrate the state variables using the rates of change."""
+    def integrate(self, day: datetime.date, delt=1.0):
+        """Integrate the state variables using the rates of change.
+
+        Args:
+            day (datetime.date): The current date of the simulation.
+            delt (float, optional): The time step for integration. Defaults to 1.0.
+
+        Returns:
+            None: This method integrates the states and does not return anything.
+
+        """
         rates = self.rates
         states = self.states
 
@@ -207,23 +231,3 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
         # New root depth
         states.RD = states.RD + rates.RR
-
-    @prepare_states
-    def _set_variable_WRT(self, nWRT):  # FIXEME
-        """Updates the value of WRT to to the new value provided as input.
-
-        Related state variables will be updated as well and the increments
-        to all adjusted state variables will be returned as a dict.
-        """
-        states = self.states
-
-        # Store old values of states
-        oWRT = states.WRT
-        oTWRT = states.TWRT
-
-        # Apply new root weight and adjust total (dead + live) root weight
-        states.WRT = nWRT
-        states.TWRT = states.WRT + states.DWRT
-
-        increments = {"WRT": states.WRT - oWRT, "TWLRT": states.TWRT - oTWRT}
-        return increments
