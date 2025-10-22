@@ -100,6 +100,12 @@ The package is structured as follows:
         ├── crop/  # differentiable implementation of each crop model
         │   ├── leaf_dynamics.py
         │   ├── root_dynamics.py
+        │   ├── ...
         ├── soil/
         ├── utils.py  # helpers
 ```
+
+!!! note
+    At the moment only two modules of `leaf_dynamics` and `root_dynamics` are
+    differentiable w.r.t two parameters of `SPAN` and `TDWI`. But the package is under
+    continuous development. So make sure that you install the latest version.

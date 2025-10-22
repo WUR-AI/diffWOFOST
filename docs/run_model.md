@@ -10,7 +10,7 @@ PCSE.ipynb](https://github.com/ajwdewit/pcse_notebooks/blob/master/01%20Getting%
 and [02 Running with custom input data.ipynb
 ](https://github.com/ajwdewit/pcse_notebooks/blob/master/02%20Running%20with%20custom%20input%20data.ipynb).
 
-in a nutshell, we can run a model for example `leaf_dynamics` using PCSE as:
+In a nutshell, we can run a model, for example, `leaf_dynamics` using PCSE as:
 
 ```python
 from diffwofost.physical_models.utils import EngineTestHelper

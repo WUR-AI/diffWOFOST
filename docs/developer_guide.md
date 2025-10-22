@@ -2,7 +2,7 @@
 
 If you are a developer wanting to contribute to the diffwofost package, this
 guide will help you get started. First check out the contribution guidelines in
-[Contributing guide](CONTRIBUTING.md) and the [project setup](project_setup.md)
+[Contributing guide](CONTRIBUTING.md) and the [Project setup](project_setup.md)
 to get familiar with the package structure and development practices.
 
 ## Installation in development mode
