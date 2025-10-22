@@ -166,12 +166,12 @@ class WOFOST_Root_Dynamics(SimulationObject):
         )
 
     @prepare_rates
-    def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
+    def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
         """Calculate the rates of change of the state variables.
 
         Args:
-            day (datetime.date): The current date of the simulation.
-            drv (WeatherDataContainer): A dictionary-like container holding
+            day (datetime.date, optional): The current date of the simulation.
+            drv (WeatherDataContainer, optional): A dictionary-like container holding
                 weather data elements as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
 
@@ -204,11 +204,11 @@ class WOFOST_Root_Dynamics(SimulationObject):
         r.RR = r.RR * mask
 
     @prepare_states
-    def integrate(self, day: datetime.date, delt=1.0):
+    def integrate(self, day: datetime.date = None, delt=1.0):
         """Integrate the state variables using the rates of change.
 
         Args:
-            day (datetime.date): The current date of the simulation.
+            day (datetime.date, optional): The current date of the simulation.
             delt (float, optional): The time step for integration. Defaults to 1.0.
 
         Returns:
