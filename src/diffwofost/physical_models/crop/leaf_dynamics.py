@@ -262,6 +262,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
         tSPAN = _broadcast_to(p.SPAN, s.LVAGE.shape)  # Broadcast to same shape
+        # Using a sigmoid here instead of a conditional statement on the value of
+        # SPAN because the latter would not allow for the gradient to be tracked.
         sharpness = torch.tensor(1000.0, dtype=DTYPE)  # FIXME
         weight = torch.sigmoid((s.LVAGE - tSPAN) * sharpness)
         r.DALV = torch.sum(weight * s.LV, dim=-1)
@@ -279,6 +281,10 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # leaf area not to exceed exponential growth curve
         is_lai_exp = s.LAIEXP < 6.0
         DTEFF = torch.clamp(drv.TEMP - p.TBASE, 0.0)
+        # NOTE: conditional statements do not allow for the gradient to be
+        # tracked through the condition. Thus, the gradient with respect to
+        # parameters that contribute to `is_lai_exp` (e.g. RGRLAI and TBASE)
+        # are expected to be incorrect.
         r.GLAIEX = torch.where(is_lai_exp, s.LAIEXP * p.RGRLAI * DTEFF, r.GLAIEX)
         # source-limited increase in leaf area
         r.GLASOL = torch.where(is_lai_exp, r.GRLV * r.SLAT, r.GLASOL)
@@ -311,6 +317,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         idx_oldest = idx_alive[0]
         tLV[..., idx_oldest] = weight_cumsum[..., idx_oldest]
         # Zero out all dead leaf classes
+        # NOTE: conditional statements do not allow for the gradient to be
+        # tracked through the condition. Thus, the gradient with respect to
+        # parameters that contribute to `is_dead` are expected to be incorrect.
         tLV = torch.where(~is_dead, tLV, 0.0)
         # Integration of physiological age
         tLVAGE = tLVAGE + rates.FYSAGE
