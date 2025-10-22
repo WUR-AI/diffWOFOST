@@ -15,6 +15,7 @@ Note that the code here is *not* python2 compatible.
 
 import logging
 import os
+import requests
 import torch
 import yaml
 from pcse import signals
@@ -251,15 +252,14 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
             self._store_WeatherDataContainer(wdc, wdc.DAY)
 
 
-def prepare_engine_input(file_path, crop_model_params):
+def prepare_engine_input(test_data, crop_model_params):
     """Prepare the inputs for the engine from the YAML file."""
-    inputs = yaml.safe_load(open(file_path))
-    agro_management_inputs = inputs["AgroManagement"]
-    cropd = inputs["ModelParameters"]
+    agro_management_inputs = test_data["AgroManagement"]
+    cropd = test_data["ModelParameters"]
 
-    weather_data_provider = WeatherDataProviderTestHelper(inputs["WeatherVariables"])
+    weather_data_provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
-    external_states = inputs["ExternalStates"]
+    external_states = test_data["ExternalStates"]
 
     # convert parameters to tensors
     crop_model_params_provider.clear_override()
@@ -280,10 +280,11 @@ def prepare_engine_input(file_path, crop_model_params):
     )
 
 
-def get_test_data(file_path):
+def get_test_data(test_data_url):
     """Get the test data from the YAML file."""
-    inputs = yaml.safe_load(open(file_path))
-    return inputs["ModelResults"], inputs["Precision"]
+    with requests.get(test_data_url) as response:
+        data = yaml.safe_load(response.content)
+    return data
 
 
 def calculate_numerical_grad(get_model_fn, param_name, param_value, output_index):
