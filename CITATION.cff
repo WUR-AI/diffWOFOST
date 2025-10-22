@@ -1,19 +1,19 @@
 # YAML 1.2
 ---
 cff-version: "1.2.0"
-title: "diffwofost"
+title: "diffwofost: A differentiable implementation of the WOFOST crop growth model"
 type: software
 authors:
-  - given-names: Fakhereh
+  - given-names: Fakhereh (Sarah)
     family-names: Alidoost
     email: f.alidoost@esciencecenter.nl
     affiliation: Netherlands eScience Center
     orcid: 'https://orcid.org/0000-0001-8407-6472'
-  - given-names: Ioannis
-    family-names: Athanasiadis
-    email: ioannis.athanasiadis@wur.nl
-    affiliation: Wageningen University & Research
-    orcid: 'https://orcid.org/0000-0003-2764-0078'
+  - given-names: Francesco
+    family-names: Nattino
+    email: f.nattino@esciencecenter.nl
+    affiliation: Netherlands eScience Center
+    orcid: 'https://orcid.org/0000-0003-3286-0139'
   - given-names: Michiel
     family-names: Kallenberg
     email: michiel.kallenberg@wur.nl
@@ -24,11 +24,11 @@ authors:
     email: ron.vanbree@wur.nl
     affiliation: Wageningen University & Research
     orcid: 'https://orcid.org/0009-0000-6365-6996'
-  - given-names: Francesco
-    family-names: Nattino
-    email: f.nattino@esciencecenter.nl
-    affiliation: Netherlands eScience Center
-    orcid: 'https://orcid.org/0000-0003-3286-0139'
+  - given-names: Ioannis
+    family-names: Athanasiadis
+    email: ioannis.athanasiadis@wur.nl
+    affiliation: Wageningen University & Research
+    orcid: 'https://orcid.org/0000-0003-2764-0078'
   - given-names: Allard
     family-names: de Wit
     email: allard.dewit@wur.nl

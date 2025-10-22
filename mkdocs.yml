@@ -8,6 +8,7 @@ nav:
     - Citation: citation.md
     - License: license.md
     - Acknowledgements: acknowledgements.md
+    - References: references.md
   - Getting started:
     - Installation: installation.md
     - How to run a model: run_model.md

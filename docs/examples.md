@@ -1,10 +1,10 @@
 #
 
-## Hybrid modelling
+## Optimization with diffWOFOST
 
-We provide an example notebook showing hybrid modelling with `diffWOFOST`. To
-get familiar with the concepts and implementation, check out `Introduction` in
-the documentation.
+We provide an example notebook showing optimization of models' parameters with
+`diffWOFOST`. To get familiar with the concepts and implementation, check out
+`Introduction` in the documentation.
 
 |    |                |
 |--------|-----------------------------------------------------|
