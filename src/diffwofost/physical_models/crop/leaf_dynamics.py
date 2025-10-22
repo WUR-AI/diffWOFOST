@@ -112,8 +112,10 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     LAI, TWLV
     """
 
-    START_DATE = None
-    MAX_DAYS = 300
+    # The following parameters are used to initialize and control the arrays that store information
+    # on the leaf classes during the time integration: leaf area, age, and biomass.
+    START_DATE = None  # Start date of the simulation
+    MAX_DAYS = 300  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
 
     class Parameters(ParamTemplate):
         RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
