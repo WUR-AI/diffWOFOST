@@ -281,6 +281,10 @@ class TestLeafDynamics:
                 torch.all(abs(reference[var] - model[var]) < precision)
                 for var, precision in expected_precision.items()
             )
+            assert all (
+                model[var].shape == (30, 5)
+                for var in expected_precision.keys()
+            )  # check the output shapes
 
     def test_leaf_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
