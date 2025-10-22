@@ -4,7 +4,7 @@
 [![PyPI - Version](https://badge.fury.io/py/diffwofost.svg)](https://img.shields.io/pypi/v/diffwofost)
 [![Python package built](https://github.com/WUR-AI/diffWOFOST/actions/workflows/build.yml/badge.svg)](https://github.com/WUR-AI/diffWOFOST/actions/workflows/build.yml)
 [![Documentation built](https://github.com/WUR-AI/diffWOFOST/actions/workflows/deploy-documentation.yml/badge.svg)](https://github.com/WUR-AI/diffWOFOST/actions/workflows/deploy-documentation.yml)
-[![Code quality](https://github.com/WUR-AI/diffWOFOST/actions/workflows/sonarcloud.yml/badge.svg)](https://github.com/WUR-AI/diffWOFOST/actions/workflows/sonarcloud.yml)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=WUR-AI_diffWOFOST&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=WUR-AI_diffWOFOST)
 
 # diffWOFOST
 
