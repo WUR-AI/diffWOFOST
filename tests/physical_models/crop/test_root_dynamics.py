@@ -10,14 +10,16 @@ from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
+from .. import pcse_test_url_base
 from .. import phy_data_folder
 
 
 def get_test_diff_root_model():
-    test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+    test_data_url = f"{pcse_test_url_base}/test_rootdynamics_wofost72_01.yaml"
+    test_data = get_test_data(test_data_url)
     crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data_path, crop_model_params)
+        prepare_engine_input(test_data, crop_model_params)
     )
     config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
     return DiffRootDynamics(
@@ -66,18 +68,29 @@ class DiffRootDynamics(torch.nn.Module):
 
 
 class TestRootDynamics:
-    def test_root_dynamics_with_testengine(self):
+    rootdynamics_data_urls = [
+        f"{pcse_test_url_base}/test_rootdynamics_wofost72_{i:02d}.yaml"
+        for i in range(1, 45)  # assuming there are 44 test files
+    ]
+
+    wofost72_data_urls = [
+        f"{pcse_test_url_base}/test_potentialproduction_wofost72_{i:02d}.yaml"
+        for i in range(1, 45)  # assuming there are 44 test files
+    ]
+
+    @pytest.mark.parametrize("test_data_url", rootdynamics_data_urls)
+    def test_root_dynamics_with_testengine(self, test_data_url):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
 
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         engine = EngineTestHelper(
@@ -91,7 +104,7 @@ class TestRootDynamics:
         actual_results = engine.get_output()
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
 
@@ -104,10 +117,11 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_engine(self):
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = f"{pcse_test_url_base}/test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params)
         )
 
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
@@ -121,16 +135,17 @@ class TestRootDynamics:
                 config_path,
             )
 
-    def test_wofost_pp_with_root_dynamics(self):
+    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
+    def test_wofost_pp_with_root_dynamics(self, test_data_url):
         # prepare model input
-        test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params)
         )
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         with patch("pcse.crop.wofost72.Root_Dynamics", WOFOST_Root_Dynamics):
             model = Wofost72_PP(
