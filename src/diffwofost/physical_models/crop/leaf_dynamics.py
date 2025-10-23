@@ -395,7 +395,6 @@ def _broadcast_to(x, shape):
         # For 0-d tensors, we simply broadcast to the given shape
         return torch.broadcast_to(x, shape)
     # The given shape should match x in all but the last axis, which represents
-    # the dimension along which the time integration is carried out
-    *dims, n_steps = shape
-    # We first append an axis to x, then expand the last axis
-    return x.unsqueeze(-1).expand((*dims, n_steps))
+    # the dimension along which the time integration is carried out.
+    # We first append an axis to x, then expand to the given shape
+    return x.unsqueeze(-1).expand(shape)
