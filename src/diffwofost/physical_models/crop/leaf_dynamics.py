@@ -8,7 +8,7 @@ from pcse.base import StatesTemplate
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
-from pcse.util import AfgenTrait
+from pcse.util import Afgen, AfgenTrait
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
@@ -176,17 +176,17 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         DVS = self.kiosk["DVS"]
 
         params = self.params
+        shape = _get_params_shape(params)
 
         # Initial leaf biomass
         WLV = (params.TDWI * (1 - FR)) * FL
-        DWLV = torch.tensor(0.0, dtype=DTYPE)
+        DWLV = torch.zeros(shape, dtype=DTYPE)
         TWLV = WLV + DWLV
 
         # Initialize leaf classes (SLA, age and weight)
-        dims = WLV.shape
-        SLA = torch.zeros((*dims, self.MAX_DAYS), dtype=DTYPE)
-        LVAGE = torch.zeros((*dims, self.MAX_DAYS), dtype=DTYPE)
-        LV = torch.zeros((*dims, self.MAX_DAYS), dtype=DTYPE)
+        SLA = torch.zeros((*shape, self.MAX_DAYS), dtype=DTYPE)
+        LVAGE = torch.zeros((*shape, self.MAX_DAYS), dtype=DTYPE)
+        LV = torch.zeros((*shape, self.MAX_DAYS), dtype=DTYPE)
         SLA[..., 0] = params.SLATB(DVS)
         LV[..., 0] = WLV
 
@@ -362,6 +362,31 @@ def _exist_required_external_variables(kiosk):
                 f" Ensure that all required variables {required_external_vars_at_init}"
                 " are provided."
             )
+
+
+def _get_params_shape(params):
+    """Get the parameters shape.
+
+    Parameters can have arbitrary number of dimensions, but all parameters that are not zero-
+    dimensional should have the same shape.
+    """
+    shape = ()
+    for parname in params.trait_names():
+        # Skip special traitlets attributes
+        if parname.startswith("trait"):
+            continue
+        param = getattr(params, parname)
+        # Skip Afgen parameters:
+        if isinstance(param, Afgen):
+            continue
+        # Parameters that are not zero dimensional should all have the same shape
+        if param.shape and not shape:
+            shape = param.shape
+        elif param.shape:
+            assert param.shape == shape, (
+                "All parameters should have the same shape (or have no dimensions)"
+            )
+    return shape
 
 
 def _broadcast_to(x, shape):
