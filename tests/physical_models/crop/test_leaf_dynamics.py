@@ -360,14 +360,14 @@ class TestDiffLeafDynamics:
         output = model({param_name: param})
         loss = output[out_name].sum()
 
-        # this is ∂loss/∂tdwi without calling loss.backward().
+        # this is ∂loss/∂param without calling loss.backward().
         # this is called forward gradient here because it is calculated without backpropagation.
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
         assert grads is not None, "Gradients should not be None"
 
         param.grad = None  # clear any existing gradient
         loss.backward()
-        # this is ∂loss/∂tdwi calculated using backpropagation
+        # this is ∂loss/∂param calculated using backpropagation
         grad_backward = param.grad
 
         assert grad_backward is not None, "Backward gradients should not be None"
@@ -388,13 +388,13 @@ class TestDiffLeafDynamics:
         param = torch.nn.Parameter(param_value)
         numerical_grad = calculate_numerical_grad(
             get_test_diff_leaf_model, param_name, param.data, out_name
-        )  # this is Δloss/Δtdwi
+        )  # this is Δloss/Δparam
 
         model = get_test_diff_leaf_model()
         output = model({param_name: param})
         loss = output[out_name].sum()
 
-        # this is ∂loss/∂tdwi, for comparison with numerical gradient
+        # this is ∂loss/∂param, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
         assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
