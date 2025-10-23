@@ -310,21 +310,22 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # Calculate the cumulative sum of weights after leaf death, and
         # find out which leaf classes are dead (negative weights)
         weight_cumsum = tLV.cumsum(dim=-1) - tDRLV
-        is_dead = weight_cumsum < 0
+        is_alive = weight_cumsum >= 0
         # Adjust value of oldest leaf class, i.e. the first non-zero
-        # weight along the time axis (the last one)
-        (*_, idx_alive) = (~is_dead).nonzero(as_tuple=True)
-        idx_oldest = idx_alive[0]
-        tLV[..., idx_oldest] = weight_cumsum[..., idx_oldest]
+        # weight along the time axis (the last dimension).
+        # Cast argument to int because torch.argmax requires it to be numeric
+        idx_oldest = torch.argmax(is_alive.type(torch.int), dim=-1, keepdim=True)
+        new_biomass = torch.take_along_dim(weight_cumsum, indices=idx_oldest, dim=-1)
+        tLV = torch.scatter(tLV, dim=-1, index=idx_oldest, src=new_biomass)
         # Zero out all dead leaf classes
         # NOTE: conditional statements do not allow for the gradient to be
         # tracked through the condition. Thus, the gradient with respect to
-        # parameters that contribute to `is_dead` are expected to be incorrect.
-        tLV = torch.where(~is_dead, tLV, 0.0)
+        # parameters that contribute to `is_alive` are expected to be incorrect.
+        tLV = torch.where(is_alive, tLV, 0.0)
         # Integration of physiological age
         tLVAGE = tLVAGE + rates.FYSAGE
-        tLVAGE = torch.where(~is_dead, tLVAGE, 0.0)
-        tSLA = torch.where(~is_dead, tSLA, 0.0)
+        tLVAGE = torch.where(is_alive, tLVAGE, 0.0)
+        tSLA = torch.where(is_alive, tSLA, 0.0)
 
         # --------- leave growth ---------
         idx = int((day - self.START_DATE).days / delt)
