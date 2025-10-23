@@ -158,10 +158,13 @@ class TestLeafDynamics:
                 for var, precision in expected_precision.items()
             )
 
-    @pytest.mark.parametrize("param,delta", [
-        ("TDWI", 0.1),
-        ("SPAN", 5),
-    ])
+    @pytest.mark.parametrize(
+        "param,delta",
+        [
+            ("TDWI", 0.1),
+            ("SPAN", 5),
+        ],
+    )
     def test_leaf_dynamics_with_different_parameter_values(self, param, delta):
         # prepare model input
         test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"
@@ -344,16 +347,19 @@ class TestLeafDynamics:
 
 
 class TestDiffLeafDynamics:
-    @pytest.mark.parametrize("param_name,param_value,out_name", [
-        ("TDWI", torch.tensor(0.2, dtype=torch.float64), "LAI"),
-        ("TDWI", torch.tensor(0.2, dtype=torch.float64), "TWLV"),
-        ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "LAI"),
-        ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "TWLV"),
-        ("SPAN", torch.tensor(30, dtype=torch.float64), "LAI"),
-        ("SPAN", torch.tensor(30, dtype=torch.float64), "TWLV"),
-        ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "LAI"),
-        ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "TWLV"),
-    ])
+    @pytest.mark.parametrize(
+        "param_name,param_value,out_name",
+        [
+            ("TDWI", torch.tensor(0.2, dtype=torch.float64), "LAI"),
+            ("TDWI", torch.tensor(0.2, dtype=torch.float64), "TWLV"),
+            ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "LAI"),
+            ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "TWLV"),
+            ("SPAN", torch.tensor(30, dtype=torch.float64), "LAI"),
+            ("SPAN", torch.tensor(30, dtype=torch.float64), "TWLV"),
+            ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "LAI"),
+            ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "TWLV"),
+        ],
+    )
     def test_gradients_leaf_dynamics(self, param_name, param_value, out_name):
         model = get_test_diff_leaf_model()
         param = torch.nn.Parameter(param_value)
@@ -373,16 +379,19 @@ class TestDiffLeafDynamics:
         assert grad_backward is not None, "Backward gradients should not be None"
         assert torch.all(grad_backward == grads), "Forward and backward gradients should match"
 
-    @pytest.mark.parametrize("param_name,param_value,out_name", [
-        ("TDWI", torch.tensor(0.2, dtype=torch.float64), "LAI"),
-        ("TDWI", torch.tensor(0.2, dtype=torch.float64), "TWLV"),
-        ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "LAI"),
-        ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "TWLV"),
-        ("SPAN", torch.tensor(30, dtype=torch.float64), "LAI"),
-        ("SPAN", torch.tensor(30, dtype=torch.float64), "TWLV"),
-        ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "LAI"),
-        ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "TWLV"),
-    ])
+    @pytest.mark.parametrize(
+        "param_name,param_value,out_name",
+        [
+            ("TDWI", torch.tensor(0.2, dtype=torch.float64), "LAI"),
+            ("TDWI", torch.tensor(0.2, dtype=torch.float64), "TWLV"),
+            ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "LAI"),
+            ("TDWI", torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "TWLV"),
+            ("SPAN", torch.tensor(30, dtype=torch.float64), "LAI"),
+            ("SPAN", torch.tensor(30, dtype=torch.float64), "TWLV"),
+            ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "LAI"),
+            ("SPAN", torch.tensor([25, 30, 35], dtype=torch.float64), "TWLV"),
+        ],
+    )
     def test_gradients_leaf_dynamics_numerical(self, param_name, param_value, out_name):
         # first check if the numerical gradient isnot zero i.e. the parameter has an effect
         param = torch.nn.Parameter(param_value)
