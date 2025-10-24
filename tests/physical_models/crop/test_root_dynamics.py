@@ -2,7 +2,7 @@ import copy
 from unittest.mock import patch
 import pytest
 import torch
-from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_almost_equal, assert_array_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics
@@ -155,20 +155,7 @@ class TestDiffRootDynamicsTDWI:
         rd = output["RD"]
         loss = rd.sum()
 
-        # this is ∂loss/∂tdwi without calling loss.backward().
-        # this is called forward gradient here because it is calculated without backpropagation.
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
-
-        assert grads is not None, "Gradients for TDWI should not be None"
-
-        tdwi.grad = None  # clear any existing gradient
-        loss.backward()
-
-        # this is ∂loss/∂tdwi calculated using backpropagation
-        grad_backward = tdwi.grad
-
-        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
-        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
+        assert loss.grad_fn is None  # tdwi does not contribute to rd
 
     def test_gradients_tdwi_rd_root_dynamics_numerical(self):
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
@@ -177,16 +164,7 @@ class TestDiffRootDynamicsTDWI:
             get_test_diff_root_model, "TDWI", tdwi, output_name
         )
 
-        model = get_test_diff_root_model()
-        output = model({"TDWI": tdwi})
-        rd = output[output_name]
-        loss = rd.sum()
-
-        # this is ∂loss/∂tdwi, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
-
-        # in this test, grads is very small
-        assert_array_almost_equal(numerical_grad, grads.item(), decimal=3)
+        assert_array_equal(numerical_grad, 0.0)  # tdwi does not contribute to rd
 
     def test_gradients_tdwi_twrt_root_dynamics(self):
         # prepare model input
