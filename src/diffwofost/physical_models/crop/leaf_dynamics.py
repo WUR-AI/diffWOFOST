@@ -8,7 +8,8 @@ from pcse.base import StatesTemplate
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
-from pcse.util import Afgen, AfgenTrait
+from pcse.util import Afgen
+from pcse.util import AfgenTrait
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
