@@ -2,7 +2,8 @@ import copy
 from unittest.mock import patch
 import pytest
 import torch
-from numpy.testing import assert_array_almost_equal, assert_array_equal
+from numpy.testing import assert_array_almost_equal
+from numpy.testing import assert_array_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
