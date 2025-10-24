@@ -486,5 +486,5 @@ class TestDiffLeafDynamicsSPAN:
         # this is ∂loss/∂param, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
 
-        assert_array_almost_equal(numerical_grad, 0.0)
+        assert_array_almost_equal(grads.data, 0.0)
         assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
