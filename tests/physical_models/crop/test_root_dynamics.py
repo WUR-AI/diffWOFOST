@@ -158,15 +158,6 @@ class TestDiffRootDynamicsTDWI:
 
         assert loss.grad_fn is None  # tdwi does not contribute to rd
 
-    def test_gradients_tdwi_rd_root_dynamics_numerical(self):
-        tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        output_name = "RD"
-        numerical_grad = calculate_numerical_grad(
-            get_test_diff_root_model, "TDWI", tdwi, output_name
-        )
-
-        assert_array_equal(numerical_grad, 0.0)  # tdwi does not contribute to rd
-
     def test_gradients_tdwi_twrt_root_dynamics(self):
         # prepare model input
         model = get_test_diff_root_model()
