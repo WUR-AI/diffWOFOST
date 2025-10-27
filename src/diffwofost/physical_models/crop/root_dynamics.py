@@ -204,7 +204,7 @@ class WOFOST_Root_Dynamics(SimulationObject):
         r.RR = r.RR * mask
 
     @prepare_states
-    def integrate(self, day: datetime.date = None, delt=1.0):
+    def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """Integrate the state variables using the rates of change.
 
         Args:
