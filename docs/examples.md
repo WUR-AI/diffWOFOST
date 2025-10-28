@@ -4,7 +4,7 @@
 
 We provide an example notebook showing optimization of models' parameters with
 `diffWOFOST`. To get familiar with the concepts and implementation, check out
-`Introduction` in the documentation.
+[`Introduction`](./index.md) in the documentation.
 
 | Open the notebook | Access the source | View the notebook |
 |-------|------------|---------------|
