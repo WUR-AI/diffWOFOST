@@ -41,7 +41,7 @@ The documentation for `diffWOFOST` is available at
 
 ## Acknowledgements
 
-The package `diffWOFOST` is developed in the project
-[deltaCrop](https://research-software-directory.org/projects/deltacrop), a
+The package `diffWOFOST` is developed in the
+[DeltaCrop](https://research-software-directory.org/projects/deltacrop) project, a
 collaboration between Wageningen University & Research and Netherlands eScience
 Center.
