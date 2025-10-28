@@ -12,7 +12,7 @@ if you want to run notebooks locally, you need to install `jupyterlab`:
 pip install jupyterlab
 ```
 
-If you are a contributer, clone the source code and install the package in
+If you are a contributor, clone the source code and install the package in
 development mode:
 
 ```bash
