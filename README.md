@@ -5,6 +5,7 @@
 [![Python package built](https://github.com/WUR-AI/diffWOFOST/actions/workflows/build.yml/badge.svg)](https://github.com/WUR-AI/diffWOFOST/actions/workflows/build.yml)
 [![Documentation built](https://github.com/WUR-AI/diffWOFOST/actions/workflows/deploy-documentation.yml/badge.svg)](https://github.com/WUR-AI/diffWOFOST/actions/workflows/deploy-documentation.yml)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=WUR-AI_diffWOFOST&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=WUR-AI_diffWOFOST)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17474960.svg)](https://doi.org/10.5281/zenodo.17474960)
 
 # diffWOFOST
 
