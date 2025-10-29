@@ -12,15 +12,15 @@
       
       
       <link rel="icon" href="../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.20">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.22">
     
     
       
-        <title>Project Setup - diffWOFOST documentation</title>
+        <title>Project setup - diffWOFOST documentation</title>
       
     
     
-      <link rel="stylesheet" href="../assets/stylesheets/main.e53b48f4.min.css">
+      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
       
         
         <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
@@ -42,6 +42,8 @@
       
     
     
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
     <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
     
       
@@ -59,7 +61,7 @@
     
     
     
-    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="blue">
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="blue">
   
     
     <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
@@ -68,7 +70,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#project-setup" class="md-skip">
+        <a href="#repository-structure" class="md-skip">
           Skip to content
         </a>
       
@@ -86,8 +88,7 @@
   <nav class="md-header__inner md-grid" aria-label="Header">
     <a href=".." title="diffWOFOST documentation" class="md-header__button md-logo" aria-label="diffWOFOST documentation" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../logo/diffwofost.png" alt="logo">
 
     </a>
     <label class="md-header__button md-icon" for="__drawer">
@@ -104,7 +105,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Project Setup
+              Project setup
             
           </span>
         </div>
@@ -117,7 +118,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="light-blue" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
     
       <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
@@ -127,7 +128,7 @@
     
     
     
-    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="blue-grey" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="green" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
     
       <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
@@ -187,7 +188,7 @@
         <a href="https://github.com/WUR-AI/diffwofost" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
   </div>
   <div class="md-source__repository">
     diffWOFOST
@@ -208,17 +209,58 @@
   
   
   
-    <li class="md-tabs__item">
-      <a href="../intro/" class="md-tabs__link">
-        
-  
-  
     
+    
+      <li class="md-tabs__item">
+        <a href=".." class="md-tabs__link">
+          
+  
   
   Introduction
 
-      </a>
-    </li>
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../installation/" class="md-tabs__link">
+          
+  
+  
+  Getting started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../CONTRIBUTING/" class="md-tabs__link">
+          
+  
+  
+  How to Contribute
+
+        </a>
+      </li>
+    
   
 
       
@@ -228,13 +270,13 @@
   
   
     <li class="md-tabs__item">
-      <a href="../CONTRIBUTING/" class="md-tabs__link">
+      <a href="../api_reference/" class="md-tabs__link">
         
   
   
     
   
-  Contributing guide
+  API Reference
 
       </a>
     </li>
@@ -271,8 +313,7 @@
   <label class="md-nav__title" for="__drawer">
     <a href=".." title="diffWOFOST documentation" class="md-nav__button md-logo" aria-label="diffWOFOST documentation" data-md-component="logo">
       
-  
-  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 8a3 3 0 0 0 3-3 3 3 0 0 0-3-3 3 3 0 0 0-3 3 3 3 0 0 0 3 3m0 3.54C9.64 9.35 6.5 8 3 8v11c3.5 0 6.64 1.35 9 3.54 2.36-2.19 5.5-3.54 9-3.54V8c-3.5 0-6.64 1.35-9 3.54"/></svg>
+  <img src="../logo/diffwofost.png" alt="logo">
 
     </a>
     diffWOFOST documentation
@@ -282,7 +323,7 @@
       <a href="https://github.com/WUR-AI/diffwofost" title="Go to repository" class="md-source" data-md-component="source">
   <div class="md-source__icon md-icon">
     
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.0.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
   </div>
   <div class="md-source__repository">
     diffWOFOST
@@ -298,9 +339,23 @@
   
   
   
-    <li class="md-nav__item">
-      <a href="../intro/" class="md-nav__link">
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
         
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
   
   
   <span class="md-ellipsis">
@@ -309,13 +364,298 @@
   </span>
   
 
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            Introduction
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    diffWOFOST
+    
+  </span>
+  
+
       </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Citation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    License
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acknowledgements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Acknowledgements
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    References
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
     </li>
   
 
     
       
       
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    How to run a model
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Example notebooks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    How to Contribute
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How to Contribute
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
   
   
   
@@ -327,6 +667,59 @@
   
   <span class="md-ellipsis">
     Contributing guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Developer guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../api_reference/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
     
   </span>
   
@@ -353,8 +746,6 @@
   
   
   
-    
-  
   
     <label class="md-nav__title" for="__toc">
       <span class="md-nav__icon md-icon"></span>
@@ -363,9 +754,9 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#python-versions" class="md-nav__link">
+  <a href="#repository-structure" class="md-nav__link">
     <span class="md-ellipsis">
-      Python versions
+      Repository structure
     </span>
   </a>
   
@@ -390,54 +781,9 @@
 </li>
       
         <li class="md-nav__item">
-  <a href="#testing-and-code-coverage" class="md-nav__link">
-    <span class="md-ellipsis">
-      Testing and code coverage
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#documentation" class="md-nav__link">
-    <span class="md-ellipsis">
-      Documentation
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#coding-style-conventions-and-code-quality" class="md-nav__link">
-    <span class="md-ellipsis">
-      Coding style conventions and code quality
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#continuous-code-quality" class="md-nav__link">
-    <span class="md-ellipsis">
-      Continuous code quality
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
   <a href="#package-version-number" class="md-nav__link">
     <span class="md-ellipsis">
       Package version number
-    </span>
-  </a>
-  
-</li>
-      
-        <li class="md-nav__item">
-  <a href="#logging" class="md-nav__link">
-    <span class="md-ellipsis">
-      Logging
     </span>
   </a>
   
@@ -470,15 +816,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#notice" class="md-nav__link">
-    <span class="md-ellipsis">
-      NOTICE
-    </span>
-  </a>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -491,6 +828,9 @@
             <div class="md-content" data-md-component="content">
               <article class="md-content__inner md-typeset">
                 
+
+
+
                   
 
 
@@ -498,29 +838,27 @@
   
 
 
-<h1 id="project-setup">Project Setup</h1>
+  <h1>Project setup</h1>
+
 <p>Here we provide some details about the project setup. Most of the choices are
-explained in the <a href="https://guide.esciencecenter.nl">guide</a>. Links to the relevant
-sections are included below. Feel free to remove this text when the development
-of the software package takes off.</p>
-<p>For a quick reference on software development, we refer to <a href="https://guide.esciencecenter.nl/#/best_practices/checklist">the software guide
-checklist</a>.</p>
-<h2 id="python-versions">Python versions</h2>
-<p>This repository is set up with Python versions:</p>
-<ul>
-<li>3.10</li>
-<li>3.11</li>
-<li>3.12</li>
-</ul>
-<p>Add or remove Python versions based on project requirements. See <a href="https://guide.esciencecenter.nl/#/best_practices/language_guides/python">the
-guide</a>
-for more information about Python versions.</p>
+explained in the <a href="https://book.the-turing-way.org/reproducible-research/reproducible-research/">Turing Way: Guide for Reproducible
+Research</a>.</p>
+<h2 id="repository-structure">Repository structure</h2>
+<p>The repository has the following structure:</p>
+<div class="highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a>├──<span class="w"> </span>.github/<span class="w">        </span><span class="c1"># GitHub specific files such as workflows</span>
+<a id="__codelineno-0-2" name="__codelineno-0-2" href="#__codelineno-0-2"></a>├──<span class="w"> </span>docs/<span class="w">           </span><span class="c1"># Documentation source files</span>
+<a id="__codelineno-0-3" name="__codelineno-0-3" href="#__codelineno-0-3"></a>├──<span class="w"> </span>my_package/<span class="w">     </span><span class="c1"># Main package code</span>
+<a id="__codelineno-0-4" name="__codelineno-0-4" href="#__codelineno-0-4"></a>├──<span class="w"> </span>tests/<span class="w">          </span><span class="c1"># Test code</span>
+<a id="__codelineno-0-5" name="__codelineno-0-5" href="#__codelineno-0-5"></a>├──<span class="w"> </span>.gitignore<span class="w">      </span><span class="c1"># Git ignore file</span>
+<a id="__codelineno-0-6" name="__codelineno-0-6" href="#__codelineno-0-6"></a>├──<span class="w"> </span>CITATION.cff<span class="w">    </span><span class="c1"># Citation file</span>
+<a id="__codelineno-0-7" name="__codelineno-0-7" href="#__codelineno-0-7"></a>├──<span class="w"> </span>LICENSE<span class="w">         </span><span class="c1"># License file</span>
+<a id="__codelineno-0-8" name="__codelineno-0-8" href="#__codelineno-0-8"></a>├──<span class="w"> </span>README.md<span class="w">       </span><span class="c1"># User documentation</span>
+<a id="__codelineno-0-9" name="__codelineno-0-9" href="#__codelineno-0-9"></a>├──<span class="w"> </span>pyproject.toml<span class="w">  </span><span class="c1"># Project configuration file and dependencies</span>
+<a id="__codelineno-0-10" name="__codelineno-0-10" href="#__codelineno-0-10"></a>├──<span class="w"> </span>mkdocs.yml<span class="w">      </span><span class="c1"># MkDocs configuration file</span>
+</code></pre></div>
 <h2 id="package-management-and-dependencies">Package management and dependencies</h2>
-<p>You can use either pip or conda for installing dependencies and package
-management. This repository does not force you to use one or the other, as
-project requirements differ. For advice on what to use, please check <a href="https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=dependencies-and-package-management">the
-relevant section of the
-guide</a>.</p>
+<p>You can use pip for installing dependencies and package
+management.</p>
 <ul>
 <li>Runtime dependencies should be added to <code>pyproject.toml</code> in the <code>dependencies</code>
   list under <code>[project]</code>.</li>
@@ -529,71 +867,30 @@ guide</a>.</p>
   <code>[project.optional-dependencies]</code>.</li>
 </ul>
 <h2 id="packagingone-command-install">Packaging/One command install</h2>
-<p>You can distribute your code using PyPI. <a href="https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=building-and-packaging-code">The
-guide</a>
-can help you decide which tool to use for packaging.</p>
-<h2 id="testing-and-code-coverage">Testing and code coverage</h2>
-<ul>
-<li>Tests should be put in the <code>tests</code> folder.</li>
-<li>The <code>tests</code> folder contains:</li>
-<li>Example tests that you should replace with your own meaningful tests (file: <code>test_my_module.py</code>)</li>
-<li>The testing framework used is <a href="https://pytest.org">PyTest</a></li>
-<li><a href="https://pythontest.com/pytest-book/">PyTest introduction</a></li>
-<li>PyTest is listed as a development dependency</li>
-<li>This is configured in <code>pyproject.toml</code></li>
-<li>The project uses <a href="https://docs.github.com/en/actions">GitHub action workflows</a> to automatically run tests on GitHub infrastructure against multiple Python versions</li>
-<li>Workflows can be found in <a href=".github/workflows/"><code>.github/workflows</code></a></li>
-<li><a href="https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=testing">Relevant section in the guide</a></li>
-</ul>
-<h2 id="documentation">Documentation</h2>
-<ul>
-<li>Documentation should be put in the <a href="docs/"><code>docs/</code></a> directory.</li>
-<li>We recommend writing the documentation using Google style docstrings.</li>
-<li>The documentation is set up with the <a href="https://www.mkdocs.org/">MkDocs</a>.</li>
-<li><code>.mkdocs.yml</code> is the <a href="https://www.mkdocs.org/">MkDocs</a> configuration file. When MkDocs is building the documentation this package and its development dependencies are installed so the API reference can be rendered.</li>
-</ul>
-<h2 id="coding-style-conventions-and-code-quality">Coding style conventions and code quality</h2>
-<ul>
-<li><a href="https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=coding-style-conventions">Relevant section in the NLeSC guide</a> and <a href="../README.dev/">README.dev.md</a>.</li>
-</ul>
-<h2 id="continuous-code-quality">Continuous code quality</h2>
-<p><a href="https://sonarcloud.io/">Sonarcloud</a> is used to perform quality analysis and code coverage report</p>
-<ul>
-<li><code>sonar-project.properties</code> is the SonarCloud <a href="https://docs.sonarqube.org/latest/analysis/analysis-parameters/">configuration</a> file</li>
-<li><code>.github/workflows/sonarcloud.yml</code> is the GitHub action workflow which performs the SonarCloud analysis</li>
-</ul>
+<p>You can distribute your code using PyPI. This can be done automatically using
+GitHub workflows, see <code>.github/</code>.</p>
 <h2 id="package-version-number">Package version number</h2>
 <ul>
-<li>We recommend using <a href="https://guide.esciencecenter.nl/#/best_practices/releases?id=semantic-versioning">semantic versioning</a>.</li>
-<li>For convenience, the package version is stored in a single place: <code>pyproject.toml</code> under the <code>tool.bumpversion</code> header.</li>
-<li>Don't forget to update the version number before <a href="https://guide.esciencecenter.nl/#/best_practices/releases">making a release</a>!</li>
-</ul>
-<h2 id="logging">Logging</h2>
-<ul>
-<li>We recommend using the logging module for getting useful information from your module (instead of using print).</li>
-<li>The project is set up with a logging example.</li>
-<li><a href="https://guide.esciencecenter.nl/#/best_practices/language_guides/python?id=logging">Relevant section in the guide</a></li>
+<li>We recommend using <a href="https://semver.org/">semantic versioning</a>.</li>
+<li>For convenience, the package version is stored in a single place: <code>pyproject.toml</code>.</li>
+<li>Don't forget to update the version number before <a href="../CONTRIBUTING/">making a release</a>! Also, update <code>__version__</code> variable in <code>diffwofost/__init__.py</code> to the
+   same version.</li>
 </ul>
 <h2 id="citationcff">CITATION.cff</h2>
 <ul>
 <li>To allow others to cite your software, add a <code>CITATION.cff</code> file</li>
 <li>It only makes sense to do this once there is something to cite (e.g., a software release with a DOI).</li>
-<li>Follow the <a href="https://guide.esciencecenter.nl/#/citable_software/making_software_citable">making software citable</a> section in the guide.</li>
+<li>Follow the <a href="https://book.the-turing-way.org/communication/citable/citable-cff/">Software Citation with CITATION.cff</a> section in the Turing Way guide.</li>
 </ul>
 <h2 id="code_of_conductmd">CODE_OF_CONDUCT.md</h2>
 <ul>
 <li>Information about how to behave professionally</li>
-<li><a href="https://guide.esciencecenter.nl/#/best_practices/documentation?id=code-of-conduct">Relevant section in the guide</a></li>
+<li>To know more, read <a href="https://book.the-turing-way.org/community-handbook/coc/">Turing Way guide on Code of Conduct</a></li>
 </ul>
 <h2 id="contributingmd">CONTRIBUTING.md</h2>
 <ul>
 <li>Information about how to contribute to this software package</li>
-<li><a href="https://guide.esciencecenter.nl/#/best_practices/documentation?id=contribution-guidelines">Relevant section in the guide</a></li>
-</ul>
-<h2 id="notice">NOTICE</h2>
-<ul>
-<li>List of attributions of this project and Apache-license dependencies</li>
-<li><a href="https://guide.esciencecenter.nl/#/best_practices/licensing?id=notice">Relevant section in the guide</a></li>
+<li>To know more, read <a href="https://book.the-turing-way.org/reproducible-research/code-documentation/code-documentation-project/#contributing-guidelines">Turing Way guide on Contributing</a></li>
 </ul>
 
 
@@ -608,6 +905,7 @@ can help you decide which tool to use for packaging.</p>
 
 
                 
+
               </article>
             </div>
           
@@ -638,10 +936,12 @@ can help you decide which tool to use for packaging.</p>
     
     
       
-      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.tabs.sticky"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "content.code.copy", "content.tabs"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
       <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       
     
   </body>

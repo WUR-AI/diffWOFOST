@@ -1,0 +1,2922 @@
+
+<!doctype html>
+<html lang="en" class="no-js">
+  <head>
+    
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width,initial-scale=1">
+      
+      
+      
+      
+        <link rel="prev" href="../developer_guide/">
+      
+      
+      
+      <link rel="icon" href="../assets/images/favicon.png">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.6.22">
+    
+    
+      
+        <title>API Reference - diffWOFOST documentation</title>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/stylesheets/main.84d31ad4.min.css">
+      
+        
+        <link rel="stylesheet" href="../assets/stylesheets/palette.06af60db.min.css">
+      
+      
+
+
+    
+    
+      
+    
+    
+      
+        
+        
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto:300,300i,400,400i,700,700i%7CRoboto+Mono:400,400i,700,700i&display=fallback">
+        <style>:root{--md-text-font:"Roboto";--md-code-font:"Roboto Mono"}</style>
+      
+    
+    
+      <link rel="stylesheet" href="../assets/_mkdocstrings.css">
+    
+    <script>__md_scope=new URL("..",location),__md_hash=e=>[...e].reduce(((e,_)=>(e<<5)-e+_.charCodeAt(0)),0),__md_get=(e,_=localStorage,t=__md_scope)=>JSON.parse(_.getItem(t.pathname+"."+e)),__md_set=(e,_,t=localStorage,a=__md_scope)=>{try{t.setItem(a.pathname+"."+e,JSON.stringify(_))}catch(e){}}</script>
+    
+      
+
+    
+    
+    
+  </head>
+  
+  
+    
+    
+      
+    
+    
+    
+    
+    <body dir="ltr" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="blue">
+  
+    
+    <input class="md-toggle" data-md-toggle="drawer" type="checkbox" id="__drawer" autocomplete="off">
+    <input class="md-toggle" data-md-toggle="search" type="checkbox" id="__search" autocomplete="off">
+    <label class="md-overlay" for="__drawer"></label>
+    <div data-md-component="skip">
+      
+        
+        <a href="#_1" class="md-skip">
+          Skip to content
+        </a>
+      
+    </div>
+    <div data-md-component="announce">
+      
+    </div>
+    
+    
+      
+
+  
+
+<header class="md-header md-header--shadow md-header--lifted" data-md-component="header">
+  <nav class="md-header__inner md-grid" aria-label="Header">
+    <a href=".." title="diffWOFOST documentation" class="md-header__button md-logo" aria-label="diffWOFOST documentation" data-md-component="logo">
+      
+  <img src="../logo/diffwofost.png" alt="logo">
+
+    </a>
+    <label class="md-header__button md-icon" for="__drawer">
+      
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M3 6h18v2H3zm0 5h18v2H3zm0 5h18v2H3z"/></svg>
+    </label>
+    <div class="md-header__title" data-md-component="header-title">
+      <div class="md-header__ellipsis">
+        <div class="md-header__topic">
+          <span class="md-ellipsis">
+            diffWOFOST documentation
+          </span>
+        </div>
+        <div class="md-header__topic" data-md-component="header-topic">
+          <span class="md-ellipsis">
+            
+              API Reference
+            
+          </span>
+        </div>
+      </div>
+    </div>
+    
+      
+        <form class="md-header__option" data-md-component="palette">
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="default" data-md-color-primary="green" data-md-color-accent="blue"  aria-label="Switch to dark mode"  type="radio" name="__palette" id="__palette_0">
+    
+      <label class="md-header__button md-icon" title="Switch to dark mode" for="__palette_1" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M12 7a5 5 0 0 1 5 5 5 5 0 0 1-5 5 5 5 0 0 1-5-5 5 5 0 0 1 5-5m0 2a3 3 0 0 0-3 3 3 3 0 0 0 3 3 3 3 0 0 0 3-3 3 3 0 0 0-3-3m0-7 2.39 3.42C13.65 5.15 12.84 5 12 5s-1.65.15-2.39.42zM3.34 7l4.16-.35A7.2 7.2 0 0 0 5.94 8.5c-.44.74-.69 1.5-.83 2.29zm.02 10 1.76-3.77a7.131 7.131 0 0 0 2.38 4.14zM20.65 7l-1.77 3.79a7.02 7.02 0 0 0-2.38-4.15zm-.01 10-4.14.36c.59-.51 1.12-1.14 1.54-1.86.42-.73.69-1.5.83-2.29zM12 22l-2.41-3.44c.74.27 1.55.44 2.41.44.82 0 1.63-.17 2.37-.44z"/></svg>
+      </label>
+    
+  
+    
+    
+    
+    <input class="md-option" data-md-color-media="" data-md-color-scheme="slate" data-md-color-primary="green" data-md-color-accent="teal"  aria-label="Switch to light mode"  type="radio" name="__palette" id="__palette_1">
+    
+      <label class="md-header__button md-icon" title="Switch to light mode" for="__palette_0" hidden>
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="m17.75 4.09-2.53 1.94.91 3.06-2.63-1.81-2.63 1.81.91-3.06-2.53-1.94L12.44 4l1.06-3 1.06 3zm3.5 6.91-1.64 1.25.59 1.98-1.7-1.17-1.7 1.17.59-1.98L15.75 11l2.06-.05L18.5 9l.69 1.95zm-2.28 4.95c.83-.08 1.72 1.1 1.19 1.85-.32.45-.66.87-1.08 1.27C15.17 23 8.84 23 4.94 19.07c-3.91-3.9-3.91-10.24 0-14.14.4-.4.82-.76 1.27-1.08.75-.53 1.93.36 1.85 1.19-.27 2.86.69 5.83 2.89 8.02a9.96 9.96 0 0 0 8.02 2.89m-1.64 2.02a12.08 12.08 0 0 1-7.8-3.47c-2.17-2.19-3.33-5-3.49-7.82-2.81 3.14-2.7 7.96.31 10.98 3.02 3.01 7.84 3.12 10.98.31"/></svg>
+      </label>
+    
+  
+</form>
+      
+    
+    
+      <script>var palette=__md_get("__palette");if(palette&&palette.color){if("(prefers-color-scheme)"===palette.color.media){var media=matchMedia("(prefers-color-scheme: light)"),input=document.querySelector(media.matches?"[data-md-color-media='(prefers-color-scheme: light)']":"[data-md-color-media='(prefers-color-scheme: dark)']");palette.color.media=input.getAttribute("data-md-color-media"),palette.color.scheme=input.getAttribute("data-md-color-scheme"),palette.color.primary=input.getAttribute("data-md-color-primary"),palette.color.accent=input.getAttribute("data-md-color-accent")}for(var[key,value]of Object.entries(palette.color))document.body.setAttribute("data-md-color-"+key,value)}</script>
+    
+    
+    
+      
+      
+        <label class="md-header__button md-icon" for="__search">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        </label>
+        <div class="md-search" data-md-component="search" role="dialog">
+  <label class="md-search__overlay" for="__search"></label>
+  <div class="md-search__inner" role="search">
+    <form class="md-search__form" name="search">
+      <input type="text" class="md-search__input" name="query" aria-label="Search" placeholder="Search" autocapitalize="off" autocorrect="off" autocomplete="off" spellcheck="false" data-md-component="search-query" required>
+      <label class="md-search__icon md-icon" for="__search">
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M9.5 3A6.5 6.5 0 0 1 16 9.5c0 1.61-.59 3.09-1.56 4.23l.27.27h.79l5 5-1.5 1.5-5-5v-.79l-.27-.27A6.52 6.52 0 0 1 9.5 16 6.5 6.5 0 0 1 3 9.5 6.5 6.5 0 0 1 9.5 3m0 2C7 5 5 7 5 9.5S7 14 9.5 14 14 12 14 9.5 12 5 9.5 5"/></svg>
+        
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M20 11v2H8l5.5 5.5-1.42 1.42L4.16 12l7.92-7.92L13.5 5.5 8 11z"/></svg>
+      </label>
+      <nav class="md-search__options" aria-label="Search">
+        
+        <button type="reset" class="md-search__icon md-icon" title="Clear" aria-label="Clear" tabindex="-1">
+          
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M19 6.41 17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/></svg>
+        </button>
+      </nav>
+      
+    </form>
+    <div class="md-search__output">
+      <div class="md-search__scrollwrap" tabindex="0" data-md-scrollfix>
+        <div class="md-search-result" data-md-component="search-result">
+          <div class="md-search-result__meta">
+            Initializing search
+          </div>
+          <ol class="md-search-result__list" role="presentation"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+      
+    
+    
+      <div class="md-header__source">
+        <a href="https://github.com/WUR-AI/diffwofost" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    diffWOFOST
+  </div>
+</a>
+      </div>
+    
+  </nav>
+  
+    
+      
+<nav class="md-tabs" aria-label="Tabs" data-md-component="tabs">
+  <div class="md-grid">
+    <ul class="md-tabs__list">
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href=".." class="md-tabs__link">
+          
+  
+  
+  Introduction
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../installation/" class="md-tabs__link">
+          
+  
+  
+  Getting started
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+  
+    
+    
+      <li class="md-tabs__item">
+        <a href="../CONTRIBUTING/" class="md-tabs__link">
+          
+  
+  
+  How to Contribute
+
+        </a>
+      </li>
+    
+  
+
+      
+        
+  
+  
+  
+    
+  
+  
+    <li class="md-tabs__item md-tabs__item--active">
+      <a href="./" class="md-tabs__link">
+        
+  
+  
+    
+  
+  API Reference
+
+      </a>
+    </li>
+  
+
+      
+    </ul>
+  </div>
+</nav>
+    
+  
+</header>
+    
+    <div class="md-container" data-md-component="container">
+      
+      
+        
+      
+      <main class="md-main" data-md-component="main">
+        <div class="md-main__inner md-grid">
+          
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--primary" data-md-component="sidebar" data-md-type="navigation" hidden>
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+
+  
+
+
+<nav class="md-nav md-nav--primary md-nav--lifted" aria-label="Navigation" data-md-level="0">
+  <label class="md-nav__title" for="__drawer">
+    <a href=".." title="diffWOFOST documentation" class="md-nav__button md-logo" aria-label="diffWOFOST documentation" data-md-component="logo">
+      
+  <img src="../logo/diffwofost.png" alt="logo">
+
+    </a>
+    diffWOFOST documentation
+  </label>
+  
+    <div class="md-nav__source">
+      <a href="https://github.com/WUR-AI/diffwofost" title="Go to repository" class="md-source" data-md-component="source">
+  <div class="md-source__icon md-icon">
+    
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><!--! Font Awesome Free 7.1.0 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license/free (Icons: CC BY 4.0, Fonts: SIL OFL 1.1, Code: MIT License) Copyright 2025 Fonticons, Inc.--><path d="M202.1 328.7c0 20.9-10.9 55.1-36.7 55.1s-36.7-34.2-36.7-55.1 10.9-55.1 36.7-55.1 36.7 34.2 36.7 55.1M496 278.2c0 31.9-3.2 65.7-17.5 95-37.9 76.6-142.1 74.8-216.7 74.8-75.8 0-186.2 2.7-225.6-74.8-14.6-29-20.2-63.1-20.2-95 0-41.9 13.9-81.5 41.5-113.6-5.2-15.8-7.7-32.4-7.7-48.8 0-21.5 4.9-32.3 14.6-51.8 45.3 0 74.3 9 108.8 36 29-6.9 58.8-10 88.7-10 27 0 54.2 2.9 80.4 9.2 34-26.7 63-35.2 107.8-35.2 9.8 19.5 14.6 30.3 14.6 51.8 0 16.4-2.6 32.7-7.7 48.2 27.5 32.4 39 72.3 39 114.2m-64.3 50.5c0-43.9-26.7-82.6-73.5-82.6-18.9 0-37 3.4-56 6-14.9 2.3-29.8 3.2-45.1 3.2-15.2 0-30.1-.9-45.1-3.2-18.7-2.6-37-6-56-6-46.8 0-73.5 38.7-73.5 82.6 0 87.8 80.4 101.3 150.4 101.3h48.2c70.3 0 150.6-13.4 150.6-101.3m-82.6-55.1c-25.8 0-36.7 34.2-36.7 55.1s10.9 55.1 36.7 55.1 36.7-34.2 36.7-55.1-10.9-55.1-36.7-55.1"/></svg>
+  </div>
+  <div class="md-source__repository">
+    diffWOFOST
+  </div>
+</a>
+    </div>
+  
+  <ul class="md-nav__list" data-md-scrollfix>
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_1" >
+        
+          
+          <label class="md-nav__link" for="__nav_1" id="__nav_1_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Introduction
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_1_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_1">
+            <span class="md-nav__icon md-icon"></span>
+            Introduction
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href=".." class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    diffWOFOST
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../citation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Citation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../license/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    License
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../acknowledgements/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Acknowledgements
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../references/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    References
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_2" >
+        
+          
+          <label class="md-nav__link" for="__nav_2" id="__nav_2_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    Getting started
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_2_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_2">
+            <span class="md-nav__icon md-icon"></span>
+            Getting started
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../installation/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Installation
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../run_model/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    How to run a model
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../examples/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Example notebooks
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+  
+  
+    
+    
+    
+    
+      
+      
+    
+    
+    <li class="md-nav__item md-nav__item--nested">
+      
+        
+        
+        <input class="md-nav__toggle md-toggle " type="checkbox" id="__nav_3" >
+        
+          
+          <label class="md-nav__link" for="__nav_3" id="__nav_3_label" tabindex="0">
+            
+  
+  
+  <span class="md-ellipsis">
+    How to Contribute
+    
+  </span>
+  
+
+            <span class="md-nav__icon md-icon"></span>
+          </label>
+        
+        <nav class="md-nav" data-md-level="1" aria-labelledby="__nav_3_label" aria-expanded="false">
+          <label class="md-nav__title" for="__nav_3">
+            <span class="md-nav__icon md-icon"></span>
+            How to Contribute
+          </label>
+          <ul class="md-nav__list" data-md-scrollfix>
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../CONTRIBUTING/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Contributing guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+              
+                
+  
+  
+  
+  
+    <li class="md-nav__item">
+      <a href="../developer_guide/" class="md-nav__link">
+        
+  
+  
+  <span class="md-ellipsis">
+    Developer guide
+    
+  </span>
+  
+
+      </a>
+    </li>
+  
+
+              
+            
+          </ul>
+        </nav>
+      
+    </li>
+  
+
+    
+      
+      
+  
+  
+    
+  
+  
+  
+    <li class="md-nav__item md-nav__item--active">
+      
+      <input class="md-nav__toggle md-toggle" type="checkbox" id="__toc">
+      
+      
+        
+      
+      
+        <label class="md-nav__link md-nav__link--active" for="__toc">
+          
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+          <span class="md-nav__icon md-icon"></span>
+        </label>
+      
+      <a href="./" class="md-nav__link md-nav__link--active">
+        
+  
+  
+  <span class="md-ellipsis">
+    API Reference
+    
+  </span>
+  
+
+      </a>
+      
+        
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#crop-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      Crop modules
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Crop modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      WOFOST_Leaf_Dynamics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WOFOST_Leaf_Dynamics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.initialize" class="md-nav__link">
+    <span class="md-ellipsis">
+      initialize
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.calc_rates" class="md-nav__link">
+    <span class="md-ellipsis">
+      calc_rates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      integrate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      WOFOST_Root_Dynamics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WOFOST_Root_Dynamics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.initialize" class="md-nav__link">
+    <span class="md-ellipsis">
+      initialize
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.calc_rates" class="md-nav__link">
+    <span class="md-ellipsis">
+      calc_rates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      integrate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#utility-under-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      Utility (under development)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Utility (under development)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.utils.EngineTestHelper" class="md-nav__link">
+    <span class="md-ellipsis">
+      EngineTestHelper
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+      
+    </li>
+  
+
+    
+  </ul>
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+            
+              
+                
+              
+              <div class="md-sidebar md-sidebar--secondary" data-md-component="sidebar" data-md-type="toc" >
+                <div class="md-sidebar__scrollwrap">
+                  <div class="md-sidebar__inner">
+                    
+
+<nav class="md-nav md-nav--secondary" aria-label="Table of contents">
+  
+  
+  
+    
+  
+  
+    <label class="md-nav__title" for="__toc">
+      <span class="md-nav__icon md-icon"></span>
+      Table of contents
+    </label>
+    <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
+      
+        <li class="md-nav__item">
+  <a href="#crop-modules" class="md-nav__link">
+    <span class="md-ellipsis">
+      Crop modules
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Crop modules">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      WOFOST_Leaf_Dynamics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WOFOST_Leaf_Dynamics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.initialize" class="md-nav__link">
+    <span class="md-ellipsis">
+      initialize
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.calc_rates" class="md-nav__link">
+    <span class="md-ellipsis">
+      calc_rates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      integrate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics" class="md-nav__link">
+    <span class="md-ellipsis">
+      WOFOST_Root_Dynamics
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="WOFOST_Root_Dynamics">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.initialize" class="md-nav__link">
+    <span class="md-ellipsis">
+      initialize
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.calc_rates" class="md-nav__link">
+    <span class="md-ellipsis">
+      calc_rates
+    </span>
+  </a>
+  
+</li>
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.integrate" class="md-nav__link">
+    <span class="md-ellipsis">
+      integrate
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#utility-under-development" class="md-nav__link">
+    <span class="md-ellipsis">
+      Utility (under development)
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="Utility (under development)">
+      <ul class="md-nav__list">
+        
+          <li class="md-nav__item">
+  <a href="#diffwofost.physical_models.utils.EngineTestHelper" class="md-nav__link">
+    <span class="md-ellipsis">
+      EngineTestHelper
+    </span>
+  </a>
+  
+</li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+    </ul>
+  
+</nav>
+                  </div>
+                </div>
+              </div>
+            
+          
+          
+            <div class="md-content" data-md-component="content">
+              <article class="md-content__inner md-typeset">
+                
+
+
+
+                  
+  
+
+
+
+  
+  
+
+
+<h1 id="_1"></h1>
+<h2 id="crop-modules"><strong>Crop modules</strong></h2>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>At the moment only two modules of <code>leaf_dynamics</code> and <code>root_dynamics</code> are
+differentiable w.r.t two parameters of <code>SPAN</code> and <code>TDWI</code>. But the package is under
+continuous development. So make sure that you install the latest version.</p>
+</div>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics</span>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pcse.base.SimulationObject">SimulationObject</span></code></p>
+
+
+        <p>Leaf dynamics for the WOFOST crop model.</p>
+<p>Implementation of biomass partitioning to leaves, growth and senenscence
+of leaves. WOFOST keeps track of the biomass that has been partitioned to
+the leaves for each day (variable <code>LV</code>), which is called a leaf class).
+For each leaf class the leaf age (variable 'LVAGE') and specific leaf area
+(variable <code>SLA</code>) are also registered. Total living leaf biomass is
+calculated by summing the biomass values for all leaf classes. Similarly,
+leaf area is calculated by summing leaf biomass times specific leaf area
+(<code>LV</code> * <code>SLA</code>).</p>
+<p>Senescense of the leaves can occur as a result of physiological age,
+drought stress or self-shading.</p>
+<p><strong>Simulation parameters</strong> (provide in cropdata dictionary)</p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Type</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RGRLAI</td>
+<td>Maximum relative increase in LAI.</td>
+<td>SCr</td>
+<td>ha ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>SPAN</td>
+<td>Life span of leaves growing at 35 Celsius</td>
+<td>SCr</td>
+<td>d</td>
+</tr>
+<tr>
+<td>TBASE</td>
+<td>Lower threshold temp. for ageing of leaves</td>
+<td>SCr</td>
+<td>C</td>
+</tr>
+<tr>
+<td>PERDL</td>
+<td>Max. relative death rate of leaves due to water stress</td>
+<td>SCr</td>
+<td></td>
+</tr>
+<tr>
+<td>TDWI</td>
+<td>Initial total crop dry weight</td>
+<td>SCr</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>KDIFTB</td>
+<td>Extinction coefficient for diffuse visible light as function of DVS</td>
+<td>TCr</td>
+<td></td>
+</tr>
+<tr>
+<td>SLATB</td>
+<td>Specific leaf area as a function of DVS</td>
+<td>TCr</td>
+<td>ha kg⁻¹</td>
+</tr>
+</tbody>
+</table>
+<p><strong>State variables</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Pbl</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LV</td>
+<td>Leaf biomass per leaf class</td>
+<td>N</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>SLA</td>
+<td>Specific leaf area per leaf class</td>
+<td>N</td>
+<td>ha kg⁻¹</td>
+</tr>
+<tr>
+<td>LVAGE</td>
+<td>Leaf age per leaf class</td>
+<td>N</td>
+<td>d</td>
+</tr>
+<tr>
+<td>LVSUM</td>
+<td>Sum of LV</td>
+<td>N</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>LAIEM</td>
+<td>LAI at emergence</td>
+<td>N</td>
+<td>-</td>
+</tr>
+<tr>
+<td>LASUM</td>
+<td>Total leaf area as sum of LV*SLA, not including stem and pod area</td>
+<td>N</td>
+<td>-</td>
+</tr>
+<tr>
+<td>LAIEXP</td>
+<td>LAI value under theoretical exponential growth</td>
+<td>N</td>
+<td>-</td>
+</tr>
+<tr>
+<td>LAIMAX</td>
+<td>Maximum LAI reached during growth cycle</td>
+<td>N</td>
+<td>-</td>
+</tr>
+<tr>
+<td>LAI</td>
+<td>Leaf area index, including stem and pod area</td>
+<td>Y</td>
+<td>-</td>
+</tr>
+<tr>
+<td>WLV</td>
+<td>Dry weight of living leaves</td>
+<td>Y</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>DWLV</td>
+<td>Dry weight of dead leaves</td>
+<td>N</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>TWLV</td>
+<td>Dry weight of total leaves (living + dead)</td>
+<td>Y</td>
+<td>kg ha⁻¹</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rate variables</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Pbl</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>GRLV</td>
+<td>Growth rate leaves</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>DSLV1</td>
+<td>Death rate leaves due to water stress</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>DSLV2</td>
+<td>Death rate leaves due to self-shading</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>DSLV3</td>
+<td>Death rate leaves due to frost kill</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>DSLV</td>
+<td>Maximum of DSLV1, DSLV2, DSLV3</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>DALV</td>
+<td>Death rate leaves due to aging</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>DRLV</td>
+<td>Death rate leaves as a combination of DSLV and DALV</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>SLAT</td>
+<td>Specific leaf area for current time step, adjusted for source/sink limited leaf expansion rate</td>
+<td>N</td>
+<td>ha kg⁻¹</td>
+</tr>
+<tr>
+<td>FYSAGE</td>
+<td>Increase in physiological leaf age</td>
+<td>N</td>
+<td>-</td>
+</tr>
+<tr>
+<td>GLAIEX</td>
+<td>Sink-limited leaf expansion rate (exponential curve)</td>
+<td>N</td>
+<td>ha ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>GLASOL</td>
+<td>Source-limited leaf expansion rate (biomass increase)</td>
+<td>N</td>
+<td>ha ha⁻¹ d⁻¹</td>
+</tr>
+</tbody>
+</table>
+<p><strong>External dependencies</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Provided by</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DVS</td>
+<td>Crop development stage</td>
+<td>DVS_Phenology</td>
+<td>-</td>
+</tr>
+<tr>
+<td>FL</td>
+<td>Fraction biomass to leaves</td>
+<td>DVS_Partitioning</td>
+<td>-</td>
+</tr>
+<tr>
+<td>FR</td>
+<td>Fraction biomass to roots</td>
+<td>DVS_Partitioning</td>
+<td>-</td>
+</tr>
+<tr>
+<td>SAI</td>
+<td>Stem area index</td>
+<td>WOFOST_Stem_Dynamics</td>
+<td>-</td>
+</tr>
+<tr>
+<td>PAI</td>
+<td>Pod area index</td>
+<td>WOFOST_Storage_Organ_Dynamics</td>
+<td>-</td>
+</tr>
+<tr>
+<td>TRA</td>
+<td>Transpiration rate</td>
+<td>Evapotranspiration</td>
+<td>cm day⁻¹ ?</td>
+</tr>
+<tr>
+<td>TRAMX</td>
+<td>Maximum transpiration rate</td>
+<td>Evapotranspiration</td>
+<td>cm day⁻¹ ?</td>
+</tr>
+<tr>
+<td>ADMI</td>
+<td>Above-ground dry matter increase</td>
+<td>CropSimulation</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>RFTRA</td>
+<td>Reduction factor for transpiration (water &amp; oxygen)</td>
+<td>Y</td>
+<td>-</td>
+</tr>
+<tr>
+<td>RF_FROST</td>
+<td>Reduction factor frost kill</td>
+<td>FROSTOL (optional)</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Outputs</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Pbl</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>LAI</td>
+<td>Leaf area index, including stem and pod area</td>
+<td>Y</td>
+<td>-</td>
+</tr>
+<tr>
+<td>TWLV</td>
+<td>Dry weight of total leaves (living + dead)</td>
+<td>Y</td>
+<td>kg ha⁻¹</td>
+</tr>
+</tbody>
+</table>
+
+          
+
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <ul>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            initialize (diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.initialize)" href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.initialize">initialize</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Initialize the WOFOST_Leaf_Dynamics simulation object.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            calc_rates (diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.calc_rates)" href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.calc_rates">calc_rates</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Calculate the rates of change for the leaf dynamics.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            integrate (diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.integrate)" href="#diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.integrate">integrate</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Integrate the leaf dynamics state variables.</p>
+            </div>
+          </li>
+    </ul>
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.initialize" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">initialize</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">initialize</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="n"><span title="datetime.date">date</span></span><span class="p">,</span> <span class="n">kiosk</span><span class="p">:</span> <span class="n"><span title="pcse.base.variablekiosk.VariableKiosk">VariableKiosk</span></span><span class="p">,</span> <span class="n">parvalues</span><span class="p">:</span> <span class="n"><span title="pcse.base.parameter_providers.ParameterProvider">ParameterProvider</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Initialize the WOFOST_Leaf_Dynamics simulation object.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>day</code></b>
+              (<code><span title="datetime.date">date</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>The starting date of the simulation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>kiosk</code></b>
+              (<code><span title="pcse.base.variablekiosk.VariableKiosk">VariableKiosk</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>A container for registering and publishing
+(internal and external) state variables. See PCSE documentation for
+details.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>parvalues</code></b>
+              (<code><span title="pcse.base.parameter_providers.ParameterProvider">ParameterProvider</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>A dictionary-like container holding
+all parameter sets (crop, soil, site) as key/value. The values are
+arrays or scalars. See PCSE documentation for details.</p>
+          </div>
+        </li>
+    </ul>
+
+          
+
+            <details class="quote">
+              <summary>Source code in <code>src/diffwofost/physical_models/crop/leaf_dynamics.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-144">144</a></span>
+<span class="normal"><a href="#__codelineno-0-145">145</a></span>
+<span class="normal"><a href="#__codelineno-0-146">146</a></span>
+<span class="normal"><a href="#__codelineno-0-147">147</a></span>
+<span class="normal"><a href="#__codelineno-0-148">148</a></span>
+<span class="normal"><a href="#__codelineno-0-149">149</a></span>
+<span class="normal"><a href="#__codelineno-0-150">150</a></span>
+<span class="normal"><a href="#__codelineno-0-151">151</a></span>
+<span class="normal"><a href="#__codelineno-0-152">152</a></span>
+<span class="normal"><a href="#__codelineno-0-153">153</a></span>
+<span class="normal"><a href="#__codelineno-0-154">154</a></span>
+<span class="normal"><a href="#__codelineno-0-155">155</a></span>
+<span class="normal"><a href="#__codelineno-0-156">156</a></span>
+<span class="normal"><a href="#__codelineno-0-157">157</a></span>
+<span class="normal"><a href="#__codelineno-0-158">158</a></span>
+<span class="normal"><a href="#__codelineno-0-159">159</a></span>
+<span class="normal"><a href="#__codelineno-0-160">160</a></span>
+<span class="normal"><a href="#__codelineno-0-161">161</a></span>
+<span class="normal"><a href="#__codelineno-0-162">162</a></span>
+<span class="normal"><a href="#__codelineno-0-163">163</a></span>
+<span class="normal"><a href="#__codelineno-0-164">164</a></span>
+<span class="normal"><a href="#__codelineno-0-165">165</a></span>
+<span class="normal"><a href="#__codelineno-0-166">166</a></span>
+<span class="normal"><a href="#__codelineno-0-167">167</a></span>
+<span class="normal"><a href="#__codelineno-0-168">168</a></span>
+<span class="normal"><a href="#__codelineno-0-169">169</a></span>
+<span class="normal"><a href="#__codelineno-0-170">170</a></span>
+<span class="normal"><a href="#__codelineno-0-171">171</a></span>
+<span class="normal"><a href="#__codelineno-0-172">172</a></span>
+<span class="normal"><a href="#__codelineno-0-173">173</a></span>
+<span class="normal"><a href="#__codelineno-0-174">174</a></span>
+<span class="normal"><a href="#__codelineno-0-175">175</a></span>
+<span class="normal"><a href="#__codelineno-0-176">176</a></span>
+<span class="normal"><a href="#__codelineno-0-177">177</a></span>
+<span class="normal"><a href="#__codelineno-0-178">178</a></span>
+<span class="normal"><a href="#__codelineno-0-179">179</a></span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span>
+<span class="normal"><a href="#__codelineno-0-182">182</a></span>
+<span class="normal"><a href="#__codelineno-0-183">183</a></span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span>
+<span class="normal"><a href="#__codelineno-0-185">185</a></span>
+<span class="normal"><a href="#__codelineno-0-186">186</a></span>
+<span class="normal"><a href="#__codelineno-0-187">187</a></span>
+<span class="normal"><a href="#__codelineno-0-188">188</a></span>
+<span class="normal"><a href="#__codelineno-0-189">189</a></span>
+<span class="normal"><a href="#__codelineno-0-190">190</a></span>
+<span class="normal"><a href="#__codelineno-0-191">191</a></span>
+<span class="normal"><a href="#__codelineno-0-192">192</a></span>
+<span class="normal"><a href="#__codelineno-0-193">193</a></span>
+<span class="normal"><a href="#__codelineno-0-194">194</a></span>
+<span class="normal"><a href="#__codelineno-0-195">195</a></span>
+<span class="normal"><a href="#__codelineno-0-196">196</a></span>
+<span class="normal"><a href="#__codelineno-0-197">197</a></span>
+<span class="normal"><a href="#__codelineno-0-198">198</a></span>
+<span class="normal"><a href="#__codelineno-0-199">199</a></span>
+<span class="normal"><a href="#__codelineno-0-200">200</a></span>
+<span class="normal"><a href="#__codelineno-0-201">201</a></span>
+<span class="normal"><a href="#__codelineno-0-202">202</a></span>
+<span class="normal"><a href="#__codelineno-0-203">203</a></span>
+<span class="normal"><a href="#__codelineno-0-204">204</a></span>
+<span class="normal"><a href="#__codelineno-0-205">205</a></span>
+<span class="normal"><a href="#__codelineno-0-206">206</a></span>
+<span class="normal"><a href="#__codelineno-0-207">207</a></span>
+<span class="normal"><a href="#__codelineno-0-208">208</a></span>
+<span class="normal"><a href="#__codelineno-0-209">209</a></span>
+<span class="normal"><a href="#__codelineno-0-210">210</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-144" name="__codelineno-0-144"></a><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span>
+<a id="__codelineno-0-145" name="__codelineno-0-145"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">day</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">,</span> <span class="n">kiosk</span><span class="p">:</span> <span class="n">VariableKiosk</span><span class="p">,</span> <span class="n">parvalues</span><span class="p">:</span> <span class="n">ParameterProvider</span>
+<a id="__codelineno-0-146" name="__codelineno-0-146"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-147" name="__codelineno-0-147"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize the WOFOST_Leaf_Dynamics simulation object.</span>
+<a id="__codelineno-0-148" name="__codelineno-0-148"></a>
+<a id="__codelineno-0-149" name="__codelineno-0-149"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-150" name="__codelineno-0-150"></a><span class="sd">        day (datetime.date): The starting date of the simulation.</span>
+<a id="__codelineno-0-151" name="__codelineno-0-151"></a><span class="sd">        kiosk (VariableKiosk): A container for registering and publishing</span>
+<a id="__codelineno-0-152" name="__codelineno-0-152"></a><span class="sd">            (internal and external) state variables. See PCSE documentation for</span>
+<a id="__codelineno-0-153" name="__codelineno-0-153"></a><span class="sd">            details.</span>
+<a id="__codelineno-0-154" name="__codelineno-0-154"></a><span class="sd">        parvalues (ParameterProvider): A dictionary-like container holding</span>
+<a id="__codelineno-0-155" name="__codelineno-0-155"></a><span class="sd">            all parameter sets (crop, soil, site) as key/value. The values are</span>
+<a id="__codelineno-0-156" name="__codelineno-0-156"></a><span class="sd">            arrays or scalars. See PCSE documentation for details.</span>
+<a id="__codelineno-0-157" name="__codelineno-0-157"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-158" name="__codelineno-0-158"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">START_DATE</span> <span class="o">=</span> <span class="n">day</span>
+<a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span> <span class="o">=</span> <span class="n">kiosk</span>
+<a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="c1"># TODO check if parvalues are already torch.nn.Parameters</span>
+<a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Parameters</span><span class="p">(</span><span class="n">parvalues</span><span class="p">)</span>
+<a id="__codelineno-0-162" name="__codelineno-0-162"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">RateVariables</span><span class="p">(</span><span class="n">kiosk</span><span class="p">)</span>
+<a id="__codelineno-0-163" name="__codelineno-0-163"></a>
+<a id="__codelineno-0-164" name="__codelineno-0-164"></a>    <span class="c1"># CALCULATE INITIAL STATE VARIABLES</span>
+<a id="__codelineno-0-165" name="__codelineno-0-165"></a>    <span class="c1"># check for required external variables</span>
+<a id="__codelineno-0-166" name="__codelineno-0-166"></a>    <span class="n">_exist_required_external_variables</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">)</span>
+<a id="__codelineno-0-167" name="__codelineno-0-167"></a>    <span class="c1"># TODO check if external variables are already torch tensors</span>
+<a id="__codelineno-0-168" name="__codelineno-0-168"></a>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a>    <span class="n">FL</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">[</span><span class="s2">&quot;FL&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-170" name="__codelineno-0-170"></a>    <span class="n">FR</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">[</span><span class="s2">&quot;FR&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="n">DVS</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">[</span><span class="s2">&quot;DVS&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-172" name="__codelineno-0-172"></a>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span>
+<a id="__codelineno-0-174" name="__codelineno-0-174"></a>    <span class="n">shape</span> <span class="o">=</span> <span class="n">_get_params_shape</span><span class="p">(</span><span class="n">params</span><span class="p">)</span>
+<a id="__codelineno-0-175" name="__codelineno-0-175"></a>
+<a id="__codelineno-0-176" name="__codelineno-0-176"></a>    <span class="c1"># Initial leaf biomass</span>
+<a id="__codelineno-0-177" name="__codelineno-0-177"></a>    <span class="n">WLV</span> <span class="o">=</span> <span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">TDWI</span> <span class="o">*</span> <span class="p">(</span><span class="mi">1</span> <span class="o">-</span> <span class="n">FR</span><span class="p">))</span> <span class="o">*</span> <span class="n">FL</span>
+<a id="__codelineno-0-178" name="__codelineno-0-178"></a>    <span class="n">DWLV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">(</span><span class="n">shape</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-179" name="__codelineno-0-179"></a>    <span class="n">TWLV</span> <span class="o">=</span> <span class="n">WLV</span> <span class="o">+</span> <span class="n">DWLV</span>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a>    <span class="c1"># Initialize leaf classes (SLA, age and weight)</span>
+<a id="__codelineno-0-182" name="__codelineno-0-182"></a>    <span class="n">SLA</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="o">*</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_DAYS</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-183" name="__codelineno-0-183"></a>    <span class="n">LVAGE</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="o">*</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_DAYS</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a>    <span class="n">LV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros</span><span class="p">((</span><span class="o">*</span><span class="n">shape</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">MAX_DAYS</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="n">SLA</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">SLATB</span><span class="p">(</span><span class="n">DVS</span><span class="p">)</span>
+<a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="n">LV</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">=</span> <span class="n">WLV</span>
+<a id="__codelineno-0-187" name="__codelineno-0-187"></a>
+<a id="__codelineno-0-188" name="__codelineno-0-188"></a>    <span class="c1"># Initial values for leaf area</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a>    <span class="n">LAIEM</span> <span class="o">=</span> <span class="n">LV</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span> <span class="o">*</span> <span class="n">SLA</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="mi">0</span><span class="p">]</span>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="n">LASUM</span> <span class="o">=</span> <span class="n">LAIEM</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a>    <span class="n">LAIEXP</span> <span class="o">=</span> <span class="n">LAIEM</span>
+<a id="__codelineno-0-192" name="__codelineno-0-192"></a>    <span class="n">LAIMAX</span> <span class="o">=</span> <span class="n">LAIEM</span>
+<a id="__codelineno-0-193" name="__codelineno-0-193"></a>    <span class="n">LAI</span> <span class="o">=</span> <span class="n">LASUM</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">[</span><span class="s2">&quot;SAI&quot;</span><span class="p">]</span> <span class="o">+</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">[</span><span class="s2">&quot;PAI&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-194" name="__codelineno-0-194"></a>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a>    <span class="c1"># Initialize StateVariables object</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">StateVariables</span><span class="p">(</span>
+<a id="__codelineno-0-197" name="__codelineno-0-197"></a>        <span class="n">kiosk</span><span class="p">,</span>
+<a id="__codelineno-0-198" name="__codelineno-0-198"></a>        <span class="n">publish</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;LAI&quot;</span><span class="p">,</span> <span class="s2">&quot;TWLV&quot;</span><span class="p">,</span> <span class="s2">&quot;WLV&quot;</span><span class="p">],</span>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a>        <span class="n">LV</span><span class="o">=</span><span class="n">LV</span><span class="p">,</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a>        <span class="n">SLA</span><span class="o">=</span><span class="n">SLA</span><span class="p">,</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a>        <span class="n">LVAGE</span><span class="o">=</span><span class="n">LVAGE</span><span class="p">,</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>        <span class="n">LAIEM</span><span class="o">=</span><span class="n">LAIEM</span><span class="p">,</span>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>        <span class="n">LASUM</span><span class="o">=</span><span class="n">LASUM</span><span class="p">,</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>        <span class="n">LAIEXP</span><span class="o">=</span><span class="n">LAIEXP</span><span class="p">,</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a>        <span class="n">LAIMAX</span><span class="o">=</span><span class="n">LAIMAX</span><span class="p">,</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a>        <span class="n">LAI</span><span class="o">=</span><span class="n">LAI</span><span class="p">,</span>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a>        <span class="n">WLV</span><span class="o">=</span><span class="n">WLV</span><span class="p">,</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a>        <span class="n">DWLV</span><span class="o">=</span><span class="n">DWLV</span><span class="p">,</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a>        <span class="n">TWLV</span><span class="o">=</span><span class="n">TWLV</span><span class="p">,</span>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a>    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.calc_rates" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">calc_rates</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">calc_rates</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="n"><span title="datetime.date">date</span></span><span class="p">,</span> <span class="n">drv</span><span class="p">:</span> <span class="n"><span title="pcse.base.weather.WeatherDataContainer">WeatherDataContainer</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Calculate the rates of change for the leaf dynamics.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>day</code></b>
+              (<code><span title="datetime.date">date</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>The current date of the simulation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>drv</code></b>
+              (<code><span title="pcse.base.weather.WeatherDataContainer">WeatherDataContainer</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>A dictionary-like container holding
+weather data elements as key/value. The values are
+arrays or scalars. See PCSE documentation for details.</p>
+          </div>
+        </li>
+    </ul>
+
+          
+
+            <details class="quote">
+              <summary>Source code in <code>src/diffwofost/physical_models/crop/leaf_dynamics.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-219">219</a></span>
+<span class="normal"><a href="#__codelineno-0-220">220</a></span>
+<span class="normal"><a href="#__codelineno-0-221">221</a></span>
+<span class="normal"><a href="#__codelineno-0-222">222</a></span>
+<span class="normal"><a href="#__codelineno-0-223">223</a></span>
+<span class="normal"><a href="#__codelineno-0-224">224</a></span>
+<span class="normal"><a href="#__codelineno-0-225">225</a></span>
+<span class="normal"><a href="#__codelineno-0-226">226</a></span>
+<span class="normal"><a href="#__codelineno-0-227">227</a></span>
+<span class="normal"><a href="#__codelineno-0-228">228</a></span>
+<span class="normal"><a href="#__codelineno-0-229">229</a></span>
+<span class="normal"><a href="#__codelineno-0-230">230</a></span>
+<span class="normal"><a href="#__codelineno-0-231">231</a></span>
+<span class="normal"><a href="#__codelineno-0-232">232</a></span>
+<span class="normal"><a href="#__codelineno-0-233">233</a></span>
+<span class="normal"><a href="#__codelineno-0-234">234</a></span>
+<span class="normal"><a href="#__codelineno-0-235">235</a></span>
+<span class="normal"><a href="#__codelineno-0-236">236</a></span>
+<span class="normal"><a href="#__codelineno-0-237">237</a></span>
+<span class="normal"><a href="#__codelineno-0-238">238</a></span>
+<span class="normal"><a href="#__codelineno-0-239">239</a></span>
+<span class="normal"><a href="#__codelineno-0-240">240</a></span>
+<span class="normal"><a href="#__codelineno-0-241">241</a></span>
+<span class="normal"><a href="#__codelineno-0-242">242</a></span>
+<span class="normal"><a href="#__codelineno-0-243">243</a></span>
+<span class="normal"><a href="#__codelineno-0-244">244</a></span>
+<span class="normal"><a href="#__codelineno-0-245">245</a></span>
+<span class="normal"><a href="#__codelineno-0-246">246</a></span>
+<span class="normal"><a href="#__codelineno-0-247">247</a></span>
+<span class="normal"><a href="#__codelineno-0-248">248</a></span>
+<span class="normal"><a href="#__codelineno-0-249">249</a></span>
+<span class="normal"><a href="#__codelineno-0-250">250</a></span>
+<span class="normal"><a href="#__codelineno-0-251">251</a></span>
+<span class="normal"><a href="#__codelineno-0-252">252</a></span>
+<span class="normal"><a href="#__codelineno-0-253">253</a></span>
+<span class="normal"><a href="#__codelineno-0-254">254</a></span>
+<span class="normal"><a href="#__codelineno-0-255">255</a></span>
+<span class="normal"><a href="#__codelineno-0-256">256</a></span>
+<span class="normal"><a href="#__codelineno-0-257">257</a></span>
+<span class="normal"><a href="#__codelineno-0-258">258</a></span>
+<span class="normal"><a href="#__codelineno-0-259">259</a></span>
+<span class="normal"><a href="#__codelineno-0-260">260</a></span>
+<span class="normal"><a href="#__codelineno-0-261">261</a></span>
+<span class="normal"><a href="#__codelineno-0-262">262</a></span>
+<span class="normal"><a href="#__codelineno-0-263">263</a></span>
+<span class="normal"><a href="#__codelineno-0-264">264</a></span>
+<span class="normal"><a href="#__codelineno-0-265">265</a></span>
+<span class="normal"><a href="#__codelineno-0-266">266</a></span>
+<span class="normal"><a href="#__codelineno-0-267">267</a></span>
+<span class="normal"><a href="#__codelineno-0-268">268</a></span>
+<span class="normal"><a href="#__codelineno-0-269">269</a></span>
+<span class="normal"><a href="#__codelineno-0-270">270</a></span>
+<span class="normal"><a href="#__codelineno-0-271">271</a></span>
+<span class="normal"><a href="#__codelineno-0-272">272</a></span>
+<span class="normal"><a href="#__codelineno-0-273">273</a></span>
+<span class="normal"><a href="#__codelineno-0-274">274</a></span>
+<span class="normal"><a href="#__codelineno-0-275">275</a></span>
+<span class="normal"><a href="#__codelineno-0-276">276</a></span>
+<span class="normal"><a href="#__codelineno-0-277">277</a></span>
+<span class="normal"><a href="#__codelineno-0-278">278</a></span>
+<span class="normal"><a href="#__codelineno-0-279">279</a></span>
+<span class="normal"><a href="#__codelineno-0-280">280</a></span>
+<span class="normal"><a href="#__codelineno-0-281">281</a></span>
+<span class="normal"><a href="#__codelineno-0-282">282</a></span>
+<span class="normal"><a href="#__codelineno-0-283">283</a></span>
+<span class="normal"><a href="#__codelineno-0-284">284</a></span>
+<span class="normal"><a href="#__codelineno-0-285">285</a></span>
+<span class="normal"><a href="#__codelineno-0-286">286</a></span>
+<span class="normal"><a href="#__codelineno-0-287">287</a></span>
+<span class="normal"><a href="#__codelineno-0-288">288</a></span>
+<span class="normal"><a href="#__codelineno-0-289">289</a></span>
+<span class="normal"><a href="#__codelineno-0-290">290</a></span>
+<span class="normal"><a href="#__codelineno-0-291">291</a></span>
+<span class="normal"><a href="#__codelineno-0-292">292</a></span>
+<span class="normal"><a href="#__codelineno-0-293">293</a></span>
+<span class="normal"><a href="#__codelineno-0-294">294</a></span>
+<span class="normal"><a href="#__codelineno-0-295">295</a></span>
+<span class="normal"><a href="#__codelineno-0-296">296</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-219" name="__codelineno-0-219"></a><span class="nd">@prepare_rates</span>
+<a id="__codelineno-0-220" name="__codelineno-0-220"></a><span class="k">def</span><span class="w"> </span><span class="nf">calc_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">day</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">,</span> <span class="n">drv</span><span class="p">:</span> <span class="n">WeatherDataContainer</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-221" name="__codelineno-0-221"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the rates of change for the leaf dynamics.</span>
+<a id="__codelineno-0-222" name="__codelineno-0-222"></a>
+<a id="__codelineno-0-223" name="__codelineno-0-223"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-224" name="__codelineno-0-224"></a><span class="sd">        day (datetime.date, optional): The current date of the simulation.</span>
+<a id="__codelineno-0-225" name="__codelineno-0-225"></a><span class="sd">        drv (WeatherDataContainer, optional): A dictionary-like container holding</span>
+<a id="__codelineno-0-226" name="__codelineno-0-226"></a><span class="sd">            weather data elements as key/value. The values are</span>
+<a id="__codelineno-0-227" name="__codelineno-0-227"></a><span class="sd">            arrays or scalars. See PCSE documentation for details.</span>
+<a id="__codelineno-0-228" name="__codelineno-0-228"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-229" name="__codelineno-0-229"></a>    <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rates</span>
+<a id="__codelineno-0-230" name="__codelineno-0-230"></a>    <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span>
+<a id="__codelineno-0-231" name="__codelineno-0-231"></a>    <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span>
+<a id="__codelineno-0-232" name="__codelineno-0-232"></a>    <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span>
+<a id="__codelineno-0-233" name="__codelineno-0-233"></a>
+<a id="__codelineno-0-234" name="__codelineno-0-234"></a>    <span class="c1"># If DVS &lt; 0, the crop has not yet emerged, so we zerofy the rates using mask</span>
+<a id="__codelineno-0-235" name="__codelineno-0-235"></a>    <span class="c1"># Make a mask (0 if DVS &lt; 0, 1 if DVS &gt;= 0)</span>
+<a id="__codelineno-0-236" name="__codelineno-0-236"></a>    <span class="n">DVS</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="s2">&quot;DVS&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-237" name="__codelineno-0-237"></a>    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">DVS</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-238" name="__codelineno-0-238"></a>
+<a id="__codelineno-0-239" name="__codelineno-0-239"></a>    <span class="c1"># Growth rate leaves</span>
+<a id="__codelineno-0-240" name="__codelineno-0-240"></a>    <span class="c1"># weight of new leaves</span>
+<a id="__codelineno-0-241" name="__codelineno-0-241"></a>    <span class="n">r</span><span class="o">.</span><span class="n">GRLV</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">k</span><span class="o">.</span><span class="n">ADMI</span> <span class="o">*</span> <span class="n">k</span><span class="o">.</span><span class="n">FL</span>
+<a id="__codelineno-0-242" name="__codelineno-0-242"></a>
+<a id="__codelineno-0-243" name="__codelineno-0-243"></a>    <span class="c1"># death of leaves due to water/oxygen stress</span>
+<a id="__codelineno-0-244" name="__codelineno-0-244"></a>    <span class="n">r</span><span class="o">.</span><span class="n">DSLV1</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">WLV</span> <span class="o">*</span> <span class="p">(</span><span class="mf">1.0</span> <span class="o">-</span> <span class="n">k</span><span class="o">.</span><span class="n">RFTRA</span><span class="p">)</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">PERDL</span>
+<a id="__codelineno-0-245" name="__codelineno-0-245"></a>
+<a id="__codelineno-0-246" name="__codelineno-0-246"></a>    <span class="c1"># death due to self shading cause by high LAI</span>
+<a id="__codelineno-0-247" name="__codelineno-0-247"></a>    <span class="n">DVS</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">[</span><span class="s2">&quot;DVS&quot;</span><span class="p">]</span>
+<a id="__codelineno-0-248" name="__codelineno-0-248"></a>    <span class="n">LAICR</span> <span class="o">=</span> <span class="mf">3.2</span> <span class="o">/</span> <span class="n">p</span><span class="o">.</span><span class="n">KDIFTB</span><span class="p">(</span><span class="n">DVS</span><span class="p">)</span>
+<a id="__codelineno-0-249" name="__codelineno-0-249"></a>    <span class="n">r</span><span class="o">.</span><span class="n">DSLV2</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">WLV</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="mf">0.03</span> <span class="o">*</span> <span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">LAI</span> <span class="o">-</span> <span class="n">LAICR</span><span class="p">)</span> <span class="o">/</span> <span class="n">LAICR</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">,</span> <span class="mf">0.03</span><span class="p">)</span>
+<a id="__codelineno-0-250" name="__codelineno-0-250"></a>
+<a id="__codelineno-0-251" name="__codelineno-0-251"></a>    <span class="c1"># Death of leaves due to frost damage as determined by</span>
+<a id="__codelineno-0-252" name="__codelineno-0-252"></a>    <span class="c1"># Reduction Factor Frost &quot;RF_FROST&quot;</span>
+<a id="__codelineno-0-253" name="__codelineno-0-253"></a>    <span class="k">if</span> <span class="s2">&quot;RF_FROST&quot;</span> <span class="ow">in</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">:</span>
+<a id="__codelineno-0-254" name="__codelineno-0-254"></a>        <span class="n">r</span><span class="o">.</span><span class="n">DSLV3</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">WLV</span> <span class="o">*</span> <span class="n">k</span><span class="o">.</span><span class="n">RF_FROST</span>
+<a id="__codelineno-0-255" name="__codelineno-0-255"></a>    <span class="k">else</span><span class="p">:</span>
+<a id="__codelineno-0-256" name="__codelineno-0-256"></a>        <span class="n">r</span><span class="o">.</span><span class="n">DSLV3</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">zeros_like</span><span class="p">(</span><span class="n">s</span><span class="o">.</span><span class="n">WLV</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-257" name="__codelineno-0-257"></a>
+<a id="__codelineno-0-258" name="__codelineno-0-258"></a>    <span class="c1"># leaf death equals maximum of water stress, shading and frost</span>
+<a id="__codelineno-0-259" name="__codelineno-0-259"></a>    <span class="n">r</span><span class="o">.</span><span class="n">DSLV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">DSLV1</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">DSLV2</span><span class="p">),</span> <span class="n">r</span><span class="o">.</span><span class="n">DSLV3</span><span class="p">)</span>
+<a id="__codelineno-0-260" name="__codelineno-0-260"></a>
+<a id="__codelineno-0-261" name="__codelineno-0-261"></a>    <span class="c1"># Determine how much leaf biomass classes have to die in states.LV,</span>
+<a id="__codelineno-0-262" name="__codelineno-0-262"></a>    <span class="c1"># given the a life span &gt; SPAN, these classes will be accumulated</span>
+<a id="__codelineno-0-263" name="__codelineno-0-263"></a>    <span class="c1"># in DALV.</span>
+<a id="__codelineno-0-264" name="__codelineno-0-264"></a>    <span class="c1"># Note that the actual leaf death is imposed on the array LV during the</span>
+<a id="__codelineno-0-265" name="__codelineno-0-265"></a>    <span class="c1"># state integration step.</span>
+<a id="__codelineno-0-266" name="__codelineno-0-266"></a>    <span class="n">tSPAN</span> <span class="o">=</span> <span class="n">_broadcast_to</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">SPAN</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">LVAGE</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>  <span class="c1"># Broadcast to same shape</span>
+<a id="__codelineno-0-267" name="__codelineno-0-267"></a>    <span class="c1"># Using a sigmoid here instead of a conditional statement on the value of</span>
+<a id="__codelineno-0-268" name="__codelineno-0-268"></a>    <span class="c1"># SPAN because the latter would not allow for the gradient to be tracked.</span>
+<a id="__codelineno-0-269" name="__codelineno-0-269"></a>    <span class="n">sharpness</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">1000.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>  <span class="c1"># FIXME</span>
+<a id="__codelineno-0-270" name="__codelineno-0-270"></a>    <span class="n">weight</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">((</span><span class="n">s</span><span class="o">.</span><span class="n">LVAGE</span> <span class="o">-</span> <span class="n">tSPAN</span><span class="p">)</span> <span class="o">*</span> <span class="n">sharpness</span><span class="p">)</span>
+<a id="__codelineno-0-271" name="__codelineno-0-271"></a>    <span class="n">r</span><span class="o">.</span><span class="n">DALV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">weight</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">LV</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-272" name="__codelineno-0-272"></a>
+<a id="__codelineno-0-273" name="__codelineno-0-273"></a>    <span class="c1"># Total death rate leaves</span>
+<a id="__codelineno-0-274" name="__codelineno-0-274"></a>    <span class="n">r</span><span class="o">.</span><span class="n">DRLV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">DSLV</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">DALV</span><span class="p">)</span>
+<a id="__codelineno-0-275" name="__codelineno-0-275"></a>
+<a id="__codelineno-0-276" name="__codelineno-0-276"></a>    <span class="c1"># physiologic ageing of leaves per time step</span>
+<a id="__codelineno-0-277" name="__codelineno-0-277"></a>    <span class="n">FYSAGE</span> <span class="o">=</span> <span class="p">(</span><span class="n">drv</span><span class="o">.</span><span class="n">TEMP</span> <span class="o">-</span> <span class="n">p</span><span class="o">.</span><span class="n">TBASE</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="mf">35.0</span> <span class="o">-</span> <span class="n">p</span><span class="o">.</span><span class="n">TBASE</span><span class="p">)</span>
+<a id="__codelineno-0-278" name="__codelineno-0-278"></a>    <span class="n">r</span><span class="o">.</span><span class="n">FYSAGE</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">FYSAGE</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<a id="__codelineno-0-279" name="__codelineno-0-279"></a>
+<a id="__codelineno-0-280" name="__codelineno-0-280"></a>    <span class="c1"># specific leaf area of leaves per time step</span>
+<a id="__codelineno-0-281" name="__codelineno-0-281"></a>    <span class="n">r</span><span class="o">.</span><span class="n">SLAT</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">p</span><span class="o">.</span><span class="n">SLATB</span><span class="p">(</span><span class="n">DVS</span><span class="p">),</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-282" name="__codelineno-0-282"></a>
+<a id="__codelineno-0-283" name="__codelineno-0-283"></a>    <span class="c1"># leaf area not to exceed exponential growth curve</span>
+<a id="__codelineno-0-284" name="__codelineno-0-284"></a>    <span class="n">is_lai_exp</span> <span class="o">=</span> <span class="n">s</span><span class="o">.</span><span class="n">LAIEXP</span> <span class="o">&lt;</span> <span class="mf">6.0</span>
+<a id="__codelineno-0-285" name="__codelineno-0-285"></a>    <span class="n">DTEFF</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">clamp</span><span class="p">(</span><span class="n">drv</span><span class="o">.</span><span class="n">TEMP</span> <span class="o">-</span> <span class="n">p</span><span class="o">.</span><span class="n">TBASE</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<a id="__codelineno-0-286" name="__codelineno-0-286"></a>    <span class="c1"># NOTE: conditional statements do not allow for the gradient to be</span>
+<a id="__codelineno-0-287" name="__codelineno-0-287"></a>    <span class="c1"># tracked through the condition. Thus, the gradient with respect to</span>
+<a id="__codelineno-0-288" name="__codelineno-0-288"></a>    <span class="c1"># parameters that contribute to `is_lai_exp` (e.g. RGRLAI and TBASE)</span>
+<a id="__codelineno-0-289" name="__codelineno-0-289"></a>    <span class="c1"># are expected to be incorrect.</span>
+<a id="__codelineno-0-290" name="__codelineno-0-290"></a>    <span class="n">r</span><span class="o">.</span><span class="n">GLAIEX</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_lai_exp</span><span class="p">,</span> <span class="n">s</span><span class="o">.</span><span class="n">LAIEXP</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">RGRLAI</span> <span class="o">*</span> <span class="n">DTEFF</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">GLAIEX</span><span class="p">)</span>
+<a id="__codelineno-0-291" name="__codelineno-0-291"></a>    <span class="c1"># source-limited increase in leaf area</span>
+<a id="__codelineno-0-292" name="__codelineno-0-292"></a>    <span class="n">r</span><span class="o">.</span><span class="n">GLASOL</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_lai_exp</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">GRLV</span> <span class="o">*</span> <span class="n">r</span><span class="o">.</span><span class="n">SLAT</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">GLASOL</span><span class="p">)</span>
+<a id="__codelineno-0-293" name="__codelineno-0-293"></a>    <span class="c1"># sink-limited increase in leaf area</span>
+<a id="__codelineno-0-294" name="__codelineno-0-294"></a>    <span class="n">GLA</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">minimum</span><span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">GLAIEX</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">GLASOL</span><span class="p">)</span>
+<a id="__codelineno-0-295" name="__codelineno-0-295"></a>    <span class="c1"># adjustment of specific leaf area of youngest leaf class</span>
+<a id="__codelineno-0-296" name="__codelineno-0-296"></a>    <span class="n">r</span><span class="o">.</span><span class="n">SLAT</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_lai_exp</span> <span class="o">&amp;</span> <span class="p">(</span><span class="n">r</span><span class="o">.</span><span class="n">GRLV</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">),</span> <span class="n">GLA</span> <span class="o">/</span> <span class="n">r</span><span class="o">.</span><span class="n">GRLV</span><span class="p">,</span> <span class="n">r</span><span class="o">.</span><span class="n">SLAT</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="diffwofost.physical_models.crop.leaf_dynamics.WOFOST_Leaf_Dynamics.integrate" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">integrate</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">integrate</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="n"><span title="datetime.date">date</span></span><span class="p">,</span> <span class="n">delt</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Integrate the leaf dynamics state variables.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>day</code></b>
+              (<code><span title="datetime.date">date</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>The current date of the simulation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>delt</code></b>
+              (<code><span title="float">float</span></code>, default:
+                  <code>1.0</code>
+)
+          –
+          <div class="doc-md-description">
+            <p>The time step for integration. Defaults to 1.0.</p>
+          </div>
+        </li>
+    </ul>
+
+          
+
+            <details class="quote">
+              <summary>Source code in <code>src/diffwofost/physical_models/crop/leaf_dynamics.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-298">298</a></span>
+<span class="normal"><a href="#__codelineno-0-299">299</a></span>
+<span class="normal"><a href="#__codelineno-0-300">300</a></span>
+<span class="normal"><a href="#__codelineno-0-301">301</a></span>
+<span class="normal"><a href="#__codelineno-0-302">302</a></span>
+<span class="normal"><a href="#__codelineno-0-303">303</a></span>
+<span class="normal"><a href="#__codelineno-0-304">304</a></span>
+<span class="normal"><a href="#__codelineno-0-305">305</a></span>
+<span class="normal"><a href="#__codelineno-0-306">306</a></span>
+<span class="normal"><a href="#__codelineno-0-307">307</a></span>
+<span class="normal"><a href="#__codelineno-0-308">308</a></span>
+<span class="normal"><a href="#__codelineno-0-309">309</a></span>
+<span class="normal"><a href="#__codelineno-0-310">310</a></span>
+<span class="normal"><a href="#__codelineno-0-311">311</a></span>
+<span class="normal"><a href="#__codelineno-0-312">312</a></span>
+<span class="normal"><a href="#__codelineno-0-313">313</a></span>
+<span class="normal"><a href="#__codelineno-0-314">314</a></span>
+<span class="normal"><a href="#__codelineno-0-315">315</a></span>
+<span class="normal"><a href="#__codelineno-0-316">316</a></span>
+<span class="normal"><a href="#__codelineno-0-317">317</a></span>
+<span class="normal"><a href="#__codelineno-0-318">318</a></span>
+<span class="normal"><a href="#__codelineno-0-319">319</a></span>
+<span class="normal"><a href="#__codelineno-0-320">320</a></span>
+<span class="normal"><a href="#__codelineno-0-321">321</a></span>
+<span class="normal"><a href="#__codelineno-0-322">322</a></span>
+<span class="normal"><a href="#__codelineno-0-323">323</a></span>
+<span class="normal"><a href="#__codelineno-0-324">324</a></span>
+<span class="normal"><a href="#__codelineno-0-325">325</a></span>
+<span class="normal"><a href="#__codelineno-0-326">326</a></span>
+<span class="normal"><a href="#__codelineno-0-327">327</a></span>
+<span class="normal"><a href="#__codelineno-0-328">328</a></span>
+<span class="normal"><a href="#__codelineno-0-329">329</a></span>
+<span class="normal"><a href="#__codelineno-0-330">330</a></span>
+<span class="normal"><a href="#__codelineno-0-331">331</a></span>
+<span class="normal"><a href="#__codelineno-0-332">332</a></span>
+<span class="normal"><a href="#__codelineno-0-333">333</a></span>
+<span class="normal"><a href="#__codelineno-0-334">334</a></span>
+<span class="normal"><a href="#__codelineno-0-335">335</a></span>
+<span class="normal"><a href="#__codelineno-0-336">336</a></span>
+<span class="normal"><a href="#__codelineno-0-337">337</a></span>
+<span class="normal"><a href="#__codelineno-0-338">338</a></span>
+<span class="normal"><a href="#__codelineno-0-339">339</a></span>
+<span class="normal"><a href="#__codelineno-0-340">340</a></span>
+<span class="normal"><a href="#__codelineno-0-341">341</a></span>
+<span class="normal"><a href="#__codelineno-0-342">342</a></span>
+<span class="normal"><a href="#__codelineno-0-343">343</a></span>
+<span class="normal"><a href="#__codelineno-0-344">344</a></span>
+<span class="normal"><a href="#__codelineno-0-345">345</a></span>
+<span class="normal"><a href="#__codelineno-0-346">346</a></span>
+<span class="normal"><a href="#__codelineno-0-347">347</a></span>
+<span class="normal"><a href="#__codelineno-0-348">348</a></span>
+<span class="normal"><a href="#__codelineno-0-349">349</a></span>
+<span class="normal"><a href="#__codelineno-0-350">350</a></span>
+<span class="normal"><a href="#__codelineno-0-351">351</a></span>
+<span class="normal"><a href="#__codelineno-0-352">352</a></span>
+<span class="normal"><a href="#__codelineno-0-353">353</a></span>
+<span class="normal"><a href="#__codelineno-0-354">354</a></span>
+<span class="normal"><a href="#__codelineno-0-355">355</a></span>
+<span class="normal"><a href="#__codelineno-0-356">356</a></span>
+<span class="normal"><a href="#__codelineno-0-357">357</a></span>
+<span class="normal"><a href="#__codelineno-0-358">358</a></span>
+<span class="normal"><a href="#__codelineno-0-359">359</a></span>
+<span class="normal"><a href="#__codelineno-0-360">360</a></span>
+<span class="normal"><a href="#__codelineno-0-361">361</a></span>
+<span class="normal"><a href="#__codelineno-0-362">362</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-298" name="__codelineno-0-298"></a><span class="nd">@prepare_states</span>
+<a id="__codelineno-0-299" name="__codelineno-0-299"></a><span class="k">def</span><span class="w"> </span><span class="nf">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">day</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">,</span> <span class="n">delt</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-300" name="__codelineno-0-300"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Integrate the leaf dynamics state variables.</span>
+<a id="__codelineno-0-301" name="__codelineno-0-301"></a>
+<a id="__codelineno-0-302" name="__codelineno-0-302"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-303" name="__codelineno-0-303"></a><span class="sd">        day (datetime.date, optional): The current date of the simulation.</span>
+<a id="__codelineno-0-304" name="__codelineno-0-304"></a><span class="sd">        delt (float, optional): The time step for integration. Defaults to 1.0.</span>
+<a id="__codelineno-0-305" name="__codelineno-0-305"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-306" name="__codelineno-0-306"></a>    <span class="c1"># TODO check if DVS &lt; 0 and skip integration needed</span>
+<a id="__codelineno-0-307" name="__codelineno-0-307"></a>    <span class="n">rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rates</span>
+<a id="__codelineno-0-308" name="__codelineno-0-308"></a>    <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span>
+<a id="__codelineno-0-309" name="__codelineno-0-309"></a>
+<a id="__codelineno-0-310" name="__codelineno-0-310"></a>    <span class="c1"># --------- leave death ---------</span>
+<a id="__codelineno-0-311" name="__codelineno-0-311"></a>    <span class="n">tLV</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">LV</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+<a id="__codelineno-0-312" name="__codelineno-0-312"></a>    <span class="n">tSLA</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">SLA</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+<a id="__codelineno-0-313" name="__codelineno-0-313"></a>    <span class="n">tLVAGE</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">LVAGE</span><span class="o">.</span><span class="n">clone</span><span class="p">()</span>
+<a id="__codelineno-0-314" name="__codelineno-0-314"></a>    <span class="n">tDRLV</span> <span class="o">=</span> <span class="n">_broadcast_to</span><span class="p">(</span><span class="n">rates</span><span class="o">.</span><span class="n">DRLV</span><span class="p">,</span> <span class="n">tLV</span><span class="o">.</span><span class="n">shape</span><span class="p">)</span>
+<a id="__codelineno-0-315" name="__codelineno-0-315"></a>
+<a id="__codelineno-0-316" name="__codelineno-0-316"></a>    <span class="c1"># Leaf death is imposed on leaves from the oldest ones.</span>
+<a id="__codelineno-0-317" name="__codelineno-0-317"></a>    <span class="c1"># Calculate the cumulative sum of weights after leaf death, and</span>
+<a id="__codelineno-0-318" name="__codelineno-0-318"></a>    <span class="c1"># find out which leaf classes are dead (negative weights)</span>
+<a id="__codelineno-0-319" name="__codelineno-0-319"></a>    <span class="n">weight_cumsum</span> <span class="o">=</span> <span class="n">tLV</span><span class="o">.</span><span class="n">cumsum</span><span class="p">(</span><span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span> <span class="o">-</span> <span class="n">tDRLV</span>
+<a id="__codelineno-0-320" name="__codelineno-0-320"></a>    <span class="n">is_alive</span> <span class="o">=</span> <span class="n">weight_cumsum</span> <span class="o">&gt;=</span> <span class="mi">0</span>
+<a id="__codelineno-0-321" name="__codelineno-0-321"></a>
+<a id="__codelineno-0-322" name="__codelineno-0-322"></a>    <span class="c1"># Adjust value of oldest leaf class, i.e. the first non-zero</span>
+<a id="__codelineno-0-323" name="__codelineno-0-323"></a>    <span class="c1"># weight along the time axis (the last dimension).</span>
+<a id="__codelineno-0-324" name="__codelineno-0-324"></a>    <span class="c1"># Cast argument to int because torch.argmax requires it to be numeric</span>
+<a id="__codelineno-0-325" name="__codelineno-0-325"></a>    <span class="n">idx_oldest</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">argmax</span><span class="p">(</span><span class="n">is_alive</span><span class="o">.</span><span class="n">type</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">int</span><span class="p">),</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">keepdim</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+<a id="__codelineno-0-326" name="__codelineno-0-326"></a>    <span class="n">new_biomass</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">take_along_dim</span><span class="p">(</span><span class="n">weight_cumsum</span><span class="p">,</span> <span class="n">indices</span><span class="o">=</span><span class="n">idx_oldest</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-327" name="__codelineno-0-327"></a>    <span class="n">tLV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">scatter</span><span class="p">(</span><span class="n">tLV</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">,</span> <span class="n">index</span><span class="o">=</span><span class="n">idx_oldest</span><span class="p">,</span> <span class="n">src</span><span class="o">=</span><span class="n">new_biomass</span><span class="p">)</span>
+<a id="__codelineno-0-328" name="__codelineno-0-328"></a>
+<a id="__codelineno-0-329" name="__codelineno-0-329"></a>    <span class="c1"># Zero out all dead leaf classes</span>
+<a id="__codelineno-0-330" name="__codelineno-0-330"></a>    <span class="c1"># NOTE: conditional statements do not allow for the gradient to be</span>
+<a id="__codelineno-0-331" name="__codelineno-0-331"></a>    <span class="c1"># tracked through the condition. Thus, the gradient with respect to</span>
+<a id="__codelineno-0-332" name="__codelineno-0-332"></a>    <span class="c1"># parameters that contribute to `is_alive` are expected to be incorrect.</span>
+<a id="__codelineno-0-333" name="__codelineno-0-333"></a>    <span class="n">tLV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_alive</span><span class="p">,</span> <span class="n">tLV</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<a id="__codelineno-0-334" name="__codelineno-0-334"></a>
+<a id="__codelineno-0-335" name="__codelineno-0-335"></a>    <span class="c1"># Integration of physiological age</span>
+<a id="__codelineno-0-336" name="__codelineno-0-336"></a>    <span class="n">tLVAGE</span> <span class="o">=</span> <span class="n">tLVAGE</span> <span class="o">+</span> <span class="n">rates</span><span class="o">.</span><span class="n">FYSAGE</span>
+<a id="__codelineno-0-337" name="__codelineno-0-337"></a>    <span class="n">tLVAGE</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_alive</span><span class="p">,</span> <span class="n">tLVAGE</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<a id="__codelineno-0-338" name="__codelineno-0-338"></a>    <span class="n">tSLA</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">where</span><span class="p">(</span><span class="n">is_alive</span><span class="p">,</span> <span class="n">tSLA</span><span class="p">,</span> <span class="mf">0.0</span><span class="p">)</span>
+<a id="__codelineno-0-339" name="__codelineno-0-339"></a>
+<a id="__codelineno-0-340" name="__codelineno-0-340"></a>    <span class="c1"># --------- leave growth ---------</span>
+<a id="__codelineno-0-341" name="__codelineno-0-341"></a>    <span class="n">idx</span> <span class="o">=</span> <span class="nb">int</span><span class="p">((</span><span class="n">day</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">START_DATE</span><span class="p">)</span><span class="o">.</span><span class="n">days</span> <span class="o">/</span> <span class="n">delt</span><span class="p">)</span>
+<a id="__codelineno-0-342" name="__codelineno-0-342"></a>    <span class="n">tLV</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">rates</span><span class="o">.</span><span class="n">GRLV</span>
+<a id="__codelineno-0-343" name="__codelineno-0-343"></a>    <span class="n">tSLA</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="n">rates</span><span class="o">.</span><span class="n">SLAT</span>
+<a id="__codelineno-0-344" name="__codelineno-0-344"></a>    <span class="n">tLVAGE</span><span class="p">[</span><span class="o">...</span><span class="p">,</span> <span class="n">idx</span><span class="p">]</span> <span class="o">=</span> <span class="mf">0.0</span>
+<a id="__codelineno-0-345" name="__codelineno-0-345"></a>
+<a id="__codelineno-0-346" name="__codelineno-0-346"></a>    <span class="c1"># calculation of new leaf area</span>
+<a id="__codelineno-0-347" name="__codelineno-0-347"></a>    <span class="n">states</span><span class="o">.</span><span class="n">LASUM</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tLV</span> <span class="o">*</span> <span class="n">tSLA</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-348" name="__codelineno-0-348"></a>    <span class="n">states</span><span class="o">.</span><span class="n">LAI</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_calc_LAI</span><span class="p">()</span>
+<a id="__codelineno-0-349" name="__codelineno-0-349"></a>    <span class="n">states</span><span class="o">.</span><span class="n">LAIMAX</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">maximum</span><span class="p">(</span><span class="n">states</span><span class="o">.</span><span class="n">LAI</span><span class="p">,</span> <span class="n">states</span><span class="o">.</span><span class="n">LAIMAX</span><span class="p">)</span>
+<a id="__codelineno-0-350" name="__codelineno-0-350"></a>
+<a id="__codelineno-0-351" name="__codelineno-0-351"></a>    <span class="c1"># exponential growth curve</span>
+<a id="__codelineno-0-352" name="__codelineno-0-352"></a>    <span class="n">states</span><span class="o">.</span><span class="n">LAIEXP</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">LAIEXP</span> <span class="o">+</span> <span class="n">rates</span><span class="o">.</span><span class="n">GLAIEX</span>
+<a id="__codelineno-0-353" name="__codelineno-0-353"></a>
+<a id="__codelineno-0-354" name="__codelineno-0-354"></a>    <span class="c1"># Update leaf biomass states</span>
+<a id="__codelineno-0-355" name="__codelineno-0-355"></a>    <span class="n">states</span><span class="o">.</span><span class="n">WLV</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">sum</span><span class="p">(</span><span class="n">tLV</span><span class="p">,</span> <span class="n">dim</span><span class="o">=-</span><span class="mi">1</span><span class="p">)</span>
+<a id="__codelineno-0-356" name="__codelineno-0-356"></a>    <span class="n">states</span><span class="o">.</span><span class="n">DWLV</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">DWLV</span> <span class="o">+</span> <span class="n">rates</span><span class="o">.</span><span class="n">DRLV</span>
+<a id="__codelineno-0-357" name="__codelineno-0-357"></a>    <span class="n">states</span><span class="o">.</span><span class="n">TWLV</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">WLV</span> <span class="o">+</span> <span class="n">states</span><span class="o">.</span><span class="n">DWLV</span>
+<a id="__codelineno-0-358" name="__codelineno-0-358"></a>
+<a id="__codelineno-0-359" name="__codelineno-0-359"></a>    <span class="c1"># Store final leaf biomass deques</span>
+<a id="__codelineno-0-360" name="__codelineno-0-360"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">LV</span> <span class="o">=</span> <span class="n">tLV</span>
+<a id="__codelineno-0-361" name="__codelineno-0-361"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">SLA</span> <span class="o">=</span> <span class="n">tSLA</span>
+<a id="__codelineno-0-362" name="__codelineno-0-362"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">states</span><span class="o">.</span><span class="n">LVAGE</span> <span class="o">=</span> <span class="n">tLVAGE</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics</span>
+
+
+</h3>
+
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pcse.base.SimulationObject">SimulationObject</span></code></p>
+
+
+        <p>Root biomass dynamics and rooting depth.</p>
+<p>Root growth and root biomass dynamics in WOFOST are separate processes,
+with the only exception that root growth stops when no more biomass is sent
+to the root system.</p>
+<p>Root biomass increase results from the assimilates partitioned to
+the root system. Root death is defined as the current root biomass
+multiplied by a relative death rate (<code>RDRRTB</code>). The latter as a function
+of the development stage (<code>DVS</code>).</p>
+<p>Increase in root depth is a simple linear expansion over time until the
+maximum rooting depth (<code>RDM</code>) is reached.</p>
+<p><strong>Simulation parameters</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Type</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RDI</td>
+<td>Initial rooting depth</td>
+<td>SCr</td>
+<td>cm</td>
+</tr>
+<tr>
+<td>RRI</td>
+<td>Daily increase in rooting depth</td>
+<td>SCr</td>
+<td>cm day⁻¹</td>
+</tr>
+<tr>
+<td>RDMCR</td>
+<td>Maximum rooting depth of the crop</td>
+<td>SCR</td>
+<td>cm</td>
+</tr>
+<tr>
+<td>RDMSOL</td>
+<td>Maximum rooting depth of the soil</td>
+<td>SSo</td>
+<td>cm</td>
+</tr>
+<tr>
+<td>TDWI</td>
+<td>Initial total crop dry weight</td>
+<td>SCr</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>IAIRDU</td>
+<td>Presence of air ducts in the root (1) or not (0)</td>
+<td>SCr</td>
+<td>-</td>
+</tr>
+<tr>
+<td>RDRRTB</td>
+<td>Relative death rate of roots as a function of development stage</td>
+<td>TCr</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>State variables</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Pbl</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RD</td>
+<td>Current rooting depth</td>
+<td>Y</td>
+<td>cm</td>
+</tr>
+<tr>
+<td>RDM</td>
+<td>Maximum attainable rooting depth at the minimum of the soil and crop maximum rooting depth</td>
+<td>N</td>
+<td>cm</td>
+</tr>
+<tr>
+<td>WRT</td>
+<td>Weight of living roots</td>
+<td>Y</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>DWRT</td>
+<td>Weight of dead roots</td>
+<td>N</td>
+<td>kg ha⁻¹</td>
+</tr>
+<tr>
+<td>TWRT</td>
+<td>Total weight of roots</td>
+<td>Y</td>
+<td>kg ha⁻¹</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Rate variables</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Pbl</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RR</td>
+<td>Growth rate root depth</td>
+<td>N</td>
+<td>cm</td>
+</tr>
+<tr>
+<td>GRRT</td>
+<td>Growth rate root biomass</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>DRRT</td>
+<td>Death rate root biomass</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>GWRT</td>
+<td>Net change in root biomass</td>
+<td>N</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Signals send or handled</strong></p>
+<p>None</p>
+<p><strong>External dependencies:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Provided by</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>DVS</td>
+<td>Crop development stage</td>
+<td>DVS_Phenology</td>
+<td>-</td>
+</tr>
+<tr>
+<td>DMI</td>
+<td>Total dry matter increase</td>
+<td>CropSimulation</td>
+<td>kg ha⁻¹ d⁻¹</td>
+</tr>
+<tr>
+<td>FR</td>
+<td>Fraction biomass to roots</td>
+<td>DVS_Partitioning</td>
+<td>-</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Outputs:</strong></p>
+<table>
+<thead>
+<tr>
+<th>Name</th>
+<th>Description</th>
+<th>Provided by</th>
+<th>Unit</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RD</td>
+<td>Current rooting depth</td>
+<td>Y</td>
+<td>cm</td>
+</tr>
+<tr>
+<td>TWRT</td>
+<td>Total weight of roots</td>
+<td>Y</td>
+<td>kg ha⁻¹</td>
+</tr>
+</tbody>
+</table>
+<p><strong>IMPORTANT NOTICE</strong></p>
+<p>Currently root development is linear and depends only on the fraction of assimilates
+send to the roots (FR) and not on the amount of assimilates itself. This means that
+roots also grow through the winter when there is no assimilation due to low
+temperatures. There has been a discussion to change this behaviour and make root growth
+dependent on the assimilates send to the roots: so root growth stops when there are
+no assimilates available for growth.</p>
+<p>Finally, we decided not to change the root model and keep the original WOFOST approach
+because of the following reasons:
+- A dry top layer in the soil could create a large drought stress that reduces the
+  assimilates to zero. In this situation the roots would not grow if dependent on the
+  assimilates, while water is available in the zone just below the root zone. Therefore
+  a dependency on the amount of assimilates could create model instability in dry
+  conditions (e.g. Southern-Mediterranean, etc.).
+- Other solutions to alleviate the problem above were explored: only put this limitation
+  after a certain development stage, putting a dependency on soil moisture levels in the
+  unrooted soil compartment. All these solutions were found to introduce arbitrary
+  parameters that have no clear explanation. Therefore all proposed solutions were discarded.</p>
+<p>We conclude that our current knowledge on root development is insufficient to propose a
+better and more biophysical approach to root development in WOFOST.</p>
+
+          
+
+
+
+
+
+
+
+
+
+
+
+<p><span class="doc-section-title">Methods:</span></p>
+    <ul>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            initialize (diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.initialize)" href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.initialize">initialize</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Initialize the model.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            calc_rates (diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.calc_rates)" href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.calc_rates">calc_rates</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Calculate the rates of change of the state variables.</p>
+            </div>
+          </li>
+          <li class="doc-section-item field-body">
+            <b><code><a class="autorefs autorefs-internal" title="            integrate (diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.integrate)" href="#diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.integrate">integrate</a></code></b>
+            –
+            <div class="doc-md-description">
+              <p>Integrate the state variables using the rates of change.</p>
+            </div>
+          </li>
+    </ul>
+
+
+
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.initialize" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">initialize</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">initialize</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="n"><span title="datetime.datetime.date">date</span></span><span class="p">,</span> <span class="n">kiosk</span><span class="p">:</span> <span class="n"><span title="pcse.base.variablekiosk.VariableKiosk">VariableKiosk</span></span><span class="p">,</span> <span class="n">parvalues</span><span class="p">:</span> <span class="n"><span title="pcse.base.parameter_providers.ParameterProvider">ParameterProvider</span></span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Initialize the model.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>day</code></b>
+              (<code><span title="datetime.datetime.date">date</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>The starting date of the simulation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>kiosk</code></b>
+              (<code><span title="pcse.base.variablekiosk.VariableKiosk">VariableKiosk</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>A container for registering and publishing
+(internal and external) state variables. See PCSE documentation for
+details.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>parvalues</code></b>
+              (<code><span title="pcse.base.parameter_providers.ParameterProvider">ParameterProvider</span></code>)
+          –
+          <div class="doc-md-description">
+            <p>A dictionary-like container holding
+all parameter sets (crop, soil, site) as key/value. The values are
+arrays or scalars. See PCSE documentation for details.</p>
+          </div>
+        </li>
+    </ul>
+
+          
+
+            <details class="quote">
+              <summary>Source code in <code>src/diffwofost/physical_models/crop/root_dynamics.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-130">130</a></span>
+<span class="normal"><a href="#__codelineno-0-131">131</a></span>
+<span class="normal"><a href="#__codelineno-0-132">132</a></span>
+<span class="normal"><a href="#__codelineno-0-133">133</a></span>
+<span class="normal"><a href="#__codelineno-0-134">134</a></span>
+<span class="normal"><a href="#__codelineno-0-135">135</a></span>
+<span class="normal"><a href="#__codelineno-0-136">136</a></span>
+<span class="normal"><a href="#__codelineno-0-137">137</a></span>
+<span class="normal"><a href="#__codelineno-0-138">138</a></span>
+<span class="normal"><a href="#__codelineno-0-139">139</a></span>
+<span class="normal"><a href="#__codelineno-0-140">140</a></span>
+<span class="normal"><a href="#__codelineno-0-141">141</a></span>
+<span class="normal"><a href="#__codelineno-0-142">142</a></span>
+<span class="normal"><a href="#__codelineno-0-143">143</a></span>
+<span class="normal"><a href="#__codelineno-0-144">144</a></span>
+<span class="normal"><a href="#__codelineno-0-145">145</a></span>
+<span class="normal"><a href="#__codelineno-0-146">146</a></span>
+<span class="normal"><a href="#__codelineno-0-147">147</a></span>
+<span class="normal"><a href="#__codelineno-0-148">148</a></span>
+<span class="normal"><a href="#__codelineno-0-149">149</a></span>
+<span class="normal"><a href="#__codelineno-0-150">150</a></span>
+<span class="normal"><a href="#__codelineno-0-151">151</a></span>
+<span class="normal"><a href="#__codelineno-0-152">152</a></span>
+<span class="normal"><a href="#__codelineno-0-153">153</a></span>
+<span class="normal"><a href="#__codelineno-0-154">154</a></span>
+<span class="normal"><a href="#__codelineno-0-155">155</a></span>
+<span class="normal"><a href="#__codelineno-0-156">156</a></span>
+<span class="normal"><a href="#__codelineno-0-157">157</a></span>
+<span class="normal"><a href="#__codelineno-0-158">158</a></span>
+<span class="normal"><a href="#__codelineno-0-159">159</a></span>
+<span class="normal"><a href="#__codelineno-0-160">160</a></span>
+<span class="normal"><a href="#__codelineno-0-161">161</a></span>
+<span class="normal"><a href="#__codelineno-0-162">162</a></span>
+<span class="normal"><a href="#__codelineno-0-163">163</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-130" name="__codelineno-0-130"></a><span class="k">def</span><span class="w"> </span><span class="nf">initialize</span><span class="p">(</span>
+<a id="__codelineno-0-131" name="__codelineno-0-131"></a>    <span class="bp">self</span><span class="p">,</span> <span class="n">day</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span><span class="p">,</span> <span class="n">kiosk</span><span class="p">:</span> <span class="n">VariableKiosk</span><span class="p">,</span> <span class="n">parvalues</span><span class="p">:</span> <span class="n">ParameterProvider</span>
+<a id="__codelineno-0-132" name="__codelineno-0-132"></a><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-133" name="__codelineno-0-133"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Initialize the model.</span>
+<a id="__codelineno-0-134" name="__codelineno-0-134"></a>
+<a id="__codelineno-0-135" name="__codelineno-0-135"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-136" name="__codelineno-0-136"></a><span class="sd">        day (datetime.date): The starting date of the simulation.</span>
+<a id="__codelineno-0-137" name="__codelineno-0-137"></a><span class="sd">        kiosk (VariableKiosk): A container for registering and publishing</span>
+<a id="__codelineno-0-138" name="__codelineno-0-138"></a><span class="sd">            (internal and external) state variables. See PCSE documentation for</span>
+<a id="__codelineno-0-139" name="__codelineno-0-139"></a><span class="sd">            details.</span>
+<a id="__codelineno-0-140" name="__codelineno-0-140"></a><span class="sd">        parvalues (ParameterProvider): A dictionary-like container holding</span>
+<a id="__codelineno-0-141" name="__codelineno-0-141"></a><span class="sd">            all parameter sets (crop, soil, site) as key/value. The values are</span>
+<a id="__codelineno-0-142" name="__codelineno-0-142"></a><span class="sd">            arrays or scalars. See PCSE documentation for details.</span>
+<a id="__codelineno-0-143" name="__codelineno-0-143"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-144" name="__codelineno-0-144"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">Parameters</span><span class="p">(</span><span class="n">parvalues</span><span class="p">)</span>
+<a id="__codelineno-0-145" name="__codelineno-0-145"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">RateVariables</span><span class="p">(</span><span class="n">kiosk</span><span class="p">,</span> <span class="n">publish</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;DRRT&quot;</span><span class="p">,</span> <span class="s2">&quot;GRRT&quot;</span><span class="p">])</span>
+<a id="__codelineno-0-146" name="__codelineno-0-146"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span> <span class="o">=</span> <span class="n">kiosk</span>
+<a id="__codelineno-0-147" name="__codelineno-0-147"></a>
+<a id="__codelineno-0-148" name="__codelineno-0-148"></a>    <span class="c1"># INITIAL STATES</span>
+<a id="__codelineno-0-149" name="__codelineno-0-149"></a>    <span class="n">params</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span>
+<a id="__codelineno-0-150" name="__codelineno-0-150"></a>
+<a id="__codelineno-0-151" name="__codelineno-0-151"></a>    <span class="c1"># Initial root depth states</span>
+<a id="__codelineno-0-152" name="__codelineno-0-152"></a>    <span class="n">rdmax</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">max</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">RDI</span><span class="p">,</span> <span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">(</span><span class="n">params</span><span class="o">.</span><span class="n">RDMCR</span><span class="p">,</span> <span class="n">params</span><span class="o">.</span><span class="n">RDMSOL</span><span class="p">))</span>
+<a id="__codelineno-0-153" name="__codelineno-0-153"></a>    <span class="n">RDM</span> <span class="o">=</span> <span class="n">rdmax</span>
+<a id="__codelineno-0-154" name="__codelineno-0-154"></a>    <span class="n">RD</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">RDI</span>
+<a id="__codelineno-0-155" name="__codelineno-0-155"></a>
+<a id="__codelineno-0-156" name="__codelineno-0-156"></a>    <span class="c1"># initial root biomass states</span>
+<a id="__codelineno-0-157" name="__codelineno-0-157"></a>    <span class="n">WRT</span> <span class="o">=</span> <span class="n">params</span><span class="o">.</span><span class="n">TDWI</span> <span class="o">*</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="o">.</span><span class="n">FR</span>
+<a id="__codelineno-0-158" name="__codelineno-0-158"></a>    <span class="n">DWRT</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-159" name="__codelineno-0-159"></a>    <span class="n">TWRT</span> <span class="o">=</span> <span class="n">WRT</span> <span class="o">+</span> <span class="n">DWRT</span>
+<a id="__codelineno-0-160" name="__codelineno-0-160"></a>
+<a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">StateVariables</span><span class="p">(</span>
+<a id="__codelineno-0-162" name="__codelineno-0-162"></a>        <span class="n">kiosk</span><span class="p">,</span> <span class="n">publish</span><span class="o">=</span><span class="p">[</span><span class="s2">&quot;RD&quot;</span><span class="p">,</span> <span class="s2">&quot;WRT&quot;</span><span class="p">,</span> <span class="s2">&quot;TWRT&quot;</span><span class="p">],</span> <span class="n">RD</span><span class="o">=</span><span class="n">RD</span><span class="p">,</span> <span class="n">RDM</span><span class="o">=</span><span class="n">RDM</span><span class="p">,</span> <span class="n">WRT</span><span class="o">=</span><span class="n">WRT</span><span class="p">,</span> <span class="n">DWRT</span><span class="o">=</span><span class="n">DWRT</span><span class="p">,</span> <span class="n">TWRT</span><span class="o">=</span><span class="n">TWRT</span>
+<a id="__codelineno-0-163" name="__codelineno-0-163"></a>    <span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.calc_rates" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">calc_rates</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">calc_rates</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="n"><span title="datetime.datetime.date">date</span></span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">drv</span><span class="p">:</span> <span class="n"><span title="pcse.base.weather.WeatherDataContainer">WeatherDataContainer</span></span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Calculate the rates of change of the state variables.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>day</code></b>
+              (<code><span title="datetime.datetime.date">date</span></code>, default:
+                  <code>None</code>
+)
+          –
+          <div class="doc-md-description">
+            <p>The current date of the simulation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>drv</code></b>
+              (<code><span title="pcse.base.weather.WeatherDataContainer">WeatherDataContainer</span></code>, default:
+                  <code>None</code>
+)
+          –
+          <div class="doc-md-description">
+            <p>A dictionary-like container holding
+weather data elements as key/value. The values are
+arrays or scalars. See PCSE documentation for details.</p>
+          </div>
+        </li>
+    </ul>
+
+          
+
+            <details class="quote">
+              <summary>Source code in <code>src/diffwofost/physical_models/crop/root_dynamics.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-165">165</a></span>
+<span class="normal"><a href="#__codelineno-0-166">166</a></span>
+<span class="normal"><a href="#__codelineno-0-167">167</a></span>
+<span class="normal"><a href="#__codelineno-0-168">168</a></span>
+<span class="normal"><a href="#__codelineno-0-169">169</a></span>
+<span class="normal"><a href="#__codelineno-0-170">170</a></span>
+<span class="normal"><a href="#__codelineno-0-171">171</a></span>
+<span class="normal"><a href="#__codelineno-0-172">172</a></span>
+<span class="normal"><a href="#__codelineno-0-173">173</a></span>
+<span class="normal"><a href="#__codelineno-0-174">174</a></span>
+<span class="normal"><a href="#__codelineno-0-175">175</a></span>
+<span class="normal"><a href="#__codelineno-0-176">176</a></span>
+<span class="normal"><a href="#__codelineno-0-177">177</a></span>
+<span class="normal"><a href="#__codelineno-0-178">178</a></span>
+<span class="normal"><a href="#__codelineno-0-179">179</a></span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span>
+<span class="normal"><a href="#__codelineno-0-182">182</a></span>
+<span class="normal"><a href="#__codelineno-0-183">183</a></span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span>
+<span class="normal"><a href="#__codelineno-0-185">185</a></span>
+<span class="normal"><a href="#__codelineno-0-186">186</a></span>
+<span class="normal"><a href="#__codelineno-0-187">187</a></span>
+<span class="normal"><a href="#__codelineno-0-188">188</a></span>
+<span class="normal"><a href="#__codelineno-0-189">189</a></span>
+<span class="normal"><a href="#__codelineno-0-190">190</a></span>
+<span class="normal"><a href="#__codelineno-0-191">191</a></span>
+<span class="normal"><a href="#__codelineno-0-192">192</a></span>
+<span class="normal"><a href="#__codelineno-0-193">193</a></span>
+<span class="normal"><a href="#__codelineno-0-194">194</a></span>
+<span class="normal"><a href="#__codelineno-0-195">195</a></span>
+<span class="normal"><a href="#__codelineno-0-196">196</a></span>
+<span class="normal"><a href="#__codelineno-0-197">197</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-165" name="__codelineno-0-165"></a><span class="nd">@prepare_rates</span>
+<a id="__codelineno-0-166" name="__codelineno-0-166"></a><span class="k">def</span><span class="w"> </span><span class="nf">calc_rates</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">day</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">drv</span><span class="p">:</span> <span class="n">WeatherDataContainer</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-167" name="__codelineno-0-167"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Calculate the rates of change of the state variables.</span>
+<a id="__codelineno-0-168" name="__codelineno-0-168"></a>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-170" name="__codelineno-0-170"></a><span class="sd">        day (datetime.date, optional): The current date of the simulation.</span>
+<a id="__codelineno-0-171" name="__codelineno-0-171"></a><span class="sd">        drv (WeatherDataContainer, optional): A dictionary-like container holding</span>
+<a id="__codelineno-0-172" name="__codelineno-0-172"></a><span class="sd">            weather data elements as key/value. The values are</span>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a><span class="sd">            arrays or scalars. See PCSE documentation for details.</span>
+<a id="__codelineno-0-174" name="__codelineno-0-174"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-175" name="__codelineno-0-175"></a>    <span class="n">p</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">params</span>
+<a id="__codelineno-0-176" name="__codelineno-0-176"></a>    <span class="n">r</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rates</span>
+<a id="__codelineno-0-177" name="__codelineno-0-177"></a>    <span class="n">s</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span>
+<a id="__codelineno-0-178" name="__codelineno-0-178"></a>    <span class="n">k</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span>
+<a id="__codelineno-0-179" name="__codelineno-0-179"></a>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a>    <span class="c1"># If DVS &lt; 0, the crop has not yet emerged, so we zerofy the rates using mask</span>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a>    <span class="c1"># Make a mask (0 if DVS &lt; 0, 1 if DVS &gt;= 0)</span>
+<a id="__codelineno-0-182" name="__codelineno-0-182"></a>    <span class="n">DVS</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="s2">&quot;DVS&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-183" name="__codelineno-0-183"></a>    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">DVS</span> <span class="o">&gt;=</span> <span class="mi">0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="c1"># Increase in root biomass</span>
+<a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="n">r</span><span class="o">.</span><span class="n">GRRT</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">k</span><span class="o">.</span><span class="n">FR</span> <span class="o">*</span> <span class="n">k</span><span class="o">.</span><span class="n">DMI</span>
+<a id="__codelineno-0-187" name="__codelineno-0-187"></a>    <span class="n">r</span><span class="o">.</span><span class="n">DRRT</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">s</span><span class="o">.</span><span class="n">WRT</span> <span class="o">*</span> <span class="n">p</span><span class="o">.</span><span class="n">RDRRTB</span><span class="p">(</span><span class="n">k</span><span class="o">.</span><span class="n">DVS</span><span class="p">)</span>
+<a id="__codelineno-0-188" name="__codelineno-0-188"></a>    <span class="n">r</span><span class="o">.</span><span class="n">GWRT</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">GRRT</span> <span class="o">-</span> <span class="n">r</span><span class="o">.</span><span class="n">DRRT</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="c1"># Increase in root depth</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a>    <span class="n">r</span><span class="o">.</span><span class="n">RR</span> <span class="o">=</span> <span class="n">mask</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">min</span><span class="p">((</span><span class="n">s</span><span class="o">.</span><span class="n">RDM</span> <span class="o">-</span> <span class="n">s</span><span class="o">.</span><span class="n">RD</span><span class="p">),</span> <span class="n">p</span><span class="o">.</span><span class="n">RRI</span><span class="p">)</span>
+<a id="__codelineno-0-192" name="__codelineno-0-192"></a>
+<a id="__codelineno-0-193" name="__codelineno-0-193"></a>    <span class="c1"># Do not let the roots growth if partioning to the roots</span>
+<a id="__codelineno-0-194" name="__codelineno-0-194"></a>    <span class="c1"># (variable FR) is zero.</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a>    <span class="n">FR</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">as_tensor</span><span class="p">(</span><span class="n">k</span><span class="p">[</span><span class="s2">&quot;FR&quot;</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a>    <span class="n">mask</span> <span class="o">=</span> <span class="p">(</span><span class="n">FR</span> <span class="o">&gt;</span> <span class="mf">0.0</span><span class="p">)</span><span class="o">.</span><span class="n">to</span><span class="p">(</span><span class="n">dtype</span><span class="o">=</span><span class="n">DTYPE</span><span class="p">)</span>
+<a id="__codelineno-0-197" name="__codelineno-0-197"></a>    <span class="n">r</span><span class="o">.</span><span class="n">RR</span> <span class="o">=</span> <span class="n">r</span><span class="o">.</span><span class="n">RR</span> <span class="o">*</span> <span class="n">mask</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+<div class="doc doc-object doc-function">
+
+
+<h4 id="diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics.integrate" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-method"></code>            <span class="doc doc-object-name doc-function-name">integrate</span>
+
+
+</h4>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">integrate</span><span class="p">(</span><span class="n">day</span><span class="p">:</span> <span class="n"><span title="datetime.datetime.date">date</span></span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">delt</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span>
+</code></pre></div>
+
+    <div class="doc doc-contents ">
+
+        <p>Integrate the state variables using the rates of change.</p>
+
+
+<p><span class="doc-section-title">Parameters:</span></p>
+    <ul>
+        <li class="doc-section-item field-body">
+            <b><code>day</code></b>
+              (<code><span title="datetime.datetime.date">date</span></code>, default:
+                  <code>None</code>
+)
+          –
+          <div class="doc-md-description">
+            <p>The current date of the simulation.</p>
+          </div>
+        </li>
+        <li class="doc-section-item field-body">
+            <b><code>delt</code></b>
+              (<code><span title="float">float</span></code>, default:
+                  <code>1.0</code>
+)
+          –
+          <div class="doc-md-description">
+            <p>The time step for integration. Defaults to 1.0.</p>
+          </div>
+        </li>
+    </ul>
+
+          
+
+            <details class="quote">
+              <summary>Source code in <code>src/diffwofost/physical_models/crop/root_dynamics.py</code></summary>
+              <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-199">199</a></span>
+<span class="normal"><a href="#__codelineno-0-200">200</a></span>
+<span class="normal"><a href="#__codelineno-0-201">201</a></span>
+<span class="normal"><a href="#__codelineno-0-202">202</a></span>
+<span class="normal"><a href="#__codelineno-0-203">203</a></span>
+<span class="normal"><a href="#__codelineno-0-204">204</a></span>
+<span class="normal"><a href="#__codelineno-0-205">205</a></span>
+<span class="normal"><a href="#__codelineno-0-206">206</a></span>
+<span class="normal"><a href="#__codelineno-0-207">207</a></span>
+<span class="normal"><a href="#__codelineno-0-208">208</a></span>
+<span class="normal"><a href="#__codelineno-0-209">209</a></span>
+<span class="normal"><a href="#__codelineno-0-210">210</a></span>
+<span class="normal"><a href="#__codelineno-0-211">211</a></span>
+<span class="normal"><a href="#__codelineno-0-212">212</a></span>
+<span class="normal"><a href="#__codelineno-0-213">213</a></span>
+<span class="normal"><a href="#__codelineno-0-214">214</a></span>
+<span class="normal"><a href="#__codelineno-0-215">215</a></span>
+<span class="normal"><a href="#__codelineno-0-216">216</a></span>
+<span class="normal"><a href="#__codelineno-0-217">217</a></span>
+<span class="normal"><a href="#__codelineno-0-218">218</a></span>
+<span class="normal"><a href="#__codelineno-0-219">219</a></span>
+<span class="normal"><a href="#__codelineno-0-220">220</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-199" name="__codelineno-0-199"></a><span class="nd">@prepare_states</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a><span class="k">def</span><span class="w"> </span><span class="nf">integrate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">day</span><span class="p">:</span> <span class="n">datetime</span><span class="o">.</span><span class="n">date</span> <span class="o">=</span> <span class="kc">None</span><span class="p">,</span> <span class="n">delt</span><span class="o">=</span><span class="mf">1.0</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a><span class="w">    </span><span class="sd">&quot;&quot;&quot;Integrate the state variables using the rates of change.</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a><span class="sd">    Args:</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a><span class="sd">        day (datetime.date, optional): The current date of the simulation.</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a><span class="sd">        delt (float, optional): The time step for integration. Defaults to 1.0.</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a><span class="sd">    &quot;&quot;&quot;</span>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a>    <span class="n">rates</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">rates</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="n">states</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">states</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a>    <span class="c1"># Dry weight of living roots</span>
+<a id="__codelineno-0-211" name="__codelineno-0-211"></a>    <span class="n">states</span><span class="o">.</span><span class="n">WRT</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">WRT</span> <span class="o">+</span> <span class="n">rates</span><span class="o">.</span><span class="n">GWRT</span>
+<a id="__codelineno-0-212" name="__codelineno-0-212"></a>
+<a id="__codelineno-0-213" name="__codelineno-0-213"></a>    <span class="c1"># Dry weight of dead roots</span>
+<a id="__codelineno-0-214" name="__codelineno-0-214"></a>    <span class="n">states</span><span class="o">.</span><span class="n">DWRT</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">DWRT</span> <span class="o">+</span> <span class="n">rates</span><span class="o">.</span><span class="n">DRRT</span>
+<a id="__codelineno-0-215" name="__codelineno-0-215"></a>
+<a id="__codelineno-0-216" name="__codelineno-0-216"></a>    <span class="c1"># Total weight dry + living roots</span>
+<a id="__codelineno-0-217" name="__codelineno-0-217"></a>    <span class="n">states</span><span class="o">.</span><span class="n">TWRT</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">WRT</span> <span class="o">+</span> <span class="n">states</span><span class="o">.</span><span class="n">DWRT</span>
+<a id="__codelineno-0-218" name="__codelineno-0-218"></a>
+<a id="__codelineno-0-219" name="__codelineno-0-219"></a>    <span class="c1"># New root depth</span>
+<a id="__codelineno-0-220" name="__codelineno-0-220"></a>    <span class="n">states</span><span class="o">.</span><span class="n">RD</span> <span class="o">=</span> <span class="n">states</span><span class="o">.</span><span class="n">RD</span> <span class="o">+</span> <span class="n">rates</span><span class="o">.</span><span class="n">RR</span>
+</code></pre></div></td></tr></table></div>
+            </details>
+    </div>
+
+</div>
+
+
+
+  </div>
+
+    </div>
+
+</div><h2 id="utility-under-development"><strong>Utility (under development)</strong></h2>
+
+
+<div class="doc doc-object doc-class">
+
+
+
+<h3 id="diffwofost.physical_models.utils.EngineTestHelper" class="doc doc-heading">
+<code class="doc-symbol doc-symbol-heading doc-symbol-class"></code>            <span class="doc doc-object-name doc-class-name">diffwofost.physical_models.utils.EngineTestHelper</span>
+
+
+</h3>
+<div class="doc-signature highlight"><pre><span></span><code><a id="__codelineno-0-1" name="__codelineno-0-1" href="#__codelineno-0-1"></a><span class="nf">EngineTestHelper</span><span class="p">(</span><span class="n">parameterprovider</span><span class="p">,</span> <span class="n">weatherdataprovider</span><span class="p">,</span> <span class="n">agromanagement</span><span class="p">,</span> <span class="n">test_config</span><span class="p">,</span> <span class="n">external_states</span><span class="o">=</span><span class="kc">None</span><span class="p">)</span>
+</code></pre></div>
+
+    <div class="doc doc-contents first">
+            <p class="doc doc-class-bases">
+              Bases: <code><span title="pcse.engine.Engine">Engine</span></code></p>
+
+
+        <p>An engine which is purely for running the YAML unit tests.</p>
+
+          
+
+
+
+
+
+
+
+
+
+
+
+
+                  <details class="quote">
+                    <summary>Source code in <code>src/diffwofost/physical_models/utils.py</code></summary>
+                    <div class="highlight"><table class="highlighttable"><tr><td class="linenos"><div class="linenodiv"><pre><span></span><span class="normal"><a href="#__codelineno-0-159">159</a></span>
+<span class="normal"><a href="#__codelineno-0-160">160</a></span>
+<span class="normal"><a href="#__codelineno-0-161">161</a></span>
+<span class="normal"><a href="#__codelineno-0-162">162</a></span>
+<span class="normal"><a href="#__codelineno-0-163">163</a></span>
+<span class="normal"><a href="#__codelineno-0-164">164</a></span>
+<span class="normal"><a href="#__codelineno-0-165">165</a></span>
+<span class="normal"><a href="#__codelineno-0-166">166</a></span>
+<span class="normal"><a href="#__codelineno-0-167">167</a></span>
+<span class="normal"><a href="#__codelineno-0-168">168</a></span>
+<span class="normal"><a href="#__codelineno-0-169">169</a></span>
+<span class="normal"><a href="#__codelineno-0-170">170</a></span>
+<span class="normal"><a href="#__codelineno-0-171">171</a></span>
+<span class="normal"><a href="#__codelineno-0-172">172</a></span>
+<span class="normal"><a href="#__codelineno-0-173">173</a></span>
+<span class="normal"><a href="#__codelineno-0-174">174</a></span>
+<span class="normal"><a href="#__codelineno-0-175">175</a></span>
+<span class="normal"><a href="#__codelineno-0-176">176</a></span>
+<span class="normal"><a href="#__codelineno-0-177">177</a></span>
+<span class="normal"><a href="#__codelineno-0-178">178</a></span>
+<span class="normal"><a href="#__codelineno-0-179">179</a></span>
+<span class="normal"><a href="#__codelineno-0-180">180</a></span>
+<span class="normal"><a href="#__codelineno-0-181">181</a></span>
+<span class="normal"><a href="#__codelineno-0-182">182</a></span>
+<span class="normal"><a href="#__codelineno-0-183">183</a></span>
+<span class="normal"><a href="#__codelineno-0-184">184</a></span>
+<span class="normal"><a href="#__codelineno-0-185">185</a></span>
+<span class="normal"><a href="#__codelineno-0-186">186</a></span>
+<span class="normal"><a href="#__codelineno-0-187">187</a></span>
+<span class="normal"><a href="#__codelineno-0-188">188</a></span>
+<span class="normal"><a href="#__codelineno-0-189">189</a></span>
+<span class="normal"><a href="#__codelineno-0-190">190</a></span>
+<span class="normal"><a href="#__codelineno-0-191">191</a></span>
+<span class="normal"><a href="#__codelineno-0-192">192</a></span>
+<span class="normal"><a href="#__codelineno-0-193">193</a></span>
+<span class="normal"><a href="#__codelineno-0-194">194</a></span>
+<span class="normal"><a href="#__codelineno-0-195">195</a></span>
+<span class="normal"><a href="#__codelineno-0-196">196</a></span>
+<span class="normal"><a href="#__codelineno-0-197">197</a></span>
+<span class="normal"><a href="#__codelineno-0-198">198</a></span>
+<span class="normal"><a href="#__codelineno-0-199">199</a></span>
+<span class="normal"><a href="#__codelineno-0-200">200</a></span>
+<span class="normal"><a href="#__codelineno-0-201">201</a></span>
+<span class="normal"><a href="#__codelineno-0-202">202</a></span>
+<span class="normal"><a href="#__codelineno-0-203">203</a></span>
+<span class="normal"><a href="#__codelineno-0-204">204</a></span>
+<span class="normal"><a href="#__codelineno-0-205">205</a></span>
+<span class="normal"><a href="#__codelineno-0-206">206</a></span>
+<span class="normal"><a href="#__codelineno-0-207">207</a></span>
+<span class="normal"><a href="#__codelineno-0-208">208</a></span>
+<span class="normal"><a href="#__codelineno-0-209">209</a></span>
+<span class="normal"><a href="#__codelineno-0-210">210</a></span>
+<span class="normal"><a href="#__codelineno-0-211">211</a></span></pre></div></td><td class="code"><div><pre><span></span><code><a id="__codelineno-0-159" name="__codelineno-0-159"></a><span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span>
+<a id="__codelineno-0-160" name="__codelineno-0-160"></a>    <span class="bp">self</span><span class="p">,</span>
+<a id="__codelineno-0-161" name="__codelineno-0-161"></a>    <span class="n">parameterprovider</span><span class="p">,</span>
+<a id="__codelineno-0-162" name="__codelineno-0-162"></a>    <span class="n">weatherdataprovider</span><span class="p">,</span>
+<a id="__codelineno-0-163" name="__codelineno-0-163"></a>    <span class="n">agromanagement</span><span class="p">,</span>
+<a id="__codelineno-0-164" name="__codelineno-0-164"></a>    <span class="n">test_config</span><span class="p">,</span>
+<a id="__codelineno-0-165" name="__codelineno-0-165"></a>    <span class="n">external_states</span><span class="o">=</span><span class="kc">None</span><span class="p">,</span>
+<a id="__codelineno-0-166" name="__codelineno-0-166"></a><span class="p">):</span>
+<a id="__codelineno-0-167" name="__codelineno-0-167"></a>    <span class="n">BaseEngine</span><span class="o">.</span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+<a id="__codelineno-0-168" name="__codelineno-0-168"></a>
+<a id="__codelineno-0-169" name="__codelineno-0-169"></a>    <span class="c1"># Load the model configuration</span>
+<a id="__codelineno-0-170" name="__codelineno-0-170"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">mconf</span> <span class="o">=</span> <span class="n">ConfigurationLoader</span><span class="p">(</span><span class="n">test_config</span><span class="p">)</span>
+<a id="__codelineno-0-171" name="__codelineno-0-171"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">parameterprovider</span> <span class="o">=</span> <span class="n">parameterprovider</span>
+<a id="__codelineno-0-172" name="__codelineno-0-172"></a>
+<a id="__codelineno-0-173" name="__codelineno-0-173"></a>    <span class="c1"># Variable kiosk for registering and publishing variables</span>
+<a id="__codelineno-0-174" name="__codelineno-0-174"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span> <span class="o">=</span> <span class="n">VariableKioskTestHelper</span><span class="p">(</span><span class="n">external_states</span><span class="p">)</span>
+<a id="__codelineno-0-175" name="__codelineno-0-175"></a>
+<a id="__codelineno-0-176" name="__codelineno-0-176"></a>    <span class="c1"># Placeholder for variables to be saved during a model run</span>
+<a id="__codelineno-0-177" name="__codelineno-0-177"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_saved_output</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<a id="__codelineno-0-178" name="__codelineno-0-178"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_saved_summary_output</span> <span class="o">=</span> <span class="nb">list</span><span class="p">()</span>
+<a id="__codelineno-0-179" name="__codelineno-0-179"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_saved_terminal_output</span> <span class="o">=</span> <span class="nb">dict</span><span class="p">()</span>
+<a id="__codelineno-0-180" name="__codelineno-0-180"></a>
+<a id="__codelineno-0-181" name="__codelineno-0-181"></a>    <span class="c1"># register handlers for starting/finishing the crop simulation, for</span>
+<a id="__codelineno-0-182" name="__codelineno-0-182"></a>    <span class="c1"># handling output and terminating the system</span>
+<a id="__codelineno-0-183" name="__codelineno-0-183"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_connect_signal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_CROP_START</span><span class="p">,</span> <span class="n">signal</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">crop_start</span><span class="p">)</span>
+<a id="__codelineno-0-184" name="__codelineno-0-184"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_connect_signal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_CROP_FINISH</span><span class="p">,</span> <span class="n">signal</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">crop_finish</span><span class="p">)</span>
+<a id="__codelineno-0-185" name="__codelineno-0-185"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_connect_signal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_OUTPUT</span><span class="p">,</span> <span class="n">signal</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">output</span><span class="p">)</span>
+<a id="__codelineno-0-186" name="__codelineno-0-186"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">_connect_signal</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">_on_TERMINATE</span><span class="p">,</span> <span class="n">signal</span><span class="o">=</span><span class="n">signals</span><span class="o">.</span><span class="n">terminate</span><span class="p">)</span>
+<a id="__codelineno-0-187" name="__codelineno-0-187"></a>
+<a id="__codelineno-0-188" name="__codelineno-0-188"></a>    <span class="c1"># Component for agromanagement</span>
+<a id="__codelineno-0-189" name="__codelineno-0-189"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">agromanager</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mconf</span><span class="o">.</span><span class="n">AGROMANAGEMENT</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">,</span> <span class="n">agromanagement</span><span class="p">)</span>
+<a id="__codelineno-0-190" name="__codelineno-0-190"></a>    <span class="n">start_date</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">agromanager</span><span class="o">.</span><span class="n">start_date</span>
+<a id="__codelineno-0-191" name="__codelineno-0-191"></a>    <span class="n">end_date</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">agromanager</span><span class="o">.</span><span class="n">end_date</span>
+<a id="__codelineno-0-192" name="__codelineno-0-192"></a>
+<a id="__codelineno-0-193" name="__codelineno-0-193"></a>    <span class="c1"># Timer: starting day, final day and model output</span>
+<a id="__codelineno-0-194" name="__codelineno-0-194"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">timer</span> <span class="o">=</span> <span class="n">Timer</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">,</span> <span class="n">start_date</span><span class="p">,</span> <span class="n">end_date</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">mconf</span><span class="p">)</span>
+<a id="__codelineno-0-195" name="__codelineno-0-195"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">day</span><span class="p">,</span> <span class="n">delt</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">timer</span><span class="p">()</span>
+<a id="__codelineno-0-196" name="__codelineno-0-196"></a>    <span class="c1"># Update external states in the kiosk</span>
+<a id="__codelineno-0-197" name="__codelineno-0-197"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">day</span><span class="p">)</span>
+<a id="__codelineno-0-198" name="__codelineno-0-198"></a>
+<a id="__codelineno-0-199" name="__codelineno-0-199"></a>    <span class="c1"># Driving variables</span>
+<a id="__codelineno-0-200" name="__codelineno-0-200"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">weatherdataprovider</span> <span class="o">=</span> <span class="n">weatherdataprovider</span>
+<a id="__codelineno-0-201" name="__codelineno-0-201"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">drv</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">_get_driving_variables</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">day</span><span class="p">)</span>
+<a id="__codelineno-0-202" name="__codelineno-0-202"></a>
+<a id="__codelineno-0-203" name="__codelineno-0-203"></a>    <span class="c1"># Component for simulation of soil processes</span>
+<a id="__codelineno-0-204" name="__codelineno-0-204"></a>    <span class="k">if</span> <span class="bp">self</span><span class="o">.</span><span class="n">mconf</span><span class="o">.</span><span class="n">SOIL</span> <span class="ow">is</span> <span class="ow">not</span> <span class="kc">None</span><span class="p">:</span>
+<a id="__codelineno-0-205" name="__codelineno-0-205"></a>        <span class="bp">self</span><span class="o">.</span><span class="n">soil</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">mconf</span><span class="o">.</span><span class="n">SOIL</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">day</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">kiosk</span><span class="p">,</span> <span class="n">parameterprovider</span><span class="p">)</span>
+<a id="__codelineno-0-206" name="__codelineno-0-206"></a>
+<a id="__codelineno-0-207" name="__codelineno-0-207"></a>    <span class="c1"># Call AgroManagement module for management actions at initialization</span>
+<a id="__codelineno-0-208" name="__codelineno-0-208"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">agromanager</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">day</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">drv</span><span class="p">)</span>
+<a id="__codelineno-0-209" name="__codelineno-0-209"></a>
+<a id="__codelineno-0-210" name="__codelineno-0-210"></a>    <span class="c1"># Calculate initial rates</span>
+<a id="__codelineno-0-211" name="__codelineno-0-211"></a>    <span class="bp">self</span><span class="o">.</span><span class="n">calc_rates</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">day</span><span class="p">,</span> <span class="bp">self</span><span class="o">.</span><span class="n">drv</span><span class="p">)</span>
+</code></pre></div></td></tr></table></div>
+                  </details>
+
+
+
+  <div class="doc doc-children">
+
+
+
+
+
+
+
+
+
+
+
+
+  </div>
+
+    </div>
+
+</div>
+
+
+
+
+
+
+
+  
+  
+
+
+
+
+  
+
+
+
+                
+
+              </article>
+            </div>
+          
+          
+<script>var target=document.getElementById(location.hash.slice(1));target&&target.name&&(target.checked=target.name.startsWith("__tabbed_"))</script>
+        </div>
+        
+      </main>
+      
+        <footer class="md-footer">
+  
+  <div class="md-footer-meta md-typeset">
+    <div class="md-footer-meta__inner md-grid">
+      <div class="md-copyright">
+  
+  
+</div>
+      
+    </div>
+  </div>
+</footer>
+      
+    </div>
+    <div class="md-dialog" data-md-component="dialog">
+      <div class="md-dialog__inner md-typeset"></div>
+    </div>
+    
+    
+    
+      
+      <script id="__config" type="application/json">{"base": "..", "features": ["navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "content.code.copy", "content.tabs"], "search": "../assets/javascripts/workers/search.973d3a69.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+    
+    
+      <script src="../assets/javascripts/bundle.f55a23d4.min.js"></script>
+      
+        <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+      
+    
+  </body>
+</html>
