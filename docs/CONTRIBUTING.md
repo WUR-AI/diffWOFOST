@@ -51,7 +51,8 @@ To create a release you need write permission on the repository.
    the root of the repository.
 2. Bump the version. The version can be manually changed in `pyproject.toml` in
    the root of the repository. Follow [Semantic Versioning](https://semver.org/)
-   principles.
+   principles. Also, update `__version__` variable in `diffwofost/__init__.py` to the
+   same version.
 3. Go to the [GitHub release
    page](https://github.com/WUR-AI/diffwofost/releases). Press draft a new
    release button. Fill version, title and description field. Press the Publish
