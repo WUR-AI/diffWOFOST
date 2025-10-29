@@ -1,9 +1,8 @@
 
 Here we provide some details about the project setup. Most of the choices are
-explained in the [guide](https://guide.esciencecenter.nl).
+explained in the [Turing Way: Guide for Reproducible
+Research](https://book.the-turing-way.org/reproducible-research/reproducible-research/).
 
-For a quick reference on software development, we refer to [the software guide
-checklist](https://guide.esciencecenter.nl/#/best_practices/checklist).
 
 ## Repository structure
 
@@ -42,23 +41,23 @@ GitHub workflows, see `.github/`.
 
 ## Package version number
 
-- We recommend using [semantic versioning](https://guide.esciencecenter.nl/#/best_practices/releases?id=semantic-versioning).
+- We recommend using [semantic versioning](https://semver.org/).
 - For convenience, the package version is stored in a single place: `pyproject.toml`.
-- Don't forget to update the version number before [making a release](https://guide.esciencecenter.nl/#/best_practices/releases)! Also, update `__version__` variable in `diffwofost/__init__.py` to the
+- Don't forget to update the version number before [making a release](./CONTRIBUTING.md)! Also, update `__version__` variable in `diffwofost/__init__.py` to the
    same version.
 
 ## CITATION.cff
 
 - To allow others to cite your software, add a `CITATION.cff` file
 - It only makes sense to do this once there is something to cite (e.g., a software release with a DOI).
-- Follow the [making software citable](https://guide.esciencecenter.nl/#/citable_software/making_software_citable) section in the guide.
+- Follow the [Software Citation with CITATION.cff](https://book.the-turing-way.org/communication/citable/citable-cff/) section in the Turing Way guide.
 
 ## CODE_OF_CONDUCT.md
 
 - Information about how to behave professionally
-- [Relevant section in the guide](https://guide.esciencecenter.nl/#/best_practices/documentation?id=code-of-conduct)
+- To know more, read [Turing Way guide on Code of Conduct](https://book.the-turing-way.org/community-handbook/coc/)
 
 ## CONTRIBUTING.md
 
 - Information about how to contribute to this software package
-- [Relevant section in the guide](https://guide.esciencecenter.nl/#/best_practices/documentation?id=contribution-guidelines)
+- To know more, read [Turing Way guide on Contributing](https://book.the-turing-way.org/reproducible-research/code-documentation/code-documentation-project/#contributing-guidelines)
