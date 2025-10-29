@@ -1,10 +1,14 @@
 """Leaf dynamics for the WOFOST crop model."""
 
+import datetime
 import torch
 from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base import StatesTemplate
+from pcse.base.parameter_providers import ParameterProvider
+from pcse.base.variablekiosk import VariableKiosk
+from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
@@ -29,89 +33,73 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     Senescense of the leaves can occur as a result of physiological age,
     drought stress or self-shading.
 
-    *Simulation parameters* (provide in cropdata dictionary)
+    **Simulation parameters** (provide in cropdata dictionary)
 
-    =======  ============================================= =======  ============
-     Name     Description                                   Type     Unit
-    =======  ============================================= =======  ============
-    RGRLAI   Maximum relative increase in LAI.              SCr     ha ha-1 d-1
-    SPAN     Life span of leaves growing at 35 Celsius      SCr     |d|
-    TBASE    Lower threshold temp. for ageing of leaves     SCr     |C|
-    PERDL    Max. relative death rate of leaves due to      SCr
-             water stress
-    TDWI     Initial total crop dry weight                  SCr     |kg ha-1|
-    KDIFTB   Extinction coefficient for diffuse visible     TCr
-             light as function of DVS
-    SLATB    Specific leaf area as a function of DVS        TCr     |ha kg-1|
-    =======  ============================================= =======  ============
+    | Name   | Description                                                        | Type | Unit       |
+    |--------|------------------------------------------------------------------  |------|------------|
+    | RGRLAI | Maximum relative increase in LAI.                                  |SCr   | ha ha⁻¹ d⁻¹|
+    | SPAN   | Life span of leaves growing at 35 Celsius                          |SCr   | d          |
+    | TBASE  | Lower threshold temp. for ageing of leaves                         |SCr   | C          |
+    | PERDL  | Max. relative death rate of leaves due to water stress             |SCr   |            |
+    | TDWI   | Initial total crop dry weight                                      |SCr   | kg ha⁻¹    |
+    | KDIFTB | Extinction coefficient for diffuse visible light as function of DVS|TCr   |            |
+    | SLATB  | Specific leaf area as a function of DVS                            |TCr   | ha kg⁻¹    |
 
-    *State variables*
+    **State variables**
 
-    =======  ================================================= ==== ============
-     Name     Description                                      Pbl      Unit
-    =======  ================================================= ==== ============
-    LV       Leaf biomass per leaf class                        N    |kg ha-1|
-    SLA      Specific leaf area per leaf class                  N    |ha kg-1|
-    LVAGE    Leaf age per leaf class                            N    |d|
-    LVSUM    Sum of LV                                          N    |kg ha-1|
-    LAIEM    LAI at emergence                                   N    -
-    LASUM    Total leaf area as sum of LV*SLA,                  N    -
-             not including stem and pod area                    N
-    LAIEXP   LAI value under theoretical exponential growth     N    -
-    LAIMAX   Maximum LAI reached during growth cycle            N    -
-    LAI      Leaf area index, including stem and pod area       Y    -
-    WLV      Dry weight of living leaves                        Y    |kg ha-1|
-    DWLV     Dry weight of dead leaves                          N    |kg ha-1|
-    TWLV     Dry weight of total leaves (living + dead)         Y    |kg ha-1|
-    =======  ================================================= ==== ============
+    | Name   | Description                                           | Pbl  | Unit        |
+    |--------|-------------------------------------------------------|------|-------------|
+    | LV     | Leaf biomass per leaf class                           | N    | kg ha⁻¹     |
+    | SLA    | Specific leaf area per leaf class                     | N    | ha kg⁻¹     |
+    | LVAGE  | Leaf age per leaf class                               | N    | d           |
+    | LVSUM  | Sum of LV                                             | N    | kg ha⁻¹     |
+    | LAIEM  | LAI at emergence                                      | N    | -           |
+    | LASUM  | Total leaf area as sum of LV*SLA, not including stem and pod area | N | -  |
+    | LAIEXP | LAI value under theoretical exponential growth        | N    | -           |
+    | LAIMAX | Maximum LAI reached during growth cycle               | N    | -           |
+    | LAI    | Leaf area index, including stem and pod area          | Y    | -           |
+    | WLV    | Dry weight of living leaves                           | Y    | kg ha⁻¹     |
+    | DWLV   | Dry weight of dead leaves                             | N    | kg ha⁻¹     |
+    | TWLV   | Dry weight of total leaves (living + dead)            | Y    | kg ha⁻¹     |
 
+    **Rate variables**
 
-    *Rate variables*
+    | Name   | Description                                           | Pbl  | Unit          |
+    |--------|-------------------------------------------------------|------|---------------|
+    | GRLV   | Growth rate leaves                                    | N    | kg ha⁻¹ d⁻¹   |
+    | DSLV1  | Death rate leaves due to water stress                 | N    | kg ha⁻¹ d⁻¹   |
+    | DSLV2  | Death rate leaves due to self-shading                 | N    | kg ha⁻¹ d⁻¹   |
+    | DSLV3  | Death rate leaves due to frost kill                   | N    | kg ha⁻¹ d⁻¹   |
+    | DSLV   | Maximum of DSLV1, DSLV2, DSLV3                        | N    | kg ha⁻¹ d⁻¹   |
+    | DALV   | Death rate leaves due to aging                        | N    | kg ha⁻¹ d⁻¹   |
+    | DRLV   | Death rate leaves as a combination of DSLV and DALV   | N    | kg ha⁻¹ d⁻¹   |
+    | SLAT   | Specific leaf area for current time step, adjusted for source/sink limited leaf expansion rate | N | ha kg⁻¹ |
+    | FYSAGE | Increase in physiological leaf age                    | N    | -             |
+    | GLAIEX | Sink-limited leaf expansion rate (exponential curve)  | N    | ha ha⁻¹ d⁻¹   |
+    | GLASOL | Source-limited leaf expansion rate (biomass increase) | N    | ha ha⁻¹ d⁻¹   |
 
-    =======  ================================================= ==== ============
-     Name     Description                                      Pbl      Unit
-    =======  ================================================= ==== ============
-    GRLV     Growth rate leaves                                 N   |kg ha-1 d-1|
-    DSLV1    Death rate leaves due to water stress              N   |kg ha-1 d-1|
-    DSLV2    Death rate leaves due to self-shading              N   |kg ha-1 d-1|
-    DSLV3    Death rate leaves due to frost kill                N   |kg ha-1 d-1|
-    DSLV     Maximum of DLSV1, DSLV2, DSLV3                     N   |kg ha-1 d-1|
-    DALV     Death rate leaves due to aging.                    N   |kg ha-1 d-1|
-    DRLV     Death rate leaves as a combination of DSLV and     N   |kg ha-1 d-1|
-             DALV
-    SLAT     Specific leaf area for current time step,          N   |ha kg-1|
-             adjusted for source/sink limited leaf expansion
-             rate.
-    FYSAGE   Increase in physiological leaf age                 N   -
-    GLAIEX   Sink-limited leaf expansion rate (exponential      N   |ha ha-1 d-1|
-             curve)
-    GLASOL   Source-limited leaf expansion rate (biomass        N   |ha ha-1 d-1|
-             increase)
-    =======  ================================================= ==== ============
+    **External dependencies**
 
+    | Name      | Description                       | Provided by                    | Unit           |
+    |-----------|-----------------------------------|--------------------------------|----------------|
+    | DVS       | Crop development stage            | DVS_Phenology                  | -              |
+    | FL        | Fraction biomass to leaves        | DVS_Partitioning               | -              |
+    | FR        | Fraction biomass to roots         | DVS_Partitioning               | -              |
+    | SAI       | Stem area index                   | WOFOST_Stem_Dynamics           | -              |
+    | PAI       | Pod area index                    | WOFOST_Storage_Organ_Dynamics  | -              |
+    | TRA       | Transpiration rate                | Evapotranspiration             | cm day⁻¹ ?     |
+    | TRAMX     | Maximum transpiration rate        | Evapotranspiration             | cm day⁻¹ ?     |
+    | ADMI      | Above-ground dry matter increase  | CropSimulation                 | kg ha⁻¹ d⁻¹    |
+    | RFTRA     | Reduction factor for transpiration (water & oxygen)   | Y          | -              |
+    | RF_FROST  | Reduction factor frost kill       | FROSTOL (optional)             | -              |
 
-    *External dependencies:*
+    **Outputs**
 
-    ======== ============================== =============================== ===========
-     Name     Description                         Provided by               Unit
-    ======== ============================== =============================== ===========
-    DVS      Crop development stage         DVS_Phenology                    -
-    FL       Fraction biomass to leaves     DVS_Partitioning                 -
-    FR       Fraction biomass to roots      DVS_Partitioning                 -
-    SAI      Stem area index                WOFOST_Stem_Dynamics             -
-    PAI      Pod area index                 WOFOST_Storage_Organ_Dynamics    -
-    TRA      Transpiration rate             Evapotranspiration              |cm day-1| ?
-    TRAMX    Maximum transpiration rate     Evapotranspiration              |cm day-1| ?
-    ADMI     Above-ground dry matter        CropSimulation                  |kg ha-1 d-1|
-             increase
-    RFTRA    Reduction factor for               Y                            -
-             transpiration (wat & ox)
-    RF_FROST Reduction factor frost kill    FROSTOL(optional)                -
-    ======== ============================== =============================== ===========
-
-    *Outputs:*
-    LAI, TWLV
-    """
+    | Name   | Description                                           | Pbl  | Unit        |
+    |--------|-------------------------------------------------------|------|-------------|
+    | LAI    | Leaf area index, including stem and pod area          | Y    | -           |
+    | TWLV   | Dry weight of total leaves (living + dead)            | Y    | kg ha⁻¹     |
+    """  # noqa: E501
 
     # The following parameters are used to initialize and control the arrays that store information
     # on the leaf classes during the time integration: leaf area, age, and biomass.
@@ -153,13 +141,19 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         GLAIEX = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
         GLASOL = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
 
-    def initialize(self, day, kiosk, parvalues):
+    def initialize(
+        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+    ) -> None:
         """Initialize the WOFOST_Leaf_Dynamics simulation object.
 
-        :param day: start date of the simulation
-        :param kiosk: variable kiosk of this PCSE  instance
-        :param parvalues: `ParameterProvider` object providing parameters as
-                key/value pairs
+        Args:
+            day (datetime.date): The starting date of the simulation.
+            kiosk (VariableKiosk): A container for registering and publishing
+                (internal and external) state variables. See PCSE documentation for
+                details.
+            parvalues (ParameterProvider): A dictionary-like container holding
+                all parameter sets (crop, soil, site) as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
         """
         self.START_DATE = day
         self.kiosk = kiosk
@@ -223,8 +217,15 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         return total_LAI
 
     @prepare_rates
-    def calc_rates(self, day, drv):
-        """Calculate the rates of change for the leaf dynamics."""
+    def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
+        """Calculate the rates of change for the leaf dynamics.
+
+        Args:
+            day (datetime.date, optional): The current date of the simulation.
+            drv (WeatherDataContainer, optional): A dictionary-like container holding
+                weather data elements as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+        """
         r = self.rates
         s = self.states
         p = self.params
@@ -295,8 +296,13 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.SLAT = torch.where(is_lai_exp & (r.GRLV > 0.0), GLA / r.GRLV, r.SLAT)
 
     @prepare_states
-    def integrate(self, day, delt=1.0):
-        """Integrate the leaf dynamics state variables."""
+    def integrate(self, day: datetime.date, delt=1.0) -> None:
+        """Integrate the leaf dynamics state variables.
+
+        Args:
+            day (datetime.date, optional): The current date of the simulation.
+            delt (float, optional): The time step for integration. Defaults to 1.0.
+        """
         # TODO check if DVS < 0 and skip integration needed
         rates = self.rates
         states = self.states
@@ -312,17 +318,20 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # find out which leaf classes are dead (negative weights)
         weight_cumsum = tLV.cumsum(dim=-1) - tDRLV
         is_alive = weight_cumsum >= 0
+
         # Adjust value of oldest leaf class, i.e. the first non-zero
         # weight along the time axis (the last dimension).
         # Cast argument to int because torch.argmax requires it to be numeric
         idx_oldest = torch.argmax(is_alive.type(torch.int), dim=-1, keepdim=True)
         new_biomass = torch.take_along_dim(weight_cumsum, indices=idx_oldest, dim=-1)
         tLV = torch.scatter(tLV, dim=-1, index=idx_oldest, src=new_biomass)
+
         # Zero out all dead leaf classes
         # NOTE: conditional statements do not allow for the gradient to be
         # tracked through the condition. Thus, the gradient with respect to
         # parameters that contribute to `is_alive` are expected to be incorrect.
         tLV = torch.where(is_alive, tLV, 0.0)
+
         # Integration of physiological age
         tLVAGE = tLVAGE + rates.FYSAGE
         tLVAGE = torch.where(is_alive, tLVAGE, 0.0)
@@ -354,7 +363,15 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
 
 def _exist_required_external_variables(kiosk):
-    """Check if all required external variables are available in the kiosk."""
+    """Check if all required external variables are available in the kiosk.
+
+    Args:
+        kiosk (VariableKiosk): The variable kiosk to check.
+
+    Raises:
+        ValueError: If any required external variable is missing.
+
+    """
     required_external_vars_at_init = ["DVS", "FL", "FR", "SAI", "PAI"]
     for var in required_external_vars_at_init:
         if var not in kiosk:

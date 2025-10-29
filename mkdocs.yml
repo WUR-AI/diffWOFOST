@@ -3,15 +3,31 @@ repo_url: https://github.com/WUR-AI/diffwofost
 repo_name: diffWOFOST
 
 nav:
-  - Introduction: intro.md
-  - Contributing guide: CONTRIBUTING.md
+  - Introduction:
+    - diffWOFOST: index.md
+    - Citation: citation.md
+    - License: license.md
+    - Acknowledgements: acknowledgements.md
+    - References: references.md
+  - Getting started:
+    - Installation: installation.md
+    - How to run a model: run_model.md
+    - Example notebooks: examples.md
+  - How to Contribute:
+    - Contributing guide: CONTRIBUTING.md
+    - Developer guide: developer_guide.md
+  - API Reference: api_reference.md
 
 theme:
   name: material
+  custom_dir: docs/download_button
+  logo: logo/diffwofost.png
   features:
     - navigation.instant
     - navigation.tabs
     - navigation.tabs.sticky
+    - content.code.copy
+    - content.tabs
   icon:
     repo: fontawesome/brands/github-alt
 
@@ -21,7 +37,7 @@ theme:
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
-      primary: light blue
+      primary: green
       accent: blue
 
     # Palette toggle for dark mode
@@ -29,18 +45,48 @@ theme:
       toggle:
         icon: material/weather-night
         name: Switch to light mode
-      primary: blue grey
+      primary: green
       accent: teal
 
 plugins:
 - include-markdown
 - search
+- mkdocs-jupyter:
+      include_source: True
+- mkdocstrings:
+    handlers:
+      python:
+        paths: [src]
+        options:
+          docstring_style: google
+          docstring_options:
+            ignore_init_summary: true
+          merge_init_into_class: true
+          docstring_section_style: list
+          show_submodules: true
+          show_root_heading: true
+          show_source: true
+          heading_level: 3
+          relative_crossrefs: true
+          parameter_headings: false
+          separate_signature: true
+          show_bases: true
+          show_signature_annotations: true
+          show_symbol_type_heading: true
+          signature_crossrefs: true
+          summary: true
+          backlinks: tree
+          scoped_crossrefs: true
+          members_order: source
 
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
+  - pymdownx.arithmatex:
+      generic: true
   - pymdownx.superfences
   - pymdownx.details
+  - pymdownx.emoji
   - admonition
   - pymdownx.tabbed:
       alternate_style: true
@@ -48,3 +94,7 @@ markdown_extensions:
 
 extra:
   generator: false
+  math: mathjax
+
+extra_javascript:
+  - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
