@@ -140,9 +140,6 @@ class WOFOST_Root_Dynamics(SimulationObject):
             parvalues (ParameterProvider): A dictionary-like container holding
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
-
-        Returns:
-            None: This method initializes the model and does not return anything.
         """
         self.params = self.Parameters(parvalues)
         self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
