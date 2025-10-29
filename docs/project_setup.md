@@ -44,7 +44,8 @@ GitHub workflows, see `.github/`.
 
 - We recommend using [semantic versioning](https://guide.esciencecenter.nl/#/best_practices/releases?id=semantic-versioning).
 - For convenience, the package version is stored in a single place: `pyproject.toml`.
-- Don't forget to update the version number before [making a release](https://guide.esciencecenter.nl/#/best_practices/releases)!
+- Don't forget to update the version number before [making a release](https://guide.esciencecenter.nl/#/best_practices/releases)! Also, update `__version__` variable in `diffwofost/__init__.py` to the
+   same version.
 
 ## CITATION.cff
 
