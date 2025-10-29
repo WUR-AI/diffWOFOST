@@ -154,7 +154,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             parvalues (ParameterProvider): A dictionary-like container holding
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
-
         """
         self.START_DATE = day
         self.kiosk = kiosk
@@ -226,10 +225,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             drv (WeatherDataContainer, optional): A dictionary-like container holding
                 weather data elements as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
-
-        Returns:
-            None: This method calculates the rates and does not return anything.
-
         """
         r = self.rates
         s = self.states
@@ -307,10 +302,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         Args:
             day (datetime.date, optional): The current date of the simulation.
             delt (float, optional): The time step for integration. Defaults to 1.0.
-
-        Returns:
-            None: This method integrates the states and does not return anything.
-
         """
         # TODO check if DVS < 0 and skip integration needed
         rates = self.rates
