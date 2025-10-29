@@ -9,7 +9,10 @@ build-backend = "setuptools.build_meta"
 
 [project]
 authors = [
-    { name = "Sarah Alidoost", email = "f.alidoost@esciencecenter.nl" }
+    { name = "Sarah Alidoost", email = "f.alidoost@esciencecenter.nl" },
+    { name = "Francesco Nattino" },
+    { name = "Michiel Kallenberg", email = "michiel.kallenberg@wur.nl" },
+    { name = "Ron van Bree" },
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -26,12 +29,12 @@ dependencies = [
     "pcse",
 ]
 description = "Differentiable WOFOST"
-keywords = ["pytorch"," differentiable"," crop"," optimization"]
+keywords = ["wofost", "pytorch", "differentiable", "crop", "optimization"]
 license = {file = "LICENSE"}
 name = "diffwofost"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"
-version = "0.1.1"
+version = "0.2.0"
 
 [project.optional-dependencies]
 dev = [
@@ -44,7 +47,7 @@ docs = [
     "mkdocs",
     "mkdocs-material",
     "mkdocs-jupyter",
-    "mkdocstrings[python]",
+    "mkdocstrings[python]>=0.18",
     "mkdocs-gen-files",
     "mkdocs-include-markdown-plugin",
     "jupyterlab",
@@ -124,7 +127,7 @@ force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
 
 [tool.bumpversion]
-current_version = "0.1.0"
+current_version = "0.2.0"
 
 [[tool.bumpversion.files]]
 filename = "src/diffwofost/__init__.py"

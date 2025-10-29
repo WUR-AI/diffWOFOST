@@ -2,7 +2,7 @@ import copy
 from unittest.mock import patch
 import pytest
 import torch
-from numpy.testing import assert_almost_equal
+from numpy.testing import assert_array_almost_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics
@@ -62,9 +62,7 @@ class DiffRootDynamics(torch.nn.Module):
         engine.run_till_terminate()
         results = engine.get_output()
 
-        return torch.stack([torch.stack([item["RD"], item["TWRT"]]) for item in results]).unsqueeze(
-            0
-        )  # shape: [1, time_steps, 2]
+        return {var: torch.stack([item[var] for item in results]) for var in ["RD", "TWRT"]}
 
 
 class TestRootDynamics:
@@ -169,48 +167,17 @@ class TestDiffRootDynamicsTDWI:
         model = get_test_diff_root_model()
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
         output = model({"TDWI": tdwi})
-        rd = output[0, :, 0]
+        rd = output["RD"]
         loss = rd.sum()
 
-        # this is ∂loss/∂tdwi without calling loss.backward().
-        # this is called forward gradient here because it is calculated without backpropagation.
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
-
-        assert grads is not None, "Gradients for TDWI should not be None"
-
-        tdwi.grad = None  # clear any existing gradient
-        loss.backward()
-
-        # this is ∂loss/∂tdwi calculated using backpropagation
-        grad_backward = tdwi.grad
-
-        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
-        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
-
-    def test_gradients_tdwi_rd_root_dynamics_numerical(self):
-        tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        output_index = 0  # Index 0 is "RD"
-        numerical_grad = calculate_numerical_grad(
-            get_test_diff_root_model, "TDWI", tdwi, output_index
-        )
-
-        model = get_test_diff_root_model()
-        output = model({"TDWI": tdwi})
-        rd = output[0, :, output_index]  # Index 0 is "RD"
-        loss = rd.sum()
-
-        # this is ∂loss/∂tdwi, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
-
-        # in this test, grads is very small
-        assert_almost_equal(numerical_grad, grads.item(), decimal=3)
+        assert loss.grad_fn is None  # tdwi does not contribute to rd
 
     def test_gradients_tdwi_twrt_root_dynamics(self):
         # prepare model input
         model = get_test_diff_root_model()
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
         output = model({"TDWI": tdwi})
-        twrt = output[0, :, 1]  # Index 1 is "TWRT"
+        twrt = output["TWRT"]
         loss = twrt.sum()
 
         # this is ∂loss/∂tdwi
@@ -230,18 +197,18 @@ class TestDiffRootDynamicsTDWI:
 
     def test_gradients_tdwi_twrt_root_dynamics_numerical(self):
         tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        output_index = 1  # Index 1 is "TWRT"
+        output_name = "TWRT"  # Index 1 is "TWRT"
         numerical_grad = calculate_numerical_grad(
-            get_test_diff_root_model, "TDWI", tdwi, output_index
+            get_test_diff_root_model, "TDWI", tdwi.data, output_name
         )
 
         model = get_test_diff_root_model()
         output = model({"TDWI": tdwi})
-        twrt = output[0, :, output_index]
+        twrt = output[output_name]
         loss = twrt.sum()
 
         # this is ∂loss/∂tdwi, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
 
         # in this test, grads is very small
-        assert_almost_equal(numerical_grad, grads.item(), decimal=3)
+        assert_array_almost_equal(numerical_grad, grads.item(), decimal=3)

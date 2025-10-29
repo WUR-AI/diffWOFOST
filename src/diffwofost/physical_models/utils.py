@@ -287,18 +287,18 @@ def get_test_data(test_data_url):
     return data
 
 
-def calculate_numerical_grad(get_model_fn, param_name, param_value, output_index):
+def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     """Calculate the numerical gradient of output with respect to a parameter."""
     delta = 1e-6
-    p_plus = param_value.item() + delta
-    p_minus = param_value.item() - delta
+    p_plus = param_value + delta
+    p_minus = param_value - delta
 
     model = get_model_fn()
-    output = model({param_name: torch.nn.Parameter(torch.tensor(p_plus, dtype=torch.float64))})
-    loss_plus = output[0, :, output_index].sum()
+    output = model({param_name: torch.nn.Parameter(p_plus)})
+    loss_plus = output[out_name].sum(dim=0)
 
     model = get_model_fn()
-    output = model({param_name: torch.nn.Parameter(torch.tensor(p_minus, dtype=torch.float64))})
-    loss_minus = output[0, :, output_index].sum()
+    output = model({param_name: torch.nn.Parameter(p_minus)})
+    loss_minus = output[out_name].sum(dim=0)
 
-    return (loss_plus.item() - loss_minus.item()) / (2 * delta)
+    return (loss_plus.data - loss_minus.data) / (2 * delta)
