@@ -10,6 +10,9 @@ build-backend = "setuptools.build_meta"
 [project]
 authors = [
     { name = "Sarah Alidoost", email = "f.alidoost@esciencecenter.nl" }
+    { name = "Francesco Nattino" }
+    { name = "Michiel Kallenberg", email = "michiel.kallenberg@wur.nl" }
+    { name = "Ron van Bree" }
 ]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
@@ -26,12 +29,12 @@ dependencies = [
     "pcse",
 ]
 description = "Differentiable WOFOST"
-keywords = ["pytorch"," differentiable"," crop"," optimization"]
+keywords = ["wofost", "pytorch", "differentiable", "crop", "optimization"]
 license = {file = "LICENSE"}
 name = "diffwofost"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.10"
-version = "0.1.1"
+version = "0.2.0"
 
 [project.optional-dependencies]
 dev = [

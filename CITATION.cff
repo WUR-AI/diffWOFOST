@@ -4,6 +4,11 @@ cff-version: "1.2.0"
 title: "diffwofost: A differentiable implementation of the WOFOST crop growth model"
 type: software
 authors:
+  - given-names: Ioannis
+    family-names: Athanasiadis
+    email: ioannis.athanasiadis@wur.nl
+    affiliation: Wageningen University & Research
+    orcid: 'https://orcid.org/0000-0003-2764-0078'
   - given-names: Fakhereh (Sarah)
     family-names: Alidoost
     email: f.alidoost@esciencecenter.nl
@@ -24,22 +29,18 @@ authors:
     email: ron.vanbree@wur.nl
     affiliation: Wageningen University & Research
     orcid: 'https://orcid.org/0009-0000-6365-6996'
-  - given-names: Ioannis
-    family-names: Athanasiadis
-    email: ioannis.athanasiadis@wur.nl
-    affiliation: Wageningen University & Research
-    orcid: 'https://orcid.org/0000-0003-2764-0078'
   - given-names: Allard
     family-names: de Wit
     email: allard.dewit@wur.nl
     affiliation: Wageningen University & Research
     orcid: 'https://orcid.org/0000-0002-5517-6404'
-date-released: 2025-09-23
-version: "0.1.1"
+date-released: 2025-10-29
+version: "0.2.0"
 repository-code: "https://github.com/WUR-AI/diffwofost"
 keywords:
-  - "pytorch"
+  - "wofost"
   - "differentiable"
   - "crop"
   - "optimization"
+  - "pytorch"
 message: "If you use this software, please cite it using these metadata."
