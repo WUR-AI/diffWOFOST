@@ -127,7 +127,7 @@ force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
 
 [tool.bumpversion]
-current_version = "0.1.0"
+current_version = "0.2.0"
 
 [[tool.bumpversion.files]]
 filename = "src/diffwofost/__init__.py"
