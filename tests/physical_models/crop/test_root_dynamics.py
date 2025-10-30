@@ -234,7 +234,7 @@ class TestDiffRootDynamicsRDI:
 
     def test_gradients_rdi_rd_root_dynamics_numerical(self):
         rdi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        output_name = "RD"  
+        output_name = "RD"
         numerical_grad = calculate_numerical_grad(
             get_test_diff_root_model, "RDI", rdi.data, output_name
         )
