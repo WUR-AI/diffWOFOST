@@ -147,105 +147,108 @@ class TestRootDynamics:
                 )
 
 
-class TestDiffRootDynamicsTDWI:
-    def test_gradients_tdwi_rd_root_dynamics(self):
+# Define parameters and outputs
+PARAM_NAMES = ["TDWI", "RDI", "RRI", "RDMCR", "RDMSOL", "IAIRDU", "RDRRTB"]
+OUTPUT_NAMES = ["RD", "TWRT"]
+
+# Define parameter configurations (value, dtype)
+PARAM_DEFAULT_VAL = {
+    "TDWI": (0.2, torch.float32),
+    "RDI": (0.2, torch.float32),
+    "RRI": (0.2, torch.float32),
+    "RDMCR": (0.2, torch.float32),
+    "RDMSOL": (0.2, torch.float32),
+    "IAIRDU": (0.2, torch.float32),
+    "RDRRTB": ([0.0, 0.0, 1.5, 0.02], torch.float32),  # Table parameter: [x1, y1, x2, y2]
+}
+
+# Define which parameter-output pairs should have gradients
+# Format: {param_name: [list of outputs that should have gradients]}
+GRADIENT_MAPPING = {
+    "TDWI": ["TWRT"],  # e.g. TDWI affects TWRT so I put it here
+    "RDI": ["RD"],
+    "RRI": ["RD"],
+    "RDMCR": ["RD"],
+    "RDMSOL": ["RD"],
+    # "RDRRTB": ["TWRT"],
+}
+
+# Generate all combinations
+_gradient_params = []
+_no_gradient_params = []
+for param_name in PARAM_NAMES:
+    for output_name in OUTPUT_NAMES:
+        if output_name in GRADIENT_MAPPING.get(param_name, []):
+            _gradient_params.append((param_name, output_name))
+        else:
+            _no_gradient_params.append((param_name, output_name))
+
+# Parametrize decorators for gradient tests
+gradient_test_params = pytest.mark.parametrize(
+    "param_name,output_name",
+    _gradient_params,
+)
+no_gradient_test_params = pytest.mark.parametrize(
+    "param_name,output_name",
+    _no_gradient_params,
+)
+
+
+class TestDiffRootDynamicsGradients:
+    """Parametrized tests for gradient calculations in root dynamics."""
+
+    @no_gradient_test_params
+    def test_no_gradients(self, param_name, output_name):
+        """Test cases where parameters should not have gradients for specific outputs."""
         model = get_test_diff_root_model()
-        tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
-        output = model({"TDWI": tdwi})
-        rd = output["RD"]
-        loss = rd.sum()
-
-        assert loss.grad_fn is None  # tdwi does not contribute to rd
-
-    def test_gradients_tdwi_twrt_root_dynamics(self):
-        # prepare model input
-        model = get_test_diff_root_model()
-        tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
-        output = model({"TDWI": tdwi})
-        twrt = output["TWRT"]
-        loss = twrt.sum()
-
-        # this is ∂loss/∂tdwi
-        # this is called forward gradient here because it is calculated without backpropagation.
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
-
-        assert grads is not None, "Gradients for TDWI should not be None"
-
-        tdwi.grad = None  # clear any existing gradient
-        loss.backward()
-
-        # this is ∂loss/∂tdwi calculated using backpropagation
-        grad_backward = tdwi.grad
-
-        assert grad_backward is not None, "Backward gradients for TDWI should not be None"
-        assert grad_backward == grads, "Forward and backward gradients for TDWI should match"
-
-    def test_gradients_tdwi_twrt_root_dynamics_numerical(self):
-        tdwi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        output_name = "TWRT"  # Index 1 is "TWRT"
-        numerical_grad = calculate_numerical_grad(
-            get_test_diff_root_model, "TDWI", tdwi.data, output_name
-        )
-
-        model = get_test_diff_root_model()
-        output = model({"TDWI": tdwi})
-        twrt = output[output_name]
-        loss = twrt.sum()
-
-        # this is ∂loss/∂tdwi, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
-
-        # in this test, grads is very small
-        assert_array_almost_equal(numerical_grad, grads.item(), decimal=3)
-
-
-class TestDiffRootDynamicsRDI:
-    def test_gradients_rdi_twrt_root_dynamics(self):
-        model = get_test_diff_root_model()
-        rdi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
-        output = model({"RDI": rdi})
-        twrt = output["TWRT"]
-        loss = twrt.sum()
+        value, dtype = PARAM_DEFAULT_VAL[param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
+        output = model({param_name: param})
+        loss = output[output_name].sum()
 
         assert loss.grad_fn is None
 
-    def test_gradients_rdi_rd_root_dynamics(self):
-        # prepare model input
+    @gradient_test_params
+    def test_gradients_forward_backward_match(self, param_name, output_name):
+        """Test that forward and backward gradients match for parameter-output pairs."""
         model = get_test_diff_root_model()
-        rdi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
-        output = model({"RDI": rdi})
-        rd = output["RD"]
-        loss = rd.sum()
+        value, dtype = PARAM_DEFAULT_VAL[param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
+        output = model({param_name: param})
+        loss = output[output_name].sum()
 
-        # this is ∂loss/∂rdi
+        # this is ∂loss/∂param
         # this is called forward gradient here because it is calculated without backpropagation.
-        grads = torch.autograd.grad(loss, rdi, retain_graph=True)[0]
+        grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        assert grads is not None, "Gradients for RDI should not be None"
+        assert grads is not None, f"Gradients for {param_name} should not be None"
 
-        rdi.grad = None  # clear any existing gradient
+        param.grad = None  # clear any existing gradient
         loss.backward()
 
-        # this is ∂loss/∂rdi calculated using backpropagation
-        grad_backward = rdi.grad
+        # this is ∂loss/∂param calculated using backpropagation
+        grad_backward = param.grad
 
-        assert grad_backward is not None, "Backward gradients for RDI should not be None"
-        assert grad_backward == grads, "Forward and backward gradients for RDI should match"
+        assert grad_backward is not None, f"Backward gradients for {param_name} should not be None"
+        assert grad_backward == grads, (
+            f"Forward and backward gradients for {param_name} should match"
+        )
 
-    def test_gradients_rdi_rd_root_dynamics_numerical(self):
-        rdi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float64))
-        output_name = "RD"
+    @gradient_test_params
+    def test_gradients_numerical(self, param_name, output_name):
+        """Test that analytical gradients match numerical gradients."""
+        value, _ = PARAM_DEFAULT_VAL[param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64))
         numerical_grad = calculate_numerical_grad(
-            get_test_diff_root_model, "RDI", rdi.data, output_name
+            get_test_diff_root_model, param_name, param.data, output_name
         )
 
         model = get_test_diff_root_model()
-        output = model({"RDI": rdi})
-        rd = output[output_name]
-        loss = rd.sum()
+        output = model({param_name: param})
+        loss = output[output_name].sum()
 
-        # this is ∂loss/∂rdi, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss, rdi, retain_graph=True)[0]
+        # this is ∂loss/∂param, for comparison with numerical gradient
+        grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        # in this test, grads is very small
+        # in these tests, grads is very small
         assert_array_almost_equal(numerical_grad, grads.item(), decimal=3)
