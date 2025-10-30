@@ -214,8 +214,6 @@ class TestDiffRootDynamicsRDI:
         model = get_test_diff_root_model()
         rdi = torch.nn.Parameter(torch.tensor(0.2, dtype=torch.float32))
         output = model({"RDI": rdi})
-        #twrt = output["TWRT"]
-        #loss = twrt.sum()
         rd = output["RD"]
         loss = rd.sum()
 
