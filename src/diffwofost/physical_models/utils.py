@@ -1,7 +1,6 @@
 """This file contains code that is required to run the YAML unit tests.
 
 It contains:
-    - SimulationObjectTestHelper: a simobj that wraps the simulation object to be tested.
     - VariableKioskTestHelper: A subclass of the VariableKiosk that can use externally
       forced states/rates
     - ConfigurationLoaderTestHelper: An subclass of ConfigurationLoader that allows to
@@ -22,14 +21,12 @@ from pcse import signals
 from pcse.agromanager import AgroManager
 from pcse.base import ConfigurationLoader
 from pcse.base.parameter_providers import ParameterProvider
-from pcse.base.simulationobject import SimulationObject
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
 from pcse.engine import Engine
 from pcse.timer import Timer
-from pcse.traitlets import Instance
 
 logging.disable(logging.CRITICAL)
 
@@ -39,49 +36,6 @@ this_dir = os.path.dirname(__file__)
 def nothing(*args, **kwargs):
     """A function that does nothing."""
     pass
-
-
-class SimulationObjectTestHelper(SimulationObject):
-    """This wraps the SimulationObject for testing.
-
-    This ensuree that the computations are not carried out before crop emergence
-    (e.g. DVS >= 0). The latter does not apply for the phenology simobject
-    itself which simulates emergence. The phenology simobject is recognized
-    because the variable DVS is not an external variable.
-    """
-
-    test_class = None
-    subsimobject = Instance(SimulationObject)
-
-    def initialize(self, day, kiosk, parvalues):
-        """Initialize the subsimobject."""
-        self.subsimobject = self.test_class(day, kiosk, parvalues)
-
-    def calc_rates(self, day, drv):
-        """Calculate the rates of the subsimobject."""
-        # some simobject do not provide a `calc_rates()` function but are directly callable
-        # here we check for those cases.
-        func = self.subsimobject if callable(self.subsimobject) else self.subsimobject.calc_rates
-        if not self.kiosk.is_external_state("DVS"):
-            func(day, drv)
-        else:
-            if self.kiosk.DVS >= 0:
-                func(day, drv)
-            else:
-                self.subsimobject.zerofy()
-
-    def integrate(self, day, delt=1.0):
-        """Integrate the states of the subsimobject."""
-        # If the simobject is callable, we do not need integration so we use the
-        # `nothing()` function.
-        func = nothing if callable(self.subsimobject) else self.subsimobject.integrate
-        if not self.kiosk.is_external_state("DVS"):
-            func(day, delt)
-        else:
-            if self.kiosk.DVS >= 0:
-                func(day, delt)
-            else:
-                self.subsimobject.touch()
 
 
 class VariableKioskTestHelper(VariableKiosk):
@@ -252,7 +206,7 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
             self._store_WeatherDataContainer(wdc, wdc.DAY)
 
 
-def prepare_engine_input(test_data, crop_model_params):
+def prepare_engine_input(test_data, crop_model_params, dtype=torch.float64):
     """Prepare the inputs for the engine from the YAML file."""
     agro_management_inputs = test_data["AgroManagement"]
     cropd = test_data["ModelParameters"]
@@ -264,12 +218,12 @@ def prepare_engine_input(test_data, crop_model_params):
     # convert parameters to tensors
     crop_model_params_provider.clear_override()
     for name in crop_model_params:
-        value = torch.tensor(crop_model_params_provider[name], dtype=torch.float32)
+        value = torch.tensor(crop_model_params_provider[name], dtype=dtype)
         crop_model_params_provider.set_override(name, value, check=False)
 
     # convert external states to tensors
     tensor_external_states = [
-        {k: v if k == "DAY" else torch.tensor(v, dtype=torch.float32) for k, v in item.items()}
+        {k: v if k == "DAY" else torch.tensor(v, dtype=dtype) for k, v in item.items()}
         for item in external_states
     ]
     return (
