@@ -68,12 +68,12 @@ class DiffRootDynamics(torch.nn.Module):
 class TestRootDynamics:
     rootdynamics_data_urls = [
         f"{pcse_test_url_base}/test_rootdynamics_wofost72_{i:02d}.yaml"
-        for i in range(1, 45)  # assuming there are 44 test files
+        for i in range(1, 45)  # there are 44 test files
     ]
 
     wofost72_data_urls = [
         f"{pcse_test_url_base}/test_potentialproduction_wofost72_{i:02d}.yaml"
-        for i in range(1, 45)  # assuming there are 44 test files
+        for i in range(1, 45)  # there are 44 test files
     ]
 
     @pytest.mark.parametrize("test_data_url", rootdynamics_data_urls)
