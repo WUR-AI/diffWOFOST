@@ -39,12 +39,12 @@ class Afgen:
 
         # Check for breaks in the series where the ascending sequence stops.
         # Only 0 or 1 breaks are allowed. Use the XOR operator '^' here
-        sum_break = sum([1 if (x0 ^ x1) else 0 for x0, x1 in zip(x_asc, x_asc[1:],strict=True)])
+        sum_break = sum([1 if (x0 ^ x1) else 0 for x0, x1 in zip(x_asc, x_asc[1:],strict=False)])
         if sum_break == 0:
             indices = list(range(len(x_list)))
         elif sum_break == 1:
             indices = [0]
-            for i, p in zip(rng, x_asc, strict=True):
+            for i, p in zip(rng, x_asc, strict=False):
                 if p is True:
                     indices.append(i)
         else:
