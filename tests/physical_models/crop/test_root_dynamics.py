@@ -10,6 +10,7 @@ from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.afgen import Afgen, AfgenTrait
 from .. import phy_data_folder
 
 
@@ -170,7 +171,7 @@ GRADIENT_MAPPING = {
     "RRI": ["RD"],
     "RDMCR": ["RD"],
     "RDMSOL": ["RD"],
-    # "RDRRTB": ["TWRT"],
+    "RDRRTB": ["TWRT"],
 }
 
 # Generate all combinations
@@ -230,7 +231,7 @@ class TestDiffRootDynamicsGradients:
         grad_backward = param.grad
 
         assert grad_backward is not None, f"Backward gradients for {param_name} should not be None"
-        assert grad_backward == grads, (
+        assert torch.allclose(grad_backward, grads), (
             f"Forward and backward gradients for {param_name} should match"
         )
 
@@ -251,4 +252,5 @@ class TestDiffRootDynamicsGradients:
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
         # in these tests, grads is very small
-        assert_array_almost_equal(numerical_grad, grads.item(), decimal=3)
+        # assert_array_almost_equal(numerical_grad, grads.item(), decimal=3)
+        assert_array_almost_equal(numerical_grad, grads.detach().numpy(), decimal=3)
