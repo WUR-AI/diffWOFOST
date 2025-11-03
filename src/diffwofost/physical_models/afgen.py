@@ -1,11 +1,11 @@
+from collections.abc import Iterable
 import torch
 from pcse.traitlets import TraitType
-from collections.abc import Iterable
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
 
-class Afgen(object):
+class Afgen:
     """Differentiable AFGEN function, expanded from pcse.
 
     :param tbl_xy: Tensor of XY value pairs describing the function
@@ -31,7 +31,6 @@ class Afgen(object):
         from a CGMS database.
         """
         x_list = tbl_xy[0::2]
-        y_list = tbl_xy[1::2]
         n = len(x_list)
 
         # Check if x range is ascending continuously
@@ -40,16 +39,16 @@ class Afgen(object):
 
         # Check for breaks in the series where the ascending sequence stops.
         # Only 0 or 1 breaks are allowed. Use the XOR operator '^' here
-        sum_break = sum([1 if (x0 ^ x1) else 0 for x0, x1 in zip(x_asc, x_asc[1:])])
+        sum_break = sum([1 if (x0 ^ x1) else 0 for x0, x1 in zip(x_asc, x_asc[1:],strict=True)])
         if sum_break == 0:
             indices = list(range(len(x_list)))
         elif sum_break == 1:
             indices = [0]
-            for i, p in zip(rng, x_asc):
+            for i, p in zip(rng, x_asc, strict=True):
                 if p is True:
                     indices.append(i)
         else:
-            msg = "X values for AFGEN input list not strictly ascending: %s" % x_list.tolist()
+            msg = f"X values for AFGEN input list not strictly ascending: {x_list.tolist()}"
             raise ValueError(msg)
 
         return indices
@@ -75,6 +74,7 @@ class Afgen(object):
         self.slopes = (y2 - y1) / (x2 - x1)
 
     def __call__(self, x):
+        """Returns the interpolated value at abscissa x."""
         # Differentiable path using PyTorch
         x = torch.as_tensor(x, dtype=DTYPE)
 
@@ -94,12 +94,13 @@ class Afgen(object):
 
 
 class AfgenTrait(TraitType):
-    """An AFGEN table trait"""
+    """An AFGEN table trait."""
 
     default_value = Afgen([0, 0, 1, 1])
     into_text = "An AFGEN table of XY pairs"
 
     def validate(self, obj, value):
+        """Validate that the value is an Afgen instance or an iterable to create one."""
         if isinstance(value, Afgen):
             return value
         elif isinstance(value, Iterable):

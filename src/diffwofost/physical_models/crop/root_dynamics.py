@@ -10,7 +10,7 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
-from diffwofost.physical_models.afgen import Afgen, AfgenTrait
+from diffwofost.physical_models.afgen import AfgenTrait
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
