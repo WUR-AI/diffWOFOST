@@ -15,6 +15,7 @@ Note that the code here is *not* python2 compatible.
 
 import logging
 import os
+from collections.abc import Iterable
 import torch
 import yaml
 from pcse import signals
@@ -29,6 +30,9 @@ from pcse.engine import BaseEngine
 from pcse.engine import Engine
 from pcse.timer import Timer
 from pcse.traitlets import Instance
+from pcse.traitlets import TraitType
+
+DTYPE = torch.float64  # Default data type for tensors in this module
 
 logging.disable(logging.CRITICAL)
 
@@ -301,3 +305,125 @@ def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     loss_minus = output[out_name].sum(dim=0)
 
     return (loss_plus.data - loss_minus.data) / (2 * delta)
+
+
+class Afgen:
+    """Differentiable AFGEN function, expanded from pcse.
+
+    AFGEN is a linear interpolation function based on a table of XY pairs.
+    """
+
+    def _check_x_ascending(self, tbl_xy):
+        """Checks that the x values are strictly ascending.
+
+        Also truncates any trailing (0.,0.) pairs as a result of data coming
+        from a CGMS database.
+
+        Args:
+            tbl_xy: Table of XY pairs as a tensor or array-like object.
+
+        Returns:
+            list: List of valid indices where x values are ascending.
+
+        Raises:
+            ValueError: If x values are not strictly ascending.
+        """
+        x_list = tbl_xy[0::2]
+        y_list = tbl_xy[1::2]
+        n = len(x_list)
+
+        # Find trailing (0, 0) pairs to truncate
+        valid_n = n
+        for i in range(n - 1, 0, -1):
+            if x_list[i] == 0 and y_list[i] == 0:
+                valid_n = i
+            else:
+                break
+
+        # Check only the valid (non-trailing-zero) portion
+        valid_x_list = x_list[:valid_n]
+
+        # Check if x range is strictly ascending
+        for i in range(1, len(valid_x_list)):
+            if valid_x_list[i] <= valid_x_list[i - 1]:
+                msg = f"X values for AFGEN input list not strictly ascending: {x_list.tolist()}"
+                raise ValueError(msg)
+
+        return list(range(valid_n))
+
+    def __init__(self, tbl_xy):
+        # Convert to tensor if needed
+        tbl_xy = torch.as_tensor(tbl_xy, dtype=DTYPE)
+
+        # Get valid indices
+        indices = self._check_x_ascending(tbl_xy)
+
+        # Extract x and y values using indices
+        x_indices = torch.tensor([2 * i for i in indices])
+        y_indices = torch.tensor([2 * i + 1 for i in indices])
+        self.x_list = tbl_xy[x_indices]
+        self.y_list = tbl_xy[y_indices]
+
+        # Calculate slopes
+        x1 = self.x_list[:-1]
+        x2 = self.x_list[1:]
+        y1 = self.y_list[:-1]
+        y2 = self.y_list[1:]
+        self.slopes = (y2 - y1) / (x2 - x1)
+
+    def __call__(self, x):
+        """Returns the interpolated value at abscissa x.
+
+        Args:
+            x (torch.Tensor): The abscissa value at which to interpolate.
+
+        Returns:
+            torch.Tensor: The interpolated value.
+        """
+        # Differentiable path using PyTorch
+        x = torch.as_tensor(x, dtype=DTYPE)
+
+        # Clamp to boundaries
+        if x <= self.x_list[0]:
+            return self.y_list[0]
+        if x >= self.x_list[-1]:
+            return self.y_list[-1]
+
+        # Find interval index using torch.searchsorted for differentiability
+        i = torch.searchsorted(self.x_list, x, right=False) - 1
+        i = torch.clamp(i, 0, len(self.x_list) - 2)
+
+        # Linear interpolation
+        v = self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
+        return v
+
+
+class AfgenTrait(TraitType):
+    """An AFGEN table trait.
+
+    Attributes:
+        default_value: Default Afgen instance with identity mapping.
+        into_text: Description of the trait type.
+    """
+
+    default_value = Afgen([0, 0, 1, 1])
+    into_text = "An AFGEN table of XY pairs"
+
+    def validate(self, obj, value):
+        """Validate that the value is an Afgen instance or an iterable to create one.
+
+        Args:
+            obj: The object instance containing this trait.
+            value: The value to validate (either an Afgen instance or an iterable).
+
+        Returns:
+            Afgen: A validated Afgen instance.
+
+        Raises:
+            TraitError: If the value cannot be validated as an Afgen instance.
+        """
+        if isinstance(value, Afgen):
+            return value
+        elif isinstance(value, Iterable):
+            return Afgen(value)
+        self.error(obj, value)

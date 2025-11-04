@@ -1,7 +1,6 @@
 """Documentation about diffwofost."""
 
 import logging
-from diffwofost.physical_models import afgen
 from diffwofost.physical_models import utils
 from diffwofost.physical_models.crop import leaf_dynamics
 from diffwofost.physical_models.crop import root_dynamics
@@ -16,5 +15,4 @@ __all__ = [
     "leaf_dynamics",
     "root_dynamics",
     "utils",
-    "afgen",
 ]

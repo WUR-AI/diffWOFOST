@@ -12,8 +12,8 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
-from diffwofost.physical_models.afgen import Afgen
-from diffwofost.physical_models.afgen import AfgenTrait
+from diffwofost.physical_models.utils import Afgen
+from diffwofost.physical_models.utils import AfgenTrait
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
@@ -401,9 +401,9 @@ def _get_params_shape(params):
         if param.shape and not shape:
             shape = param.shape
         elif param.shape:
-            assert param.shape == shape, (
-                "All parameters should have the same shape (or have no dimensions)"
-            )
+            assert (
+                param.shape == shape
+            ), "All parameters should have the same shape (or have no dimensions)"
     return shape
 
 

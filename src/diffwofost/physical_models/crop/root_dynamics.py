@@ -10,7 +10,7 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
-from diffwofost.physical_models.afgen import AfgenTrait
+from diffwofost.physical_models.utils import AfgenTrait
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
@@ -80,6 +80,15 @@ class WOFOST_Root_Dynamics(SimulationObject):
     | RD   | Current rooting depth   | Y                | cm           |
     | TWRT | Total weight of roots   | Y                | kg ha⁻¹      |
 
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it |
+    |--------|----------------------------|
+    | RD     | RDI, RRI, RDMCR, RDMSOL    |
+    | TWRT   | TDWI, RDRRTB               |
+
+    [!] Notice that the gradient ∂TWRT/∂RDRRTB is zero.
+
     **IMPORTANT NOTICE**
 
     Currently root development is linear and depends only on the fraction of assimilates
@@ -112,7 +121,7 @@ class WOFOST_Root_Dynamics(SimulationObject):
         RDMSOL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         IAIRDU = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        RDRRTB = AfgenTrait()  # FIXEME
+        RDRRTB = AfgenTrait()
 
     class RateVariables(RatesTemplate):
         RR = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
