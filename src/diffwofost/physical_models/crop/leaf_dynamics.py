@@ -401,9 +401,9 @@ def _get_params_shape(params):
         if param.shape and not shape:
             shape = param.shape
         elif param.shape:
-            assert (
-                param.shape == shape
-            ), "All parameters should have the same shape (or have no dimensions)"
+            assert param.shape == shape, (
+                "All parameters should have the same shape (or have no dimensions)"
+            )
     return shape
 
 

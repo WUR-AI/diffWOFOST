@@ -220,9 +220,9 @@ class TestDiffRootDynamicsGradients:
         grad_backward = param.grad
 
         assert grad_backward is not None, f"Backward gradients for {param_name} should not be None"
-        assert torch.allclose(
-            grad_backward, grads
-        ), f"Forward and backward gradients for {param_name} should match"
+        assert torch.allclose(grad_backward, grads), (
+            f"Forward and backward gradients for {param_name} should match"
+        )
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     def test_gradients_numerical(self, param_name, output_name):
