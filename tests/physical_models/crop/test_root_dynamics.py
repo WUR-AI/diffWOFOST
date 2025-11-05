@@ -240,7 +240,6 @@ class TestDiffRootDynamicsGradients:
         # this is ∂loss/∂param, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        # in these tests, grads is very small
         assert_array_almost_equal(numerical_grad, grads.detach().numpy(), decimal=3)
 
         # Warn if gradient is zero
