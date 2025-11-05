@@ -11,6 +11,8 @@ from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from diffwofost.physical_models.utils import AfgenTrait
+from diffwofost.physical_models.utils import _broadcast_to
+from diffwofost.physical_models.utils import _get_params_shape
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
@@ -156,15 +158,16 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
         # INITIAL STATES
         params = self.params
+        shape = _get_params_shape(params)
 
         # Initial root depth states
         rdmax = torch.max(params.RDI, torch.min(params.RDMCR, params.RDMSOL))
-        RDM = rdmax
-        RD = params.RDI
+        RDM = _broadcast_to(rdmax, shape)
+        RD = _broadcast_to(params.RDI, shape)
 
-        # initial root biomass states
-        WRT = params.TDWI * self.kiosk.FR
-        DWRT = torch.tensor(0.0, dtype=DTYPE)
+        # Initial root biomass states
+        WRT = _broadcast_to(params.TDWI * self.kiosk.FR, shape)
+        DWRT = torch.zeros_like(WRT) if shape else torch.zeros((), dtype=DTYPE)
         TWRT = WRT + DWRT
 
         self.states = self.StateVariables(

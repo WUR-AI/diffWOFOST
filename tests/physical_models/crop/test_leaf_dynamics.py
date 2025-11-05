@@ -12,6 +12,9 @@ from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
 
+# Ignore deprecation warnings from pcse.base.simulationobject
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
+
 
 def get_test_diff_leaf_model():
     test_data_path = phy_data_folder / "test_leafdynamics_wofost72_01.yaml"

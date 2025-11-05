@@ -13,6 +13,9 @@ from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
 
+# Ignore deprecation warnings from pcse.base.simulationobject
+pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
+
 
 def get_test_diff_root_model():
     test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
@@ -118,6 +121,205 @@ class TestRootDynamics:
                 weather_data_provider,
                 agro_management_inputs,
                 config_path,
+            )
+
+    @pytest.mark.parametrize("param", ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"])
+    def test_root_dynamics_with_one_parameter_vector(self, param):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
+
+        # Setting a vector (with one value) for the selected parameter
+        repeated = crop_model_params_provider[param].repeat(10)
+        crop_model_params_provider.set_override(param, repeated, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                all(abs(reference[var] - model[var]) < precision)
+                for var, precision in expected_precision.items()
+            )
+
+    @pytest.mark.parametrize(
+        "param,delta",
+        [
+            ("RDI", 1.0),
+            ("RRI", 0.1),
+        ],
+    )
+    def test_root_dynamics_with_different_parameter_values(self, param, delta):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
+
+        # Setting a vector with multiple values for the selected parameter
+        test_value = crop_model_params_provider[param]
+        # We set the value for which test data are available as the last element
+        param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
+        crop_model_params_provider.set_override(param, param_vec, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                # The value for which test data are available is the last element
+                abs(reference[var] - model[var][-1]) < precision
+                for var, precision in expected_precision.items()
+            )
+
+    def test_root_dynamics_with_multiple_parameter_vectors(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
+
+        # Setting a vector (with one value) for the RDI and RRI parameters
+        for param in ("RDI", "RRI"):
+            repeated = crop_model_params_provider[param].repeat(10)
+            crop_model_params_provider.set_override(param, repeated, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                all(abs(reference[var] - model[var]) < precision)
+                for var, precision in expected_precision.items()
+            )
+
+    def test_root_dynamics_with_multiple_parameter_arrays(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
+
+        # Setting an array with arbitrary shape (and one value) for the
+        # RDI and RRI parameters
+        for param in ("RDI", "RRI"):
+            repeated = crop_model_params_provider[param].broadcast_to((30, 5))
+            crop_model_params_provider.set_override(param, repeated, check=False)
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = get_test_data(test_data_path)
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                torch.all(abs(reference[var] - model[var]) < precision)
+                for var, precision in expected_precision.items()
+            )
+            assert all(
+                model[var].shape == (30, 5) for var in expected_precision.keys()
+            )  # check the output shapes
+
+    def test_root_dynamics_with_incompatible_parameter_vectors(self):
+        # prepare model input
+        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data_path, crop_model_params)
+        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
+
+        # Setting a vector (with one value) for the RDI and RRI parameters,
+        # but with different lengths
+        crop_model_params_provider.set_override(
+            "RDI", crop_model_params_provider["RDI"].repeat(10), check=False
+        )
+        crop_model_params_provider.set_override(
+            "RRI", crop_model_params_provider["RRI"].repeat(5), check=False
+        )
+
+        with pytest.raises(AssertionError):
+            EngineTestHelper(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs,
+                config_path,
+                external_states,
             )
 
     def test_wofost_pp_with_root_dynamics(self):

@@ -427,3 +427,42 @@ class AfgenTrait(TraitType):
         elif isinstance(value, Iterable):
             return Afgen(value)
         self.error(obj, value)
+
+
+def _get_params_shape(params):
+    """Get the parameters shape.
+
+    Parameters can have arbitrary number of dimensions, but all parameters that are not zero-
+    dimensional should have the same shape.
+    """
+    shape = ()
+    for parname in params.trait_names():
+        # Skip special traitlets attributes
+        if parname.startswith("trait"):
+            continue
+        param = getattr(params, parname)
+        # Skip Afgen parameters:
+        if isinstance(param, Afgen):
+            continue
+        # Parameters that are not zero dimensional should all have the same shape
+        if param.shape and not shape:
+            shape = param.shape
+        elif param.shape:
+            assert param.shape == shape, (
+                "All parameters should have the same shape (or have no dimensions)"
+            )
+    return shape
+
+
+def _broadcast_to(x, shape):
+    """Create a view of tensor X with the given shape."""
+    # If already the correct shape, return as-is
+    if x.shape == shape:
+        return x
+    if x.dim() == 0:
+        # For 0-d tensors, we simply broadcast to the given shape
+        return torch.broadcast_to(x, shape)
+    # The given shape should match x in all but the last axis, which represents
+    # the dimension along which the time integration is carried out.
+    # We first append an axis to x, then expand to the given shape
+    return x.unsqueeze(-1).expand(shape)
