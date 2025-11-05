@@ -274,13 +274,18 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # approximation when SPAN is not a learnable parameter.
         # TODO: sharpness can be exposed as a parameter
         if p.SPAN.requires_grad:
-            sharpness = torch.tensor(1000.0, dtype=DTYPE)
-            weight = torch.sigmoid((s.LVAGE - tSPAN) * sharpness)
-            r.DALV = torch.sum(weight * s.LV, dim=-1)
+            # 1e-16 is chosen empirically for cases when s.LVAGE - tSPAN is very
+            # small and mask should be 1
+            sharpness = torch.tensor(1e-16, dtype=DTYPE)
+
+            # 1e-14 is chosen empirically for cases when s.LVAGE - tSPAN is
+            # equal to zero and mask should be 0.0
+            epsilon = 1e-14
+            span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=DTYPE)
         else:
             span_mask = (s.LVAGE > tSPAN).to(dtype=DTYPE)
-            r.DALV = torch.sum(span_mask * s.LV, dim=-1)
 
+        r.DALV = torch.sum(span_mask * s.LV, dim=-1)
         r.DALV = dvs_mask * r.DALV
 
         # Total death rate leaves

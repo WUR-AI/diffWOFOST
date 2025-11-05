@@ -363,6 +363,45 @@ class TestLeafDynamics:
                     for var, precision in expected_precision.items()
                 )
 
+    @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)
+    def test_leaf_dynamics_with_sigmoid_approx(self, test_data_url):
+        """Test if sigmoid approximation gives same results as leaf dynamics."""
+        # prepare model input
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        # Make SPAN a parameter requiring gradients
+        crop_model_params_provider["SPAN"].requires_grad = True
+
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        engine = EngineTestHelper(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            config_path,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        assert len(actual_results) == len(expected_results)
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            assert all(
+                abs(reference[var] - model[var]) < precision
+                for var, precision in expected_precision.items()
+            )
+
 
 class TestDiffLeafDynamicsTDWI:
     @pytest.mark.parametrize(
