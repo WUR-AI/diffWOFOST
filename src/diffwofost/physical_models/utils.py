@@ -14,7 +14,6 @@ Note that the code here is *not* python2 compatible.
 
 import logging
 import os
-import requests
 import torch
 import yaml
 from pcse import signals
@@ -234,11 +233,10 @@ def prepare_engine_input(test_data, crop_model_params, dtype=torch.float64):
     )
 
 
-def get_test_data(test_data_url):
+def get_test_data(test_data_path):
     """Get the test data from the YAML file."""
-    with requests.get(test_data_url) as response:
-        data = yaml.safe_load(response.content)
-    return data
+    with open(test_data_path) as f:
+        return yaml.safe_load(f)
 
 
 def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):

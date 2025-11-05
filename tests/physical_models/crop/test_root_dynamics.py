@@ -10,12 +10,11 @@ from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
-from .. import pcse_test_url_base
 from .. import phy_data_folder
 
 
 def get_test_diff_root_model():
-    test_data_url = f"{pcse_test_url_base}/test_rootdynamics_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -67,12 +66,12 @@ class DiffRootDynamics(torch.nn.Module):
 
 class TestRootDynamics:
     rootdynamics_data_urls = [
-        f"{pcse_test_url_base}/test_rootdynamics_wofost72_{i:02d}.yaml"
+        f"{phy_data_folder}/test_rootdynamics_wofost72_{i:02d}.yaml"
         for i in range(1, 45)  # there are 44 test files
     ]
 
     wofost72_data_urls = [
-        f"{pcse_test_url_base}/test_potentialproduction_wofost72_{i:02d}.yaml"
+        f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml"
         for i in range(1, 45)  # there are 44 test files
     ]
 
@@ -115,7 +114,7 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_engine(self):
         # prepare model input
-        test_data_url = f"{pcse_test_url_base}/test_rootdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (

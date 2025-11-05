@@ -10,12 +10,11 @@ from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
-from .. import pcse_test_url_base
 from .. import phy_data_folder
 
 
 def get_test_diff_leaf_model():
-    test_data_url = f"{pcse_test_url_base}/test_leafdynamics_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -67,12 +66,12 @@ class DiffLeafDynamics(torch.nn.Module):
 
 class TestLeafDynamics:
     leafdynamics_data_urls = [
-        f"{pcse_test_url_base}/test_leafdynamics_wofost72_{i:02d}.yaml"
+        f"{phy_data_folder}/test_leafdynamics_wofost72_{i:02d}.yaml"
         for i in range(1, 45)  # there are 44 test files
     ]
 
     wofost72_data_urls = [
-        f"{pcse_test_url_base}/test_potentialproduction_wofost72_{i:02d}.yaml"
+        f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml"
         for i in range(1, 45)  # there are 44 test files
     ]
 
@@ -113,7 +112,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_engine(self):
         # prepare model input
-        test_data_url = f"{pcse_test_url_base}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
@@ -134,7 +133,7 @@ class TestLeafDynamics:
     @pytest.mark.parametrize("param", ["TDWI", "SPAN"])
     def test_leaf_dynamics_with_one_parameter_vector(self, param):
         # prepare model input
-        test_data_url = f"{pcse_test_url_base}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (
@@ -180,7 +179,7 @@ class TestLeafDynamics:
     )
     def test_leaf_dynamics_with_different_parameter_values(self, param, delta):
         # prepare model input
-        test_data_url = f"{pcse_test_url_base}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (
@@ -222,7 +221,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_multiple_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{pcse_test_url_base}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (
@@ -262,7 +261,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_multiple_parameter_arrays(self):
         # prepare model input
-        test_data_url = f"{pcse_test_url_base}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (
@@ -306,7 +305,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{pcse_test_url_base}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
         (
