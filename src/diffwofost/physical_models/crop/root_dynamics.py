@@ -189,21 +189,21 @@ class WOFOST_Root_Dynamics(SimulationObject):
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
         DVS = torch.as_tensor(k["DVS"], dtype=DTYPE)
-        mask = (DVS >= 0).to(dtype=DTYPE)
+        dvs_mask = (DVS >= 0).to(dtype=DTYPE)
 
         # Increase in root biomass
-        r.GRRT = mask * k.FR * k.DMI
-        r.DRRT = mask * s.WRT * p.RDRRTB(k.DVS)
+        r.GRRT = dvs_mask * k.FR * k.DMI
+        r.DRRT = dvs_mask * s.WRT * p.RDRRTB(k.DVS)
         r.GWRT = r.GRRT - r.DRRT
 
         # Increase in root depth
-        r.RR = mask * torch.min((s.RDM - s.RD), p.RRI)
+        r.RR = dvs_mask * torch.min((s.RDM - s.RD), p.RRI)
 
         # Do not let the roots growth if partioning to the roots
         # (variable FR) is zero.
         FR = torch.as_tensor(k["FR"], dtype=DTYPE)
         mask = (FR > 0.0).to(dtype=DTYPE)
-        r.RR = r.RR * mask
+        r.RR = r.RR * mask * dvs_mask
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
