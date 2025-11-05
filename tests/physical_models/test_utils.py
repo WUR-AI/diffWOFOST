@@ -81,7 +81,7 @@ class TestAfgen:
         result = afgen(x)
         result.backward()
 
-        # For a linear function y = x, the gradient should be 1
+        # For the linear function y = x, the gradient is 1
         assert x.grad is not None
         assert torch.isclose(x.grad, torch.tensor(1.0, dtype=DTYPE), atol=1e-5)
 
