@@ -73,7 +73,7 @@ class TestRootDynamics:
 
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -107,7 +107,7 @@ class TestRootDynamics:
     def test_root_dynamics_with_engine(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             prepare_engine_input(test_data_path, crop_model_params)
         )
@@ -123,7 +123,7 @@ class TestRootDynamics:
                 config_path,
             )
 
-    @pytest.mark.parametrize("param", ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"])
+    @pytest.mark.parametrize("param", ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"])
     def test_root_dynamics_with_one_parameter_vector(self, param):
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
@@ -137,7 +137,12 @@ class TestRootDynamics:
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
-        repeated = crop_model_params_provider[param].repeat(10)
+        # If the parameter is an Afgen table (like RDRRTB), the repeat will create a
+        # tensor of Afgen objects
+        if param == "RDRRTB":
+            repeated = crop_model_params_provider[param].repeat(10, 1)
+        else:
+            repeated = crop_model_params_provider[param].repeat(10)
         crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(
@@ -172,7 +177,7 @@ class TestRootDynamics:
     def test_root_dynamics_with_different_parameter_values(self, param, delta):
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -213,7 +218,7 @@ class TestRootDynamics:
     def test_root_dynamics_with_multiple_parameter_vectors(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -223,8 +228,13 @@ class TestRootDynamics:
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the RDI and RRI parameters
-        for param in ("RDI", "RRI"):
-            repeated = crop_model_params_provider[param].repeat(10)
+        for param in ("RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"):
+            # If the parameter is an Afgen table (like RDRRTB), the repeat will create a
+            # tensor of Afgen objects
+            if param == "RDRRTB":
+                repeated = crop_model_params_provider[param].repeat(10, 1)
+            else:
+                repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(
@@ -252,7 +262,7 @@ class TestRootDynamics:
     def test_root_dynamics_with_multiple_parameter_arrays(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -261,10 +271,12 @@ class TestRootDynamics:
         ) = prepare_engine_input(test_data_path, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
-        # Setting an array with arbitrary shape (and one value) for the
-        # RDI and RRI parameters
-        for param in ("RDI", "RRI"):
-            repeated = crop_model_params_provider[param].broadcast_to((30, 5))
+        # Setting an array with arbitrary shape (and one value)
+        for param in ("RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"):
+            if param == "RDRRTB":
+                repeated = crop_model_params_provider[param].repeat((30, 5, 1))
+            else:
+                repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(
@@ -295,7 +307,7 @@ class TestRootDynamics:
     def test_root_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -325,7 +337,7 @@ class TestRootDynamics:
     def test_wofost_pp_with_root_dynamics(self):
         # prepare model input
         test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
+        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             prepare_engine_input(test_data_path, crop_model_params)
         )
@@ -355,17 +367,18 @@ class TestDiffRootDynamicsGradients:
 
     # Define parameters and outputs
     param_names = ["TDWI", "RDI", "RRI", "RDMCR", "RDMSOL", "IAIRDU", "RDRRTB"]
+    param_names = ["RDRRTB"]
     output_names = ["RD", "TWRT"]
 
     # Define parameter configurations (value, dtype)
     param_default_val = {
-        "TDWI": (0.2, torch.float32),
-        "RDI": (10, torch.float32),
-        "RRI": (1.0, torch.float32),
-        "RDMCR": (120, torch.float32),
-        "RDMSOL": (120, torch.float32),
-        "IAIRDU": (0.2, torch.float32),
-        "RDRRTB": ([0.0, 0.0, 1.5, 0.02], torch.float32),  # Table parameter: [x1, y1, x2, y2]
+        "TDWI": ([0.2, 0.3, 0.5], torch.float32),
+        "RDI": ([10, 10.1], torch.float32),
+        "RRI": ([1.0, 1.5, 2.0, 2.25], torch.float32),
+        "RDMCR": ([120, 121], torch.float32),
+        "RDMSOL": ([120, 121], torch.float32),
+        "IAIRDU": ([0.2, 0.2, 0.3, 0.4], torch.float32),
+        "RDRRTB": ([[0.0, 0.0, 1.5, 0.02], [0.0, 0.0, 1.6, 0.03]], torch.float32),
     }
 
     # Define which parameter-output pairs should have gradients

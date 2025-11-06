@@ -269,3 +269,271 @@ class TestAfgenEdgeCases:
         result = afgen(torch.tensor(15.0))
         expected = torch.tensor(7.5, dtype=DTYPE)
         assert torch.isclose(result, expected)
+
+
+class TestAfgenBatched:
+    """Tests for batched Afgen functionality with multidimensional tensors."""
+
+    def test_batched_2d_simple(self):
+        """Test batched Afgen with 2D tensor (batch of tables)."""
+        # Create 3 different tables in a batch
+        tables = torch.tensor(
+            [
+                [0, 0, 10, 10],  # y = x
+                [0, 0, 10, 20],  # y = 2x
+                [0, 5, 10, 15],  # y = x + 5
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        # Test that it's recognized as batched
+        assert afgen.is_batched
+        assert afgen.batch_shape == (3,)
+
+        # Test interpolation - should return tensor with batch dimension
+        result = afgen(torch.tensor(5.0))
+
+        assert result.shape == (3,)
+        assert torch.isclose(result[0], torch.tensor(5.0, dtype=DTYPE))
+        assert torch.isclose(result[1], torch.tensor(10.0, dtype=DTYPE))
+        assert torch.isclose(result[2], torch.tensor(10.0, dtype=DTYPE))
+
+    def test_batched_3d_tensor(self):
+        """Test batched Afgen with 3D tensor (2D batch of tables)."""
+        # Create a 2x3 batch of tables
+        tables = torch.tensor(
+            [
+                [
+                    [0, 0, 10, 10],  # y = x
+                    [0, 0, 10, 20],  # y = 2x
+                    [0, 5, 10, 15],  # y = x + 5
+                ],
+                [
+                    [0, 10, 10, 20],  # y = x + 10
+                    [0, 0, 10, 5],  # y = 0.5x
+                    [0, 2, 10, 12],  # y = x + 2
+                ],
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        assert afgen.is_batched
+        assert afgen.batch_shape == (2, 3)
+
+        # Test interpolation
+        result = afgen(torch.tensor(5.0))
+
+        assert result.shape == (2, 3)
+        # First row
+        assert torch.isclose(result[0, 0], torch.tensor(5.0, dtype=DTYPE))
+        assert torch.isclose(result[0, 1], torch.tensor(10.0, dtype=DTYPE))
+        assert torch.isclose(result[0, 2], torch.tensor(10.0, dtype=DTYPE))
+        # Second row
+        assert torch.isclose(result[1, 0], torch.tensor(15.0, dtype=DTYPE))
+        assert torch.isclose(result[1, 1], torch.tensor(2.5, dtype=DTYPE))
+        assert torch.isclose(result[1, 2], torch.tensor(7.0, dtype=DTYPE))
+
+    def test_batched_boundary_clamping(self):
+        """Test that boundary clamping works correctly for batched tables."""
+        tables = torch.tensor(
+            [
+                [0, 0, 10, 10],
+                [0, 5, 10, 15],
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        # Test below lower bound
+        result = afgen(torch.tensor(-5.0))
+        assert result.shape == (2,)
+        assert result[0] == 0.0
+        assert result[1] == 5.0
+
+        # Test above upper bound
+        result = afgen(torch.tensor(20.0))
+        assert result.shape == (2,)
+        assert result[0] == 10.0
+        assert result[1] == 15.0
+
+    def test_batched_different_ranges(self):
+        """Test batched tables with different x ranges."""
+        tables = torch.tensor(
+            [
+                [0, 0, 5, 10, 0, 0, 0, 0],  # Range 0-5, trailing zeros
+                [0, 0, 10, 20, 20, 30, 0, 0],  # Range 0-20, trailing zeros
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        # Test within first table's range but outside second table's initial segment
+        result = afgen(torch.tensor(3.0))
+        assert result.shape == (2,)
+        assert torch.isclose(result[0], torch.tensor(6.0, dtype=DTYPE))  # From first table
+        assert torch.isclose(result[1], torch.tensor(6.0, dtype=DTYPE))  # From second table
+
+    def test_batched_gradient_flow(self):
+        """Test that gradients flow correctly through batched Afgen."""
+        tables = torch.tensor(
+            [
+                [0, 0, 10, 10],  # y = x, gradient = 1
+                [0, 0, 10, 20],  # y = 2x, gradient = 2
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        x = torch.tensor(5.0, dtype=DTYPE, requires_grad=True)
+        result = afgen(x)
+
+        # Sum the batch dimension for backward pass
+        loss = result.sum()
+        loss.backward()
+
+        # Combined gradient should be 1 + 2 = 3
+        assert x.grad is not None
+        assert torch.isclose(x.grad, torch.tensor(3.0, dtype=DTYPE), atol=1e-5)
+
+    def test_batched_4d_tensor(self):
+        """Test with 4D tensor to verify arbitrary dimensionality."""
+        # Create a 2x2x2 batch of tables
+        tables = torch.ones(2, 2, 2, 4, dtype=DTYPE) * torch.tensor([0, 0, 10, 10], dtype=DTYPE)
+
+        # Modify some tables to have different slopes
+        tables[0, 0, 0] = torch.tensor([0, 0, 10, 20], dtype=DTYPE)  # y = 2x
+        tables[1, 1, 1] = torch.tensor([0, 0, 10, 5], dtype=DTYPE)  # y = 0.5x
+
+        afgen = Afgen(tables)
+
+        assert afgen.is_batched
+        assert afgen.batch_shape == (2, 2, 2)
+
+        result = afgen(torch.tensor(5.0))
+        assert result.shape == (2, 2, 2)
+
+        # Check specific modified tables
+        assert torch.isclose(result[0, 0, 0], torch.tensor(10.0, dtype=DTYPE))
+        assert torch.isclose(result[1, 1, 1], torch.tensor(2.5, dtype=DTYPE))
+
+        # Check unmodified tables (should be y = x)
+        assert torch.isclose(result[0, 0, 1], torch.tensor(5.0, dtype=DTYPE))
+        assert torch.isclose(result[0, 1, 0], torch.tensor(5.0, dtype=DTYPE))
+
+    def test_batched_complex_interpolation(self):
+        """Test batched tables with multiple segments."""
+        # Each table has 3 segments
+        tables = torch.tensor(
+            [
+                [0, 0, 5, 10, 10, 5, 15, 15],  # Piecewise: up, down, flat
+                [0, 5, 5, 10, 10, 10, 15, 5],  # Piecewise: up, flat, down
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        # Test in different segments
+        # At x=2.5 (first segment)
+        result = afgen(torch.tensor(2.5))
+        assert result.shape == (2,)
+        assert torch.isclose(result[0], torch.tensor(5.0, dtype=DTYPE))
+        assert torch.isclose(result[1], torch.tensor(7.5, dtype=DTYPE))
+
+        # At x=7.5 (second segment)
+        result = afgen(torch.tensor(7.5))
+        assert result.shape == (2,)
+        assert torch.isclose(result[0], torch.tensor(7.5, dtype=DTYPE))
+        assert torch.isclose(result[1], torch.tensor(10.0, dtype=DTYPE))
+
+        # At x=12.5 (third segment)
+        result = afgen(torch.tensor(12.5))
+        assert result.shape == (2,)
+        assert torch.isclose(result[0], torch.tensor(10.0, dtype=DTYPE))
+        assert torch.isclose(result[1], torch.tensor(7.5, dtype=DTYPE))
+
+    def test_batched_dtype_consistency(self):
+        """Test that batched output maintains correct dtype."""
+        tables = torch.tensor(
+            [
+                [0, 0, 10, 10],
+                [0, 0, 10, 20],
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+        result = afgen(torch.tensor(5.0))
+
+        assert result.dtype == DTYPE
+
+    def test_batched_with_trailing_zeros(self):
+        """Test batched tables with trailing zeros are handled correctly."""
+        tables = torch.tensor(
+            [
+                [0, 0, 5, 10, 10, 20, 0, 0],
+                [0, 5, 10, 15, 0, 0, 0, 0],
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        # Should work correctly, ignoring trailing zeros
+        result = afgen(torch.tensor(5.0))
+        assert result.shape == (2,)
+        assert torch.isclose(result[0], torch.tensor(10.0, dtype=DTYPE))
+        assert torch.isclose(result[1], torch.tensor(10.0, dtype=DTYPE))
+
+    def test_batched_single_element_batch(self):
+        """Test edge case of batch size 1."""
+        tables = torch.tensor(
+            [
+                [0, 0, 10, 10],
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        assert afgen.is_batched
+        assert afgen.batch_shape == (1,)
+
+        result = afgen(torch.tensor(5.0))
+        assert result.shape == (1,)
+        assert torch.isclose(result[0], torch.tensor(5.0, dtype=DTYPE))
+
+    def test_batched_ascending_check_fails(self):
+        """Test that invalid batched tables raise errors."""
+        # Second table has non-ascending x values (padded to same length)
+        tables = torch.tensor(
+            [
+                [0, 0, 10, 10, 0, 0],
+                [0, 0, 10, 5, 5, 10],  # x values: 0, 10, 5 (not ascending)
+            ],
+            dtype=DTYPE,
+        )
+
+        with pytest.raises(
+            ValueError, match="X values for AFGEN input list not strictly ascending"
+        ):
+            Afgen(tables)
+
+    def test_backward_compatibility_non_batched(self):
+        """Test that non-batched (1D) usage still works correctly."""
+        afgen = Afgen([0, 0, 10, 10])
+
+        assert not afgen.is_batched
+        assert afgen.batch_shape is None
+
+        result = afgen(torch.tensor(5.0))
+        assert isinstance(result, torch.Tensor)
+        assert result.dim() == 0  # Scalar tensor
+        assert torch.isclose(result, torch.tensor(5.0, dtype=DTYPE))

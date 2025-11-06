@@ -293,24 +293,47 @@ def get_test_data(file_path):
 def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     """Calculate the numerical gradient of output with respect to a parameter."""
     delta = 1e-6
-    p_plus = param_value + delta
-    p_minus = param_value - delta
 
-    model = get_model_fn()
-    output = model({param_name: torch.nn.Parameter(p_plus)})
-    loss_plus = output[out_name].sum(dim=0)
+    if param_name == "RDRRTB":
+        # Parameters like RDRRTB are batched tables, so we need to compute
+        # the gradient for each table element separately
+        grads = torch.zeros_like(param_value)
 
-    model = get_model_fn()
-    output = model({param_name: torch.nn.Parameter(p_minus)})
-    loss_minus = output[out_name].sum(dim=0)
+        for j in range(param_value.shape[1]):
+            # Perturb all batches for element j
+            p_plus = param_value.clone()
+            p_plus[:, j] += delta
+            model = get_model_fn()
+            loss_plus = model({param_name: p_plus})[out_name].sum(dim=0)
 
-    return (loss_plus.data - loss_minus.data) / (2 * delta)
+            p_minus = param_value.clone()
+            p_minus[:, j] -= delta
+            model = get_model_fn()
+            loss_minus = model({param_name: p_minus})[out_name].sum(dim=0)
+
+            grads[:, j] = (loss_plus.data - loss_minus.data) / (2 * delta)
+
+        return grads
+    else:
+        p_plus = param_value + delta
+        p_minus = param_value - delta
+
+        model = get_model_fn()
+        output = model({param_name: torch.nn.Parameter(p_plus)})
+        loss_plus = output[out_name].sum(dim=0)
+
+        model = get_model_fn()
+        output = model({param_name: torch.nn.Parameter(p_minus)})
+        loss_minus = output[out_name].sum(dim=0)
+
+        return (loss_plus.data - loss_minus.data) / (2 * delta)
 
 
 class Afgen:
     """Differentiable AFGEN function, expanded from pcse.
 
     AFGEN is a linear interpolation function based on a table of XY pairs.
+    Now supports batched tables (tensor of lists) for vectorized operations.
     """
 
     def _check_x_ascending(self, tbl_xy):
@@ -321,13 +344,53 @@ class Afgen:
 
         Args:
             tbl_xy: Table of XY pairs as a tensor or array-like object.
+                   Can be 1D (single table) or ND (vectorized tables).
 
         Returns:
-            list: List of valid indices where x values are ascending.
+            list or tensor: List of valid indices (for 1D) or tensor of valid counts (for ND).
 
         Raises:
             ValueError: If x values are not strictly ascending.
         """
+        # Handle batched tables (>1D tensors)
+        if tbl_xy.dim() > 1:
+            batch_shape = tbl_xy.shape[:-1]
+            table_len = tbl_xy.shape[-1]
+
+            # Flatten batch dimensions for processing
+            flat_tables = tbl_xy.reshape(-1, table_len)
+            num_tables = flat_tables.shape[0]
+
+            valid_counts = []
+            for idx in range(num_tables):
+                table = flat_tables[idx]
+                x_list = table[0::2]
+                y_list = table[1::2]
+                n = len(x_list)
+
+                # Find trailing (0, 0) pairs to truncate
+                valid_n = n
+                for i in range(n - 1, 0, -1):
+                    if x_list[i] == 0 and y_list[i] == 0:
+                        valid_n = i
+                    else:
+                        break
+
+                # Check if x range is strictly ascending
+                valid_x_list = x_list[:valid_n]
+                for i in range(1, len(valid_x_list)):
+                    if valid_x_list[i] <= valid_x_list[i - 1]:
+                        msg = (
+                            "X values for AFGEN input list"
+                            + " not strictly ascending: {x_list.tolist()}"
+                        )
+                        raise ValueError(msg)
+
+                valid_counts.append(valid_n)
+
+            return torch.tensor(valid_counts).reshape(batch_shape)
+
+        # Original 1D logic from pcse
         x_list = tbl_xy[0::2]
         y_list = tbl_xy[1::2]
         n = len(x_list)
@@ -355,34 +418,125 @@ class Afgen:
         # Convert to tensor if needed
         tbl_xy = torch.as_tensor(tbl_xy, dtype=DTYPE)
 
-        # Get valid indices
-        indices = self._check_x_ascending(tbl_xy)
+        # Detect if we have batched tables (>1D)
+        self.is_batched = tbl_xy.dim() > 1
 
-        # Extract x and y values using indices
-        x_indices = torch.tensor([2 * i for i in indices])
-        y_indices = torch.tensor([2 * i + 1 for i in indices])
-        self.x_list = tbl_xy[x_indices]
-        self.y_list = tbl_xy[y_indices]
+        if self.is_batched:
+            self.batch_shape = tbl_xy.shape[:-1]
+            table_len = tbl_xy.shape[-1]
 
-        # Calculate slopes
-        x1 = self.x_list[:-1]
-        x2 = self.x_list[1:]
-        y1 = self.y_list[:-1]
-        y2 = self.y_list[1:]
-        self.slopes = (y2 - y1) / (x2 - x1)
+            # Store the full batched tables
+            self.tbl_xy = tbl_xy
+
+            # Get valid counts for each table
+            valid_counts = self._check_x_ascending(tbl_xy)
+            self.valid_counts = valid_counts
+
+            # Extract x and y for all tables
+            flat_tables = tbl_xy.reshape(-1, table_len)
+            num_tables = flat_tables.shape[0]
+
+            x_list_batch = []
+            y_list_batch = []
+            slopes_batch = []
+
+            for idx in range(num_tables):
+                table = flat_tables[idx]
+                valid_n = valid_counts.flatten()[idx].item()
+
+                x_indices = torch.tensor([2 * i for i in range(valid_n)])
+                y_indices = torch.tensor([2 * i + 1 for i in range(valid_n)])
+
+                x_vals = table[x_indices]
+                y_vals = table[y_indices]
+
+                # Calculate slopes
+                if len(x_vals) > 1:
+                    slopes = (y_vals[1:] - y_vals[:-1]) / (x_vals[1:] - x_vals[:-1])
+                else:
+                    slopes = torch.tensor([], dtype=DTYPE)
+
+                x_list_batch.append(x_vals)
+                y_list_batch.append(y_vals)
+                slopes_batch.append(slopes)
+
+            # Store as lists - don't reshape, just keep the flat structure
+            self.x_list_batch = x_list_batch
+            self.y_list_batch = y_list_batch
+            self.slopes_batch = slopes_batch
+
+        else:
+            # Original 1D logic from pcse
+            self.batch_shape = None
+            indices = self._check_x_ascending(tbl_xy)
+
+            # Extract x and y values using indices
+            x_indices = torch.tensor([2 * i for i in indices])
+            y_indices = torch.tensor([2 * i + 1 for i in indices])
+            self.x_list = tbl_xy[x_indices]
+            self.y_list = tbl_xy[y_indices]
+
+            # Calculate slopes
+            x1 = self.x_list[:-1]
+            x2 = self.x_list[1:]
+            y1 = self.y_list[:-1]
+            y2 = self.y_list[1:]
+            self.slopes = (y2 - y1) / (x2 - x1)
 
     def __call__(self, x):
         """Returns the interpolated value at abscissa x.
 
         Args:
             x (torch.Tensor): The abscissa value at which to interpolate.
+                             Can be scalar or batched to match table dimensions.
 
         Returns:
-            torch.Tensor: The interpolated value.
+            torch.Tensor: The interpolated value, preserving batch dimensions.
         """
-        # Differentiable path using PyTorch
         x = torch.as_tensor(x, dtype=DTYPE)
 
+        if self.is_batched:
+            # Ensure x has compatible shape for broadcasting
+            # x can be scalar or have batch dimensions
+
+            # Flatten batch dimensions for processing
+            flat_x = x.reshape(-1) if x.dim() > 0 else x.unsqueeze(0)
+            num_queries = flat_x.shape[0] if flat_x.dim() > 0 else 1
+
+            results = []
+
+            # Process each table
+            for idx in range(len(self.x_list_batch)):
+                x_list = self.x_list_batch[idx]
+                y_list = self.y_list_batch[idx]
+                slopes = self.slopes_batch[idx]
+
+                # Get the query value (broadcast if needed)
+                if num_queries == 1:
+                    x_val = flat_x[0] if flat_x.dim() > 0 else flat_x
+                elif idx < num_queries:
+                    x_val = flat_x[idx]
+                else:
+                    x_val = flat_x[0]  # Broadcast first value
+
+                # Boundary conditions
+                if x_val <= x_list[0]:
+                    result = y_list[0]
+                elif x_val >= x_list[-1]:
+                    result = y_list[-1]
+                else:
+                    # Find interval and interpolate
+                    i = torch.searchsorted(x_list, x_val, right=False) - 1
+                    i = torch.clamp(i, 0, len(x_list) - 2)
+                    result = y_list[i] + slopes[i] * (x_val - x_list[i])
+
+                results.append(result)
+
+            # Reshape to original batch shape
+            output = torch.stack(results).reshape(self.batch_shape)
+            return output
+
+        # Original scalar logic from pcse
         # Clamp to boundaries
         if x <= self.x_list[0]:
             return self.y_list[0]
@@ -396,6 +550,11 @@ class Afgen:
         # Linear interpolation
         v = self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
         return v
+
+    @property
+    def shape(self):
+        """Returns the shape of the Afgen table."""
+        return self.batch_shape
 
 
 class AfgenTrait(TraitType):
@@ -441,16 +600,23 @@ def _get_params_shape(params):
         if parname.startswith("trait"):
             continue
         param = getattr(params, parname)
-        # Skip Afgen parameters:
-        if isinstance(param, Afgen):
-            continue
         # Parameters that are not zero dimensional should all have the same shape
-        if param.shape and not shape:
-            shape = param.shape
-        elif param.shape:
-            assert param.shape == shape, (
-                "All parameters should have the same shape (or have no dimensions)"
-            )
+        # However, Afgen parameters are inherently a 1-d table, so we have to treat them differently
+        if not isinstance(param, Afgen):
+            if param.shape and not shape:
+                shape = param.shape
+            elif param.shape:
+                assert param.shape == shape, (
+                    "All parameters should have the same shape (or have no dimensions)"
+                )
+        else:
+            # Afgen parameters have an extra dimension
+            if param.shape and not shape:
+                shape = param.shape
+            elif param.shape:
+                assert param.shape == shape, (
+                    "All parameters should have the same shape (or have no dimensions)"
+                )
     return shape
 
 
