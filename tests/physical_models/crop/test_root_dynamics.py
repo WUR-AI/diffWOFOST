@@ -367,18 +367,28 @@ class TestDiffRootDynamicsGradients:
 
     # Define parameters and outputs
     param_names = ["TDWI", "RDI", "RRI", "RDMCR", "RDMSOL", "IAIRDU", "RDRRTB"]
-    param_names = ["RDRRTB"]
     output_names = ["RD", "TWRT"]
 
     # Define parameter configurations (value, dtype)
-    param_default_val = {
-        "TDWI": ([0.2, 0.3, 0.5], torch.float32),
-        "RDI": ([10, 10.1], torch.float32),
-        "RRI": ([1.0, 1.5, 2.0, 2.25], torch.float32),
-        "RDMCR": ([120, 121], torch.float32),
-        "RDMSOL": ([120, 121], torch.float32),
-        "IAIRDU": ([0.2, 0.2, 0.3, 0.4], torch.float32),
-        "RDRRTB": ([[0.0, 0.0, 1.5, 0.02], [0.0, 0.0, 1.6, 0.03]], torch.float32),
+    param_configs = {
+        "single": {
+            "TDWI": (0.2, torch.float32),
+            "RDI": (10.1, torch.float32),
+            "RRI": (2.25, torch.float32),
+            "RDMCR": (121, torch.float32),
+            "RDMSOL": (121, torch.float32),
+            "IAIRDU": (0.2, torch.float32),
+            "RDRRTB": ([0.0, 0.0, 1.5, 0.02], torch.float32),
+        },
+        "tensor": {
+            "TDWI": ([0.2, 0.3, 0.5], torch.float32),
+            "RDI": ([10, 10.1], torch.float32),
+            "RRI": ([1.0, 1.5, 2.0, 2.25], torch.float32),
+            "RDMCR": ([120, 121], torch.float32),
+            "RDMSOL": ([120, 121], torch.float32),
+            "IAIRDU": ([0.2, 0.2, 0.3, 0.4], torch.float32),
+            "RDRRTB": ([[0.0, 0.0, 1.5, 0.02], [0.0, 0.0, 1.6, 0.03]], torch.float32),
+        },
     }
 
     # Define which parameter-output pairs should have gradients
@@ -403,10 +413,11 @@ class TestDiffRootDynamicsGradients:
                 no_gradient_params.append((param_name, output_name))
 
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
-    def test_no_gradients(self, param_name, output_name):
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_no_gradients(self, param_name, output_name, config_type):
         """Test cases where parameters should not have gradients for specific outputs."""
         model = get_test_diff_root_model()
-        value, dtype = self.param_default_val[param_name]
+        value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
         output = model({param_name: param})
         loss = output[output_name].sum()
@@ -414,10 +425,11 @@ class TestDiffRootDynamicsGradients:
         assert loss.grad_fn is None
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
-    def test_gradients_forward_backward_match(self, param_name, output_name):
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_gradients_forward_backward_match(self, param_name, output_name, config_type):
         """Test that forward and backward gradients match for parameter-output pairs."""
         model = get_test_diff_root_model()
-        value, dtype = self.param_default_val[param_name]
+        value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
         output = model({param_name: param})
         loss = output[output_name].sum()
@@ -440,9 +452,10 @@ class TestDiffRootDynamicsGradients:
         )
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
-    def test_gradients_numerical(self, param_name, output_name):
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_gradients_numerical(self, param_name, output_name, config_type):
         """Test that analytical gradients match numerical gradients."""
-        value, _ = self.param_default_val[param_name]
+        value, _ = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64))
         numerical_grad = calculate_numerical_grad(
             get_test_diff_root_model, param_name, param.data, output_name

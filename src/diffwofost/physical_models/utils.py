@@ -297,6 +297,12 @@ def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     if param_name == "RDRRTB":
         # Parameters like RDRRTB are batched tables, so we need to compute
         # the gradient for each table element separately
+
+        # Handle 1D case by temporarily expanding to 2D
+        original_dim = param_value.dim()
+        if original_dim == 1:
+            param_value = param_value.unsqueeze(0)
+
         grads = torch.zeros_like(param_value)
 
         for j in range(param_value.shape[1]):
@@ -304,16 +310,20 @@ def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
             p_plus = param_value.clone()
             p_plus[:, j] += delta
             model = get_model_fn()
-            loss_plus = model({param_name: p_plus})[out_name].sum(dim=0)
+            loss_plus = model({param_name: p_plus.squeeze(0) if original_dim == 1 else p_plus})[
+                out_name
+            ].sum(dim=0)
 
             p_minus = param_value.clone()
             p_minus[:, j] -= delta
             model = get_model_fn()
-            loss_minus = model({param_name: p_minus})[out_name].sum(dim=0)
+            loss_minus = model({param_name: p_minus.squeeze(0) if original_dim == 1 else p_minus})[
+                out_name
+            ].sum(dim=0)
 
             grads[:, j] = (loss_plus.data - loss_minus.data) / (2 * delta)
 
-        return grads
+        return grads.squeeze(0) if original_dim == 1 else grads
     else:
         p_plus = param_value + delta
         p_minus = param_value - delta
