@@ -601,22 +601,12 @@ def _get_params_shape(params):
             continue
         param = getattr(params, parname)
         # Parameters that are not zero dimensional should all have the same shape
-        # However, Afgen parameters are inherently a 1-d table, so we have to treat them differently
-        if not isinstance(param, Afgen):
-            if param.shape and not shape:
-                shape = param.shape
-            elif param.shape:
-                assert param.shape == shape, (
-                    "All parameters should have the same shape (or have no dimensions)"
-                )
-        else:
-            # Afgen parameters have an extra dimension
-            if param.shape and not shape:
-                shape = param.shape
-            elif param.shape:
-                assert param.shape == shape, (
-                    "All parameters should have the same shape (or have no dimensions)"
-                )
+        if param.shape and not shape:
+            shape = param.shape
+        elif param.shape:
+            assert param.shape == shape, (
+                "All parameters should have the same shape (or have no dimensions)"
+            )
     return shape
 
 
