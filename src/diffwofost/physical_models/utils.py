@@ -294,49 +294,32 @@ def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     """Calculate the numerical gradient of output with respect to a parameter."""
     delta = 1e-6
 
-    if param_name == "RDRRTB":
-        # Parameters like RDRRTB are batched tables, so we need to compute
-        # the gradient for each table element separately
+    # Parameters like RDRRTB are batched tables, so we need to compute
+    # the gradient for each table element separately
+    # So, we flatten the parameter for easier indexing
+    param_flat = param_value.reshape(-1)
+    grad_flat = torch.zeros_like(param_flat)
 
-        # Handle 1D case by temporarily expanding to 2D
-        original_dim = param_value.dim()
-        if original_dim == 1:
-            param_value = param_value.unsqueeze(0)
+    for i in range(param_flat.numel()):
+        p_plus = param_flat.clone()
+        p_plus[i] += delta
+        p_minus = param_flat.clone()
+        p_minus[i] -= delta
 
-        grads = torch.zeros_like(param_value)
-
-        for j in range(param_value.shape[1]):
-            # Perturb all batches for element j
-            p_plus = param_value.clone()
-            p_plus[:, j] += delta
-            model = get_model_fn()
-            loss_plus = model({param_name: p_plus.squeeze(0) if original_dim == 1 else p_plus})[
-                out_name
-            ].sum(dim=0)
-
-            p_minus = param_value.clone()
-            p_minus[:, j] -= delta
-            model = get_model_fn()
-            loss_minus = model({param_name: p_minus.squeeze(0) if original_dim == 1 else p_minus})[
-                out_name
-            ].sum(dim=0)
-
-            grads[:, j] = (loss_plus.data - loss_minus.data) / (2 * delta)
-
-        return grads.squeeze(0) if original_dim == 1 else grads
-    else:
-        p_plus = param_value + delta
-        p_minus = param_value - delta
+        p_plus = p_plus.view_as(param_value)
+        p_minus = p_minus.view_as(param_value)
 
         model = get_model_fn()
-        output = model({param_name: torch.nn.Parameter(p_plus)})
-        loss_plus = output[out_name].sum(dim=0)
+        out_plus = model({param_name: p_plus})[out_name]
+        loss_plus = out_plus.sum()
 
         model = get_model_fn()
-        output = model({param_name: torch.nn.Parameter(p_minus)})
-        loss_minus = output[out_name].sum(dim=0)
+        out_minus = model({param_name: p_minus})[out_name]
+        loss_minus = out_minus.sum()
 
-        return (loss_plus.data - loss_minus.data) / (2 * delta)
+        grad_flat[i] = (loss_plus - loss_minus) / (2 * delta)
+
+    return grad_flat.view_as(param_value)
 
 
 class Afgen:
