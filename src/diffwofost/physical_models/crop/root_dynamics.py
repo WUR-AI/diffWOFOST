@@ -10,7 +10,9 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
-from pcse.util import AfgenTrait
+from diffwofost.physical_models.utils import AfgenTrait
+from diffwofost.physical_models.utils import _broadcast_to
+from diffwofost.physical_models.utils import _get_params_shape
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
@@ -80,6 +82,15 @@ class WOFOST_Root_Dynamics(SimulationObject):
     | RD   | Current rooting depth   | Y                | cm           |
     | TWRT | Total weight of roots   | Y                | kg ha⁻¹      |
 
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it |
+    |--------|----------------------------|
+    | RD     | RDI, RRI, RDMCR, RDMSOL    |
+    | TWRT   | TDWI, RDRRTB               |
+
+    [!] Notice that the gradient ∂TWRT/∂RDRRTB is zero.
+
     **IMPORTANT NOTICE**
 
     Currently root development is linear and depends only on the fraction of assimilates
@@ -112,7 +123,7 @@ class WOFOST_Root_Dynamics(SimulationObject):
         RDMSOL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         IAIRDU = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        RDRRTB = AfgenTrait()  # FIXEME
+        RDRRTB = AfgenTrait()
 
     class RateVariables(RatesTemplate):
         RR = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
@@ -147,15 +158,16 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
         # INITIAL STATES
         params = self.params
+        shape = _get_params_shape(params)
 
         # Initial root depth states
         rdmax = torch.max(params.RDI, torch.min(params.RDMCR, params.RDMSOL))
-        RDM = rdmax
-        RD = params.RDI
+        RDM = _broadcast_to(rdmax, shape)
+        RD = _broadcast_to(params.RDI, shape)
 
-        # initial root biomass states
-        WRT = params.TDWI * self.kiosk.FR
-        DWRT = torch.tensor(0.0, dtype=DTYPE)
+        # Initial root biomass states
+        WRT = _broadcast_to(params.TDWI * self.kiosk.FR, shape)
+        DWRT = torch.zeros_like(WRT) if shape else torch.zeros((), dtype=DTYPE)
         TWRT = WRT + DWRT
 
         self.states = self.StateVariables(
@@ -180,21 +192,21 @@ class WOFOST_Root_Dynamics(SimulationObject):
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
         DVS = torch.as_tensor(k["DVS"], dtype=DTYPE)
-        mask = (DVS >= 0).to(dtype=DTYPE)
+        dvs_mask = (DVS >= 0).to(dtype=DTYPE)
 
         # Increase in root biomass
-        r.GRRT = mask * k.FR * k.DMI
-        r.DRRT = mask * s.WRT * p.RDRRTB(k.DVS)
+        r.GRRT = dvs_mask * k.FR * k.DMI
+        r.DRRT = dvs_mask * s.WRT * p.RDRRTB(k.DVS)
         r.GWRT = r.GRRT - r.DRRT
 
         # Increase in root depth
-        r.RR = mask * torch.min((s.RDM - s.RD), p.RRI)
+        r.RR = dvs_mask * torch.min((s.RDM - s.RD), p.RRI)
 
         # Do not let the roots growth if partioning to the roots
         # (variable FR) is zero.
         FR = torch.as_tensor(k["FR"], dtype=DTYPE)
         mask = (FR > 0.0).to(dtype=DTYPE)
-        r.RR = r.RR * mask
+        r.RR = r.RR * mask * dvs_mask
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
