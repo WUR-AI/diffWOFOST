@@ -67,3 +67,6 @@ venv.bak/
 *.swp
 *.swo
 *.orig
+
+# test data
+tests/physical_models/test_data/*.yaml

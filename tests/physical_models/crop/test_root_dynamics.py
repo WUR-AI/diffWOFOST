@@ -18,10 +18,11 @@ pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.si
 
 
 def get_test_diff_root_model():
-    test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
+    test_data = get_test_data(test_data_url)
     crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data_path, crop_model_params)
+        prepare_engine_input(test_data, crop_model_params)
     )
     config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
     return DiffRootDynamics(
@@ -68,18 +69,28 @@ class DiffRootDynamics(torch.nn.Module):
 
 
 class TestRootDynamics:
-    def test_root_dynamics_with_testengine(self):
-        """EngineTestHelper and not Engine because it allows to specify `external_states`."""
+    rootdynamics_data_urls = [
+        f"{phy_data_folder}/test_rootdynamics_wofost72_{i:02d}.yaml"
+        for i in range(1, 45)  # there are 44 test files
+    ]
 
+    wofost72_data_urls = [
+        f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml"
+        for i in range(1, 45)  # there are 44 test files
+    ]
+
+    @pytest.mark.parametrize("test_data_url", rootdynamics_data_urls)
+    def test_root_dynamics_with_testengine(self, test_data_url):
+        """EngineTestHelper and not Engine because it allows to specify `external_states`."""
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         engine = EngineTestHelper(
@@ -93,7 +104,7 @@ class TestRootDynamics:
         actual_results = engine.get_output()
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
 
@@ -106,10 +117,11 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_engine(self):
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params)
         )
 
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
@@ -126,14 +138,15 @@ class TestRootDynamics:
     @pytest.mark.parametrize("param", ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"])
     def test_root_dynamics_with_one_parameter_vector(self, param):
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
@@ -156,7 +169,7 @@ class TestRootDynamics:
         actual_results = engine.get_output()
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
 
@@ -176,14 +189,15 @@ class TestRootDynamics:
     )
     def test_root_dynamics_with_different_parameter_values(self, param, delta):
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector with multiple values for the selected parameter
@@ -203,7 +217,7 @@ class TestRootDynamics:
         actual_results = engine.get_output()
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
 
@@ -217,14 +231,15 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_multiple_parameter_vectors(self):
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the RDI and RRI parameters
@@ -248,7 +263,7 @@ class TestRootDynamics:
         actual_results = engine.get_output()
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
 
@@ -261,14 +276,15 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_multiple_parameter_arrays(self):
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting an array with arbitrary shape (and one value)
@@ -290,7 +306,7 @@ class TestRootDynamics:
         actual_results = engine.get_output()
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
 
@@ -306,14 +322,15 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
-        test_data_path = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data_path, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params)
         config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the RDI and RRI parameters,
@@ -334,16 +351,17 @@ class TestRootDynamics:
                 external_states,
             )
 
-    def test_wofost_pp_with_root_dynamics(self):
+    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
+    def test_wofost_pp_with_root_dynamics(self, test_data_url):
         # prepare model input
-        test_data_path = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data_path, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params)
         )
 
         # get expected results from YAML test data
-        expected_results, expected_precision = get_test_data(test_data_path)
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         with patch("pcse.crop.wofost72.Root_Dynamics", WOFOST_Root_Dynamics):
             model = Wofost72_PP(

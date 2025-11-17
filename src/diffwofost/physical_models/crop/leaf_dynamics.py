@@ -105,7 +105,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     # The following parameters are used to initialize and control the arrays that store information
     # on the leaf classes during the time integration: leaf area, age, and biomass.
     START_DATE = None  # Start date of the simulation
-    MAX_DAYS = 300  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
+    MAX_DAYS = 365  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
 
     class Parameters(ParamTemplate):
         RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -233,31 +233,34 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         k = self.kiosk
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
-        # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
+        # A mask (0 if DVS < 0, 1 if DVS >= 0)
         DVS = torch.as_tensor(k["DVS"], dtype=DTYPE)
-        mask = (DVS >= 0).to(dtype=DTYPE)
+        dvs_mask = (DVS >= 0).to(dtype=DTYPE)
 
         # Growth rate leaves
         # weight of new leaves
-        r.GRLV = mask * k.ADMI * k.FL
+        r.GRLV = dvs_mask * k.ADMI * k.FL
 
         # death of leaves due to water/oxygen stress
-        r.DSLV1 = mask * s.WLV * (1.0 - k.RFTRA) * p.PERDL
+        r.DSLV1 = dvs_mask * s.WLV * (1.0 - k.RFTRA) * p.PERDL
 
         # death due to self shading cause by high LAI
         DVS = self.kiosk["DVS"]
         LAICR = 3.2 / p.KDIFTB(DVS)
-        r.DSLV2 = mask * s.WLV * torch.clamp(0.03 * (s.LAI - LAICR) / LAICR, 0.0, 0.03)
+        r.DSLV2 = dvs_mask * s.WLV * torch.clamp(0.03 * (s.LAI - LAICR) / LAICR, 0.0, 0.03)
 
         # Death of leaves due to frost damage as determined by
         # Reduction Factor Frost "RF_FROST"
         if "RF_FROST" in self.kiosk:
-            r.DSLV3 = mask * s.WLV * k.RF_FROST
+            r.DSLV3 = s.WLV * k.RF_FROST
         else:
             r.DSLV3 = torch.zeros_like(s.WLV, dtype=DTYPE)
 
+        r.DSLV3 = dvs_mask * r.DSLV3
+
         # leaf death equals maximum of water stress, shading and frost
         r.DSLV = torch.maximum(torch.maximum(r.DSLV1, r.DSLV2), r.DSLV3)
+        r.DSLV = dvs_mask * r.DSLV
 
         # Determine how much leaf biomass classes have to die in states.LV,
         # given the a life span > SPAN, these classes will be accumulated
@@ -265,36 +268,67 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
         tSPAN = _broadcast_to(p.SPAN, s.LVAGE.shape)  # Broadcast to same shape
+
         # Using a sigmoid here instead of a conditional statement on the value of
         # SPAN because the latter would not allow for the gradient to be tracked.
-        sharpness = torch.tensor(1000.0, dtype=DTYPE)  # FIXME
-        weight = torch.sigmoid((s.LVAGE - tSPAN) * sharpness)
-        r.DALV = torch.sum(weight * s.LV, dim=-1)
+        # the if statement `p.SPAN.requires_grad` to avoid unnecessary
+        # approximation when SPAN is not a learnable parameter.
+        # TODO: sharpness can be exposed as a parameter
+        if p.SPAN.requires_grad:
+            # 1e-16 is chosen empirically for cases when s.LVAGE - tSPAN is very
+            # small and mask should be 1
+            sharpness = torch.tensor(1e-16, dtype=DTYPE)
+
+            # 1e-14 is chosen empirically for cases when s.LVAGE - tSPAN is
+            # equal to zero and mask should be 0.0
+            epsilon = 1e-14
+            span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=DTYPE)
+        else:
+            span_mask = (s.LVAGE > tSPAN).to(dtype=DTYPE)
+
+        r.DALV = torch.sum(span_mask * s.LV, dim=-1)
+        r.DALV = dvs_mask * r.DALV
 
         # Total death rate leaves
         r.DRLV = torch.maximum(r.DSLV, r.DALV)
 
         # physiologic ageing of leaves per time step
         FYSAGE = (drv.TEMP - p.TBASE) / (35.0 - p.TBASE)
-        r.FYSAGE = mask * torch.clamp(FYSAGE, 0.0)
+        r.FYSAGE = dvs_mask * torch.clamp(FYSAGE, 0.0)
 
         # specific leaf area of leaves per time step
-        r.SLAT = mask * torch.tensor(p.SLATB(DVS), dtype=DTYPE)
+        r.SLAT = dvs_mask * torch.tensor(p.SLATB(DVS), dtype=DTYPE)
 
         # leaf area not to exceed exponential growth curve
         is_lai_exp = s.LAIEXP < 6.0
         DTEFF = torch.clamp(drv.TEMP - p.TBASE, 0.0)
+
         # NOTE: conditional statements do not allow for the gradient to be
         # tracked through the condition. Thus, the gradient with respect to
         # parameters that contribute to `is_lai_exp` (e.g. RGRLAI and TBASE)
         # are expected to be incorrect.
-        r.GLAIEX = torch.where(is_lai_exp, s.LAIEXP * p.RGRLAI * DTEFF, r.GLAIEX)
+        r.GLAIEX = torch.where(
+            dvs_mask.bool(),
+            torch.where(is_lai_exp, s.LAIEXP * p.RGRLAI * DTEFF, r.GLAIEX),
+            torch.tensor(0.0, dtype=DTYPE),
+        )
+
         # source-limited increase in leaf area
-        r.GLASOL = torch.where(is_lai_exp, r.GRLV * r.SLAT, r.GLASOL)
+        r.GLASOL = torch.where(
+            dvs_mask.bool(),
+            torch.where(is_lai_exp, r.GRLV * r.SLAT, r.GLASOL),
+            torch.tensor(0.0, dtype=DTYPE),
+        )
+
         # sink-limited increase in leaf area
         GLA = torch.minimum(r.GLAIEX, r.GLASOL)
+
         # adjustment of specific leaf area of youngest leaf class
-        r.SLAT = torch.where(is_lai_exp & (r.GRLV > 0.0), GLA / r.GRLV, r.SLAT)
+        r.SLAT = torch.where(
+            dvs_mask.bool(),
+            torch.where(is_lai_exp & (r.GRLV > 0.0), GLA / r.GRLV, r.SLAT),
+            torch.tensor(0.0, dtype=DTYPE),
+        )
 
     @prepare_states
     def integrate(self, day: datetime.date, delt=1.0) -> None:
@@ -327,13 +361,12 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         new_biomass = torch.take_along_dim(weight_cumsum, indices=idx_oldest, dim=-1)
         tLV = torch.scatter(tLV, dim=-1, index=idx_oldest, src=new_biomass)
 
+        # Integration of physiological age
         # Zero out all dead leaf classes
         # NOTE: conditional statements do not allow for the gradient to be
         # tracked through the condition. Thus, the gradient with respect to
         # parameters that contribute to `is_alive` are expected to be incorrect.
         tLV = torch.where(is_alive, tLV, 0.0)
-
-        # Integration of physiological age
         tLVAGE = tLVAGE + rates.FYSAGE
         tLVAGE = torch.where(is_alive, tLVAGE, 0.0)
         tSLA = torch.where(is_alive, tSLA, 0.0)
