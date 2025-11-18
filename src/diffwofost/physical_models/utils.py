@@ -26,6 +26,7 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
 from pcse.engine import Engine
+from pcse.settings import settings
 from pcse.timer import Timer
 from pcse.traitlets import TraitType
 
@@ -200,8 +201,9 @@ class EngineTestHelper(Engine):
 class WeatherDataProviderTestHelper(WeatherDataProvider):
     """It stores the weatherdata contained within the YAML tests."""
 
-    def __init__(self, yaml_weather):
+    def __init__(self, yaml_weather, meteo_range_checks=True):
         super().__init__()
+        settings.METEO_RANGE_CHECKS = meteo_range_checks
         for weather in yaml_weather:
             if "SNOWDEPTH" in weather:
                 weather.pop("SNOWDEPTH")
@@ -209,12 +211,16 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
             self._store_WeatherDataContainer(wdc, wdc.DAY)
 
 
-def prepare_engine_input(test_data, crop_model_params, dtype=torch.float64):
+def prepare_engine_input(
+    test_data, crop_model_params, meteo_range_checks=True, dtype=torch.float64
+):
     """Prepare the inputs for the engine from the YAML file."""
     agro_management_inputs = test_data["AgroManagement"]
     cropd = test_data["ModelParameters"]
 
-    weather_data_provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
+    weather_data_provider = WeatherDataProviderTestHelper(
+        test_data["WeatherVariables"], meteo_range_checks=meteo_range_checks
+    )
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data["ExternalStates"]
 
@@ -539,6 +545,8 @@ def _get_params_shape(params):
 
     Parameters can have arbitrary number of dimensions, but all parameters that are not zero-
     dimensional should have the same shape.
+
+    This check if fundamental for vectorized operations in the physical models.
     """
     shape = ()
     for parname in params.trait_names():
@@ -554,6 +562,71 @@ def _get_params_shape(params):
                 "All parameters should have the same shape (or have no dimensions)"
             )
     return shape
+
+
+def _check_drv_shape(drv, expected_shape):
+    """Check that the driving variables have the expected shape.
+
+    Driving variables can be scalars (0-dimensional) or match the expected shape.
+    Scalars will be broadcast during operations.
+
+    Args:
+        drv: WeatherDataContainer with driving variables
+        expected_shape: Expected shape tuple for non-scalar variables
+
+    Raises:
+        ValueError: If any variable has incompatible shape
+    """
+    # Define compulsory and optional weather variables
+    compulsory_vars = [
+        "LAT",
+        "LON",
+        "ELEV",
+        "DAY",
+        "IRRAD",
+        "TMIN",
+        "TMAX",
+        "VAP",
+        "RAIN",
+        "WIND",
+        "E0",
+        "ES0",
+        "ET0",
+    ]
+    optional_vars = ["TEMP", "SNOWDEPTH"]
+    all_vars = compulsory_vars + optional_vars
+
+    for var_name in all_vars:
+        # Skip if variable doesn't exist (only matters for optional vars)
+        if not hasattr(drv, var_name):
+            if var_name in compulsory_vars:
+                raise ValueError(
+                    f"Compulsory variable '{var_name}' missing from WeatherDataContainer"
+                )
+            continue
+
+        var_value = getattr(drv, var_name)
+
+        # Skip DAY as it's a date object, not a tensor
+        if var_name == "DAY":
+            continue
+
+        # Convert to tensor if needed for shape checking
+        if not isinstance(var_value, torch.Tensor):
+            var_value = torch.as_tensor(var_value, dtype=DTYPE)
+
+        # Check shape: must be scalar (0-d) or match expected_shape
+        if var_value.dim() == 0:
+            # Scalar is valid, will be broadcast
+            continue
+        elif var_value.shape == expected_shape:
+            # Matches expected shape
+            continue
+        else:
+            raise ValueError(
+                f"Weather variable '{var_name}' has incompatible shape {var_value.shape}. "
+                f"Expected scalar (0-dimensional) or shape {expected_shape}."
+            )
 
 
 def _broadcast_to(x, shape):

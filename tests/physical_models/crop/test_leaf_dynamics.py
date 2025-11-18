@@ -135,7 +135,7 @@ class TestLeafDynamics:
             )
 
     @pytest.mark.parametrize(
-        "param", ["TDWI", "SPAN", "RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB"]
+        "param", ["TDWI", "SPAN", "RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB", "TEMP"]
     )
     def test_leaf_dynamics_with_one_parameter_vector(self, param):
         # prepare model input
@@ -147,16 +147,21 @@ class TestLeafDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
-        if param in ["KDIFTB", "SLATB"]:
+        if param == "TEMP":
+            # Vectorize weather variable
+            for (_, _), wdc in weather_data_provider.store.items():
+                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+        elif param in ["KDIFTB", "SLATB"]:
             # AfgenTrait parameters need to have shape (N, M)
             repeated = crop_model_params_provider[param].repeat(10, 1)
+            crop_model_params_provider.set_override(param, repeated, check=False)
         else:
             repeated = crop_model_params_provider[param].repeat(10)
-        crop_model_params_provider.set_override(param, repeated, check=False)
+            crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -343,6 +348,35 @@ class TestLeafDynamics:
         )
 
         with pytest.raises(AssertionError):
+            EngineTestHelper(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs,
+                config_path,
+                external_states,
+            )
+
+    def test_leaf_dynamics_with_incompatible_weather_parameter_vectors(self):
+        # prepare model input
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # Setting vectors with incompatible shapes: TDWI and TEMP
+        crop_model_params_provider.set_override(
+            "TDWI", crop_model_params_provider["TDWI"].repeat(10), check=False
+        )
+        for (_, _), wdc in weather_data_provider.store.items():
+            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+
+        with pytest.raises(ValueError, match="incompatible shape"):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,

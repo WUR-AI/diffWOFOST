@@ -186,6 +186,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         params = self.params
         params.shape = _get_params_shape(params)
+        self._shape_finalized = False  # Track if shape has been updated with drv data
 
         # Initial leaf biomass
         WLV = (params.TDWI * (1 - FR)) * FL
@@ -244,6 +245,49 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         s = self.states
         p = self.params
         k = self.kiosk
+
+        # Update shape if needed based on drv.TEMP
+        if not self._shape_finalized:
+            TEMP = torch.as_tensor(drv.TEMP, dtype=DTYPE)
+            # Broadcast to get the final shape
+            temp_shape = TEMP.shape if TEMP.ndim > 0 else ()
+            if temp_shape != p.shape:
+                old_shape = p.shape
+                # Validate that shapes can be broadcasted
+                try:
+                    # Update to the broadcasted shape
+                    p.shape = torch.broadcast_shapes(p.shape, temp_shape)
+                except RuntimeError as e:
+                    raise ValueError(
+                        f"Parameter shape {p.shape} and weather driver shape {temp_shape} "
+                        f"have incompatible shape and cannot be broadcasted together. "
+                        f"Original error: {e}"
+                    ) from e
+
+                # Reshape state variables to match new parameter shape
+                # For time-series tensors (LV, SLA, LVAGE), we need to add the batch dimension
+                if len(old_shape) == 0:
+                    # Old shape was scalar, new shape has batch dimension
+                    s.LV = s.LV.unsqueeze(0).expand(*p.shape, self.MAX_DAYS)
+                    s.SLA = s.SLA.unsqueeze(0).expand(*p.shape, self.MAX_DAYS)
+                    s.LVAGE = s.LVAGE.unsqueeze(0).expand(*p.shape, self.MAX_DAYS)
+                else:
+                    # Both have batch dimensions, use standard broadcast
+                    s.LV = s.LV.expand(*p.shape, self.MAX_DAYS)
+                    s.SLA = s.SLA.expand(*p.shape, self.MAX_DAYS)
+                    s.LVAGE = s.LVAGE.expand(*p.shape, self.MAX_DAYS)
+
+                # For scalar state variables, use _broadcast_to
+                s.LAIEM = _broadcast_to(s.LAIEM, p.shape)
+                s.LASUM = _broadcast_to(s.LASUM, p.shape)
+                s.LAIEXP = _broadcast_to(s.LAIEXP, p.shape)
+                s.LAIMAX = _broadcast_to(s.LAIMAX, p.shape)
+                s.LAI = _broadcast_to(s.LAI, p.shape)
+                s.WLV = _broadcast_to(s.WLV, p.shape)
+                s.DWLV = _broadcast_to(s.DWLV, p.shape)
+                s.TWLV = _broadcast_to(s.TWLV, p.shape)
+
+            self._shape_finalized = True
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
         # A mask (0 if DVS < 0, 1 if DVS >= 0)
