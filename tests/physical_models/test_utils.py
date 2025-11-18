@@ -564,9 +564,6 @@ class TestCheckDrvShape:
         # (all scalar values should pass for any expected_shape)
         _check_drv_shape(wdc, expected_shape)
 
-        # If no exception was raised, test passes
-        assert True
-
     def test_single_vector_variable(self):
         """Test that each weather variable can individually be vectorized to expected_shape."""
         from diffwofost.physical_models.utils import _check_drv_shape
@@ -644,9 +641,6 @@ class TestCheckDrvShape:
 
         # Should not raise an exception (all same shape)
         _check_drv_shape(wdc, expected_shape)
-
-        # If no exception was raised, test passes
-        assert True
 
     def test_mixed_shapes_raises_error(self):
         """Test that two variables with different non-scalar shapes raise ValueError."""
