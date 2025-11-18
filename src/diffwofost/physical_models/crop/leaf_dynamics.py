@@ -14,6 +14,7 @@ from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
+from diffwofost.physical_models.utils import _check_drv_shape
 from diffwofost.physical_models.utils import _get_params_shape
 
 DTYPE = torch.float64  # Default data type for tensors in this module
@@ -288,6 +289,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
                 s.TWLV = _broadcast_to(s.TWLV, p.shape)
 
             self._shape_finalized = True
+        # Finally check if drv shape is consistent
+        # [!] once weathercontainer supports batched variables, this check will be redundant
+        _check_drv_shape(drv, p.shape)
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
         # A mask (0 if DVS < 0, 1 if DVS >= 0)

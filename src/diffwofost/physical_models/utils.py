@@ -570,6 +570,8 @@ def _check_drv_shape(drv, expected_shape):
     Driving variables can be scalars (0-dimensional) or match the expected shape.
     Scalars will be broadcast during operations.
 
+    [!] This function will be redundant once weathercontainer supports batched variables.
+
     Args:
         drv: WeatherDataContainer with driving variables
         expected_shape: Expected shape tuple for non-scalar variables
