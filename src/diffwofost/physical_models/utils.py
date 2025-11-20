@@ -203,6 +203,10 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
 
     def __init__(self, yaml_weather, meteo_range_checks=True):
         super().__init__()
+        # This is a temporary workaround. The `METEO_RANGE_CHECKS` logic in
+        # `__setattr__` method in `WeatherDataContainer` is not vector compatible
+        # yet. So we can disable it here when creating the `WeatherDataContainer`
+        # instances with arrays.
         settings.METEO_RANGE_CHECKS = meteo_range_checks
         for weather in yaml_weather:
             if "SNOWDEPTH" in weather:
