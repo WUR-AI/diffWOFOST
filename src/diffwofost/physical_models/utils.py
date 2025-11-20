@@ -26,6 +26,7 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
 from pcse.engine import Engine
+from pcse.settings import settings
 from pcse.timer import Timer
 from pcse.traitlets import TraitType
 
@@ -200,8 +201,13 @@ class EngineTestHelper(Engine):
 class WeatherDataProviderTestHelper(WeatherDataProvider):
     """It stores the weatherdata contained within the YAML tests."""
 
-    def __init__(self, yaml_weather):
+    def __init__(self, yaml_weather, meteo_range_checks=True):
         super().__init__()
+        # This is a temporary workaround. The `METEO_RANGE_CHECKS` logic in
+        # `__setattr__` method in `WeatherDataContainer` is not vector compatible
+        # yet. So we can disable it here when creating the `WeatherDataContainer`
+        # instances with arrays.
+        settings.METEO_RANGE_CHECKS = meteo_range_checks
         for weather in yaml_weather:
             if "SNOWDEPTH" in weather:
                 weather.pop("SNOWDEPTH")
@@ -209,12 +215,16 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
             self._store_WeatherDataContainer(wdc, wdc.DAY)
 
 
-def prepare_engine_input(test_data, crop_model_params, dtype=torch.float64):
+def prepare_engine_input(
+    test_data, crop_model_params, meteo_range_checks=True, dtype=torch.float64
+):
     """Prepare the inputs for the engine from the YAML file."""
     agro_management_inputs = test_data["AgroManagement"]
     cropd = test_data["ModelParameters"]
 
-    weather_data_provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
+    weather_data_provider = WeatherDataProviderTestHelper(
+        test_data["WeatherVariables"], meteo_range_checks=meteo_range_checks
+    )
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data["ExternalStates"]
 
@@ -539,6 +549,8 @@ def _get_params_shape(params):
 
     Parameters can have arbitrary number of dimensions, but all parameters that are not zero-
     dimensional should have the same shape.
+
+    This check if fundamental for vectorized operations in the physical models.
     """
     shape = ()
     for parname in params.trait_names():
@@ -556,8 +568,43 @@ def _get_params_shape(params):
     return shape
 
 
+def _get_drv(drv_var, expected_shape):
+    """Check that the driving variables have the expected shape and fetch them.
+
+    Driving variables can be scalars (0-dimensional) or match the expected shape.
+    Scalars will be broadcast during operations.
+
+    [!] This function will be redundant once weathercontainer supports batched variables.
+
+    Args:
+        drv_var: driving variable in WeatherDataContainer
+        expected_shape: Expected shape tuple for non-scalar variables
+
+    Raises:
+        ValueError: If any variable has incompatible shape
+
+    Returns:
+        torch.Tensor: The validated variable, either as-is or broadcasted to expected shape.
+    """
+    # Check shape: must be scalar (0-d) or match expected_shape
+    if not isinstance(drv_var, torch.Tensor) or drv_var.dim() == 0:
+        # Scalar is valid, will be broadcast
+        return _broadcast_to(drv_var, expected_shape)
+    elif drv_var.shape == expected_shape:
+        # Matches expected shape
+        return drv_var
+    else:
+        raise ValueError(
+            f"Requested weather variable has incompatible shape {drv_var.shape}. "
+            f"Expected scalar (0-dimensional) or shape {expected_shape}."
+        )
+
+
 def _broadcast_to(x, shape):
     """Create a view of tensor X with the given shape."""
+    # If x is not a tensor, convert it
+    if not isinstance(x, torch.Tensor):
+        x = torch.tensor(x, dtype=DTYPE)
     # If already the correct shape, return as-is
     if x.shape == shape:
         return x

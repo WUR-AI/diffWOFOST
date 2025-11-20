@@ -14,6 +14,7 @@ from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
+from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import _get_params_shape
 
 DTYPE = torch.float64  # Default data type for tensors in this module
@@ -100,12 +101,25 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     |--------|-------------------------------------------------------|------|-------------|
     | LAI    | Leaf area index, including stem and pod area          | Y    | -           |
     | TWLV   | Dry weight of total leaves (living + dead)            | Y    | kg ha⁻¹     |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                |
+    |--------|------------------------------------------|
+    | LAI    | TDWI, SPAN, RGRLAI, TBASE, KDIFTB, SLATB |
+    | TWLV   | TDWI, PERDL                              |
+
+    [!] Notice that the following gradients are zero:
+        - ∂SPAN/∂LAI
+        - ∂PERDL/∂TWLV
+        - ∂KDIFTB/∂LAI
     """  # noqa: E501
 
     # The following parameters are used to initialize and control the arrays that store information
     # on the leaf classes during the time integration: leaf area, age, and biomass.
     START_DATE = None  # Start date of the simulation
     MAX_DAYS = 365  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
+    params_shape = None  # Shape of the parameters tensors
 
     class Parameters(ParamTemplate):
         RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -113,8 +127,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         TBASE = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         PERDL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        SLATB = AfgenTrait()  # FIXME
-        KDIFTB = AfgenTrait()  # FIXME
+        SLATB = AfgenTrait()
+        KDIFTB = AfgenTrait()
 
     class StateVariables(StatesTemplate):
         LV = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -172,17 +186,17 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         DVS = self.kiosk["DVS"]
 
         params = self.params
-        shape = _get_params_shape(params)
+        self.params_shape = _get_params_shape(params)
 
         # Initial leaf biomass
         WLV = (params.TDWI * (1 - FR)) * FL
-        DWLV = torch.zeros(shape, dtype=DTYPE)
+        DWLV = torch.zeros(self.params_shape, dtype=DTYPE)
         TWLV = WLV + DWLV
 
         # Initialize leaf classes (SLA, age and weight)
-        SLA = torch.zeros((*shape, self.MAX_DAYS), dtype=DTYPE)
-        LVAGE = torch.zeros((*shape, self.MAX_DAYS), dtype=DTYPE)
-        LV = torch.zeros((*shape, self.MAX_DAYS), dtype=DTYPE)
+        SLA = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
+        LVAGE = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
+        LV = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
         SLA[..., 0] = params.SLATB(DVS)
         LV[..., 0] = WLV
 
@@ -292,16 +306,20 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # Total death rate leaves
         r.DRLV = torch.maximum(r.DSLV, r.DALV)
 
+        # Get the temperature from the drv
+        TEMP = _get_drv(drv.TEMP, self.params_shape)
+
         # physiologic ageing of leaves per time step
-        FYSAGE = (drv.TEMP - p.TBASE) / (35.0 - p.TBASE)
+        TBASE = _broadcast_to(p.TBASE, self.params_shape)
+        FYSAGE = (TEMP - TBASE) / (35.0 - TBASE)
         r.FYSAGE = dvs_mask * torch.clamp(FYSAGE, 0.0)
 
         # specific leaf area of leaves per time step
-        r.SLAT = dvs_mask * torch.tensor(p.SLATB(DVS), dtype=DTYPE)
+        r.SLAT = dvs_mask * p.SLATB(DVS)
 
         # leaf area not to exceed exponential growth curve
         is_lai_exp = s.LAIEXP < 6.0
-        DTEFF = torch.clamp(drv.TEMP - p.TBASE, 0.0)
+        DTEFF = torch.clamp(TEMP - TBASE, 0.0)
 
         # NOTE: conditional statements do not allow for the gradient to be
         # tracked through the condition. Thus, the gradient with respect to
@@ -324,9 +342,10 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         GLA = torch.minimum(r.GLAIEX, r.GLASOL)
 
         # adjustment of specific leaf area of youngest leaf class
+        epsilon = 1e-10  # small value to avoid division by zero
         r.SLAT = torch.where(
             dvs_mask.bool(),
-            torch.where(is_lai_exp & (r.GRLV > 0.0), GLA / r.GRLV, r.SLAT),
+            torch.where(is_lai_exp & (r.GRLV > epsilon), GLA / (r.GRLV + epsilon), r.SLAT),
             torch.tensor(0.0, dtype=DTYPE),
         )
 
@@ -367,7 +386,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # tracked through the condition. Thus, the gradient with respect to
         # parameters that contribute to `is_alive` are expected to be incorrect.
         tLV = torch.where(is_alive, tLV, 0.0)
-        tLVAGE = tLVAGE + rates.FYSAGE
+        tLVAGE = tLVAGE + rates.FYSAGE.unsqueeze(-1)
         tLVAGE = torch.where(is_alive, tLVAGE, 0.0)
         tSLA = torch.where(is_alive, tSLA, 0.0)
 

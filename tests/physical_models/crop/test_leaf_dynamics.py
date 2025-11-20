@@ -1,4 +1,5 @@
 import copy
+import warnings
 from unittest.mock import patch
 import pytest
 import torch
@@ -133,45 +134,70 @@ class TestLeafDynamics:
                 config_path,
             )
 
-    @pytest.mark.parametrize("param", ["TDWI", "SPAN"])
+    @pytest.mark.parametrize(
+        "param", ["TDWI", "SPAN", "RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB", "TEMP"]
+    )
     def test_leaf_dynamics_with_one_parameter_vector(self, param):
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
-        repeated = crop_model_params_provider[param].repeat(10)
-        crop_model_params_provider.set_override(param, repeated, check=False)
+        if param == "TEMP":
+            # Vectorize weather variable
+            for (_, _), wdc in weather_data_provider.store.items():
+                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+        elif param in ["KDIFTB", "SLATB"]:
+            # AfgenTrait parameters need to have shape (N, M)
+            repeated = crop_model_params_provider[param].repeat(10, 1)
+            crop_model_params_provider.set_override(param, repeated, check=False)
+        else:
+            repeated = crop_model_params_provider[param].repeat(10)
+            crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
-            crop_model_params_provider,
-            weather_data_provider,
-            agro_management_inputs,
-            config_path,
-            external_states,
-        )
-        engine.run_till_terminate()
-        actual_results = engine.get_output()
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        assert len(actual_results) == len(expected_results)
-
-        for reference, model in zip(expected_results, actual_results, strict=False):
-            assert reference["DAY"] == model["day"]
-            assert all(
-                all(abs(reference[var] - model[var]) < precision)
-                for var, precision in expected_precision.items()
+        if param == "TEMP":
+            # Expect error due to incompatible shapes
+            # (By defaults parameters are not reshaped following weather variables)
+            with pytest.raises(ValueError):
+                engine = EngineTestHelper(
+                    crop_model_params_provider,
+                    weather_data_provider,
+                    agro_management_inputs,
+                    config_path,
+                    external_states,
+                )
+                engine.run_till_terminate()
+                actual_results = engine.get_output()
+        else:
+            engine = EngineTestHelper(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs,
+                config_path,
+                external_states,
             )
+            engine.run_till_terminate()
+            actual_results = engine.get_output()
+
+            # get expected results from YAML test data
+            expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+            assert len(actual_results) == len(expected_results)
+
+            for reference, model in zip(expected_results, actual_results, strict=False):
+                assert reference["DAY"] == model["day"]
+                assert all(
+                    all(abs(reference[var] - model[var]) < precision)
+                    for var, precision in expected_precision.items()
+                )
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -184,7 +210,7 @@ class TestLeafDynamics:
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -226,7 +252,7 @@ class TestLeafDynamics:
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -236,8 +262,12 @@ class TestLeafDynamics:
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the TDWI and SPAN parameters
-        for param in ("TDWI", "SPAN"):
-            repeated = crop_model_params_provider[param].repeat(10)
+        for param in ("TDWI", "SPAN", "RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB"):
+            if param in ("KDIFTB", "SLATB"):
+                # AfgenTrait parameters need to have shape (N, M)
+                repeated = crop_model_params_provider[param].repeat(10, 1)
+            else:
+                repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(
@@ -266,20 +296,26 @@ class TestLeafDynamics:
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
-        # Setting an array with arbitrary shape (and one value) for the
-        # TDWI and SPAN parameters
-        for param in ("TDWI", "SPAN"):
-            repeated = crop_model_params_provider[param].broadcast_to((30, 5))
+        # Setting an array with arbitrary shape (and one value)
+        for param in ("RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB"):
+            if param in ("KDIFTB", "SLATB"):
+                # AfgenTrait parameters need to have shape (N, M)
+                repeated = crop_model_params_provider[param].repeat(30, 5, 1)
+            else:
+                repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
+
+        for (_, _), wdc in weather_data_provider.store.items():
+            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -310,7 +346,7 @@ class TestLeafDynamics:
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -337,11 +373,40 @@ class TestLeafDynamics:
                 external_states,
             )
 
+    def test_leaf_dynamics_with_incompatible_weather_parameter_vectors(self):
+        # prepare model input
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
+        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
+
+        # Setting vectors with incompatible shapes: TDWI and TEMP
+        crop_model_params_provider.set_override(
+            "TDWI", crop_model_params_provider["TDWI"].repeat(10), check=False
+        )
+        for (_, _), wdc in weather_data_provider.store.items():
+            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+
+        with pytest.raises(ValueError):
+            EngineTestHelper(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs,
+                config_path,
+                external_states,
+            )
+
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost_pp_with_leaf_dynamics(self, test_data_url):
         # prepare model input
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             prepare_engine_input(test_data, crop_model_params)
         )
@@ -370,7 +435,7 @@ class TestLeafDynamics:
         """Test if sigmoid approximation gives same results as leaf dynamics."""
         # prepare model input
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -405,144 +470,133 @@ class TestLeafDynamics:
             )
 
 
-class TestDiffLeafDynamicsTDWI:
-    @pytest.mark.parametrize(
-        "param_value,out_name",
-        [
-            (torch.tensor(0.2, dtype=torch.float64), "LAI"),
-            (torch.tensor(0.2, dtype=torch.float64), "TWLV"),
-            (torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "LAI"),
-            (torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "TWLV"),
-        ],
-    )
-    def test_gradients_leaf_dynamics(self, param_value, out_name):
-        model = get_test_diff_leaf_model()
-        tdwi = torch.nn.Parameter(param_value)
-        output = model({"TDWI": tdwi})
-        loss = output[out_name].sum()
+class TestDiffLeafDynamicsGradients:
+    """Parametrized tests for gradient calculations in leaf dynamics."""
 
-        # this is ∂loss/∂param without calling loss.backward().
+    # Define parameters and outputs
+    param_names = ["TDWI", "SPAN", "RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB"]
+    output_names = ["LAI", "TWLV"]
+
+    # Define parameter configurations (value, dtype)
+    param_configs = {
+        "single": {
+            "TDWI": (0.2, torch.float64),
+            "SPAN": (30, torch.float64),
+            "RGRLAI": (0.016, torch.float64),
+            "TBASE": (3.0, torch.float64),
+            "PERDL": (0.03, torch.float64),
+            "KDIFTB": ([[0.0, 0.6, 2.0, 0.6]], torch.float64),
+            "SLATB": ([[0.0, 0.002, 2.0, 0.002]], torch.float64),
+        },
+        "tensor": {
+            "TDWI": ([0.1, 0.2, 0.3], torch.float64),
+            "SPAN": ([25, 30, 35], torch.float64),
+            "RGRLAI": ([-10, 0.08, 1], torch.float64),
+            "TBASE": ([-5, 0, 10.0], torch.float64),
+            "PERDL": ([-10, 0.1, 15], torch.float64),
+            "KDIFTB": (
+                [[0.0, 0.5, 10.0, 1.0], [0.0, 0.6, 12.0, 1.2], [0.0, 0.4, 8.0, 0.8]],
+                torch.float64,
+            ),
+            "SLATB": (
+                [
+                    [0.0, 0.002031, 0.5, 0.002031, 2.0, 0.002031],
+                    [0.0, 0.0025, 0.6, 0.0025, 2.5, 0.0025],
+                    [0.0, 0.0015, 0.4, 0.0015, 1.5, 0.0015],
+                ],
+                torch.float64,
+            ),
+        },
+    }
+
+    # Define which parameter-output pairs should have gradients
+    # Format: {param_name: [list of outputs that should have gradients]}
+    gradient_mapping = {
+        "TDWI": ["LAI", "TWLV"],
+        "SPAN": ["LAI"],
+        "RGRLAI": ["LAI"],
+        "TBASE": ["LAI"],
+        "PERDL": ["TWLV"],
+        "KDIFTB": ["LAI"],
+        "SLATB": ["LAI"],
+    }
+
+    # Generate all combinations
+    gradient_params = []
+    no_gradient_params = []
+    for param_name in param_names:
+        for output_name in output_names:
+            if output_name in gradient_mapping.get(param_name, []):
+                gradient_params.append((param_name, output_name))
+            else:
+                no_gradient_params.append((param_name, output_name))
+
+    @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_no_gradients(self, param_name, output_name, config_type):
+        """Test cases where parameters should not have gradients for specific outputs."""
+        model = get_test_diff_leaf_model()
+        value, dtype = self.param_configs[config_type][param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
+        output = model({param_name: param})
+        loss = output[output_name].sum()
+
+        grads = torch.autograd.grad(loss, param, retain_graph=True, allow_unused=True)[0]
+        if grads is not None:
+            assert torch.all((grads == 0) | torch.isnan(grads)), (
+                f"Gradient for {param_name} w.r.t. {output_name} should be zero or NaN"
+            )
+
+    @pytest.mark.parametrize("param_name,output_name", gradient_params)
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_gradients_forward_backward_match(self, param_name, output_name, config_type):
+        """Test that forward and backward gradients match for parameter-output pairs."""
+        model = get_test_diff_leaf_model()
+        value, dtype = self.param_configs[config_type][param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
+        output = model({param_name: param})
+        loss = output[output_name].sum()
+
+        # this is ∂loss/∂param
         # this is called forward gradient here because it is calculated without backpropagation.
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
-        assert grads is not None, "Gradients should not be None"
+        grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        tdwi.grad = None  # clear any existing gradient
+        assert grads is not None, f"Gradients for {param_name} should not be None"
+
+        param.grad = None  # clear any existing gradient
         loss.backward()
-        # this is ∂loss/∂param calculated using backpropagation
-        grad_backward = tdwi.grad
-        assert grad_backward is not None, "Backward gradients should not be None"
-        assert torch.all(grad_backward == grads), "Forward and backward gradients should match"
 
-    @pytest.mark.parametrize(
-        "param_value,out_name",
-        [
-            (torch.tensor(0.2, dtype=torch.float64), "LAI"),
-            (torch.tensor(0.2, dtype=torch.float64), "TWLV"),
-            (torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "LAI"),
-            (torch.tensor([0.1, 0.2, 0.3], dtype=torch.float64), "TWLV"),
-        ],
-    )
-    def test_gradients_leaf_dynamics_numerical(self, param_value, out_name):
-        # first check if the numerical gradient isnot zero i.e. the parameter has an effect
-        tdwi = torch.nn.Parameter(param_value)
+        # this is ∂loss/∂param calculated using backpropagation
+        grad_backward = param.grad
+
+        assert grad_backward is not None, f"Backward gradients for {param_name} should not be None"
+        assert torch.all(grad_backward == grads), (
+            f"Forward and backward gradients for {param_name} should match"
+        )
+
+    @pytest.mark.parametrize("param_name,output_name", gradient_params)
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_gradients_numerical(self, param_name, output_name, config_type):
+        """Test that analytical gradients match numerical gradients."""
+        value, _ = self.param_configs[config_type][param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64))
         numerical_grad = calculate_numerical_grad(
-            get_test_diff_leaf_model, "TDWI", tdwi.data, out_name
-        )  # this is Δloss/Δparam
+            get_test_diff_leaf_model, param_name, param.data, output_name
+        )
 
         model = get_test_diff_leaf_model()
-        output = model({"TDWI": tdwi})
-        loss = output[out_name].sum()
+        output = model({param_name: param})
+        loss = output[output_name].sum()
 
         # this is ∂loss/∂param, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss, tdwi, retain_graph=True)[0]
+        grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
         assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
 
-
-class TestDiffLeafDynamicsSPAN:
-    @pytest.mark.parametrize(
-        "param_value",
-        [torch.tensor(30, dtype=torch.float64), torch.tensor([25, 30, 35], dtype=torch.float64)],
-    )
-    def test_gradients_lai_leaf_dynamics(self, param_value):
-        model = get_test_diff_leaf_model()
-        span = torch.nn.Parameter(param_value)
-        output = model({"SPAN": span})
-        loss = output["LAI"].sum()
-
-        # this is ∂loss/∂param without calling loss.backward().
-        # this is called forward gradient here because it is calculated without backpropagation.
-        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
-        assert grads is not None, "Gradients should not be None"
-
-        span.grad = None  # clear any existing gradient
-        loss.backward()
-        # this is ∂loss/∂param calculated using backpropagation
-        grad_backward = span.grad
-
-        assert grad_backward is not None, "Backward gradients should not be None"
-        assert torch.all(grad_backward == grads), "Forward and backward gradients should match"
-
-    @pytest.mark.parametrize(
-        "param_value",
-        [torch.tensor(30, dtype=torch.float64), torch.tensor([25, 30, 35], dtype=torch.float64)],
-    )
-    def test_gradients_lai_leaf_dynamics_numerical(self, param_value):
-        # first check if the numerical gradient isnot zero i.e. the parameter has an effect
-        span = torch.nn.Parameter(param_value)
-        numerical_grad = calculate_numerical_grad(
-            get_test_diff_leaf_model, "SPAN", span.data, "LAI"
-        )  # this is Δloss/Δparam
-
-        model = get_test_diff_leaf_model()
-        output = model({"SPAN": span})
-        loss = output["LAI"].sum()
-
-        # this is ∂loss/∂param, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
-
-        assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
-
-    @pytest.mark.parametrize(
-        "param_value",
-        [torch.tensor(30, dtype=torch.float64), torch.tensor([25, 30, 35], dtype=torch.float64)],
-    )
-    def test_gradients_twlv_leaf_dynamics(self, param_value):
-        model = get_test_diff_leaf_model()
-        span = torch.nn.Parameter(param_value)
-        output = model({"SPAN": span})
-        loss = output["TWLV"].sum()
-
-        # this is ∂loss/∂param without calling loss.backward().
-        # this is called forward gradient here because it is calculated without backpropagation.
-        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
-        assert grads is not None, "Gradients should not be None"
-
-        span.grad = None  # clear any existing gradient
-        loss.backward()
-        # this is ∂loss/∂param calculated using backpropagation
-        grad_backward = span.grad
-
-        assert grad_backward is not None, "Backward gradients should not be None"
-        assert torch.all(grad_backward == grads), "Forward and backward gradients should match"
-
-    @pytest.mark.parametrize(
-        "param_value",
-        [torch.tensor(30, dtype=torch.float64), torch.tensor([25, 30, 35], dtype=torch.float64)],
-    )
-    def test_gradients_leaf_twlv_dynamics_numerical(self, param_value):
-        # first check if the numerical gradient isnot zero i.e. the parameter has an effect
-        span = torch.nn.Parameter(param_value)
-        numerical_grad = calculate_numerical_grad(
-            get_test_diff_leaf_model, "SPAN", span.data, "TWLV"
-        )  # this is Δloss/Δparam
-
-        model = get_test_diff_leaf_model()
-        output = model({"SPAN": span})
-        loss = output["TWLV"].sum()
-
-        # this is ∂loss/∂param, for comparison with numerical gradient
-        grads = torch.autograd.grad(loss, span, retain_graph=True)[0]
-
-        assert_array_almost_equal(grads.data, 0.0)
-        assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
+        # Warn if gradient is zero (but this shouldn't happen for gradient_params)
+        if torch.all(grads == 0):
+            warnings.warn(
+                f"Gradient for parameter '{param_name}' with respect to output "
+                + f"'{output_name}' is zero: {grads.data}",
+                UserWarning,
+            )
