@@ -187,7 +187,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         params = self.params
         self.params_shape = _get_params_shape(params)
-        self._shape_finalized = False  # Track if shape has been updated with drv data
 
         # Initial leaf biomass
         WLV = (params.TDWI * (1 - FR)) * FL
