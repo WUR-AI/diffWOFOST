@@ -564,7 +564,7 @@ def _get_params_shape(params):
     return shape
 
 
-def _get_drv_var(drv_var, expected_shape):
+def _get_drv(drv_var, expected_shape):
     """Check that the driving variables have the expected shape and fetch them.
 
     Driving variables can be scalars (0-dimensional) or match the expected shape.

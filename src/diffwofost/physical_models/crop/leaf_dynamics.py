@@ -14,7 +14,7 @@ from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_drv_var
+from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import _get_params_shape
 
 DTYPE = torch.float64  # Default data type for tensors in this module
@@ -308,7 +308,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.DRLV = torch.maximum(r.DSLV, r.DALV)
 
         # Get the temperature from the drv
-        TEMP = _get_drv_var(drv.TEMP, self.params_shape)
+        TEMP = _get_drv(drv.TEMP, self.params_shape)
 
         # physiologic ageing of leaves per time step
         TBASE = _broadcast_to(p.TBASE, self.params_shape)
