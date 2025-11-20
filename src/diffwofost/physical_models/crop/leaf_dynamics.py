@@ -119,6 +119,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     # on the leaf classes during the time integration: leaf area, age, and biomass.
     START_DATE = None  # Start date of the simulation
     MAX_DAYS = 365  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
+    params_shape = None  # Shape of the parameters tensors
 
     class Parameters(ParamTemplate):
         RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
