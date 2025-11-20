@@ -203,10 +203,6 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
 
     def __init__(self, yaml_weather, meteo_range_checks=True):
         super().__init__()
-        # This is a temporary workaround. The `METEO_RANGE_CHECKS` logic in
-        # `__setattr__` method in `WeatherDataContainer` is not vector compatible
-        # yet. So we can disable it here when creating the `WeatherDataContainer`
-        # instances with arrays.
         settings.METEO_RANGE_CHECKS = meteo_range_checks
         for weather in yaml_weather:
             if "SNOWDEPTH" in weather:
@@ -568,8 +564,8 @@ def _get_params_shape(params):
     return shape
 
 
-def _check_drv_shape(drv, expected_shape):
-    """Check that the driving variables have the expected shape.
+def _get_drv_var(drv_var, expected_shape):
+    """Check that the driving variables have the expected shape and fetch them.
 
     Driving variables can be scalars (0-dimensional) or match the expected shape.
     Scalars will be broadcast during operations.
@@ -577,66 +573,34 @@ def _check_drv_shape(drv, expected_shape):
     [!] This function will be redundant once weathercontainer supports batched variables.
 
     Args:
-        drv: WeatherDataContainer with driving variables
+        drv_var: driving variable in WeatherDataContainer
         expected_shape: Expected shape tuple for non-scalar variables
 
     Raises:
         ValueError: If any variable has incompatible shape
+
+    Returns:
+        torch.Tensor: The validated variable, either as-is or broadcasted to expected shape.
     """
-    # Define compulsory and optional weather variables
-    compulsory_vars = [
-        "LAT",
-        "LON",
-        "ELEV",
-        "DAY",
-        "IRRAD",
-        "TMIN",
-        "TMAX",
-        "VAP",
-        "RAIN",
-        "WIND",
-        "E0",
-        "ES0",
-        "ET0",
-    ]
-    optional_vars = ["TEMP", "SNOWDEPTH"]
-    all_vars = compulsory_vars + optional_vars
-
-    for var_name in all_vars:
-        # Skip if variable doesn't exist (only matters for optional vars)
-        if not hasattr(drv, var_name):
-            if var_name in compulsory_vars:
-                raise ValueError(
-                    f"Compulsory variable '{var_name}' missing from WeatherDataContainer"
-                )
-            continue
-
-        var_value = getattr(drv, var_name)
-
-        # Skip DAY as it's a date object, not a tensor
-        if var_name == "DAY":
-            continue
-
-        # Convert to tensor if needed for shape checking
-        if not isinstance(var_value, torch.Tensor):
-            var_value = torch.as_tensor(var_value, dtype=DTYPE)
-
-        # Check shape: must be scalar (0-d) or match expected_shape
-        if var_value.dim() == 0:
-            # Scalar is valid, will be broadcast
-            continue
-        elif var_value.shape == expected_shape:
-            # Matches expected shape
-            continue
-        else:
-            raise ValueError(
-                f"Weather variable '{var_name}' has incompatible shape {var_value.shape}. "
-                f"Expected scalar (0-dimensional) or shape {expected_shape}."
-            )
+    # Check shape: must be scalar (0-d) or match expected_shape
+    if not isinstance(drv_var, torch.Tensor) or drv_var.dim() == 0:
+        # Scalar is valid, will be broadcast
+        return _broadcast_to(drv_var, expected_shape)
+    elif drv_var.shape == expected_shape:
+        # Matches expected shape
+        return drv_var
+    else:
+        raise ValueError(
+            f"Requested weather variable has incompatible shape {drv_var.shape}. "
+            f"Expected scalar (0-dimensional) or shape {expected_shape}."
+        )
 
 
 def _broadcast_to(x, shape):
     """Create a view of tensor X with the given shape."""
+    # If x is not a tensor, convert it
+    if not isinstance(x, torch.Tensor):
+        x = torch.tensor(x, dtype=DTYPE)
     # If already the correct shape, return as-is
     if x.shape == shape:
         return x

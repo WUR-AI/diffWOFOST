@@ -6,6 +6,7 @@ from diffwofost.physical_models.utils import DTYPE
 from diffwofost.physical_models.utils import Afgen
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import WeatherDataProviderTestHelper
+from diffwofost.physical_models.utils import _get_drv_var
 from diffwofost.physical_models.utils import get_test_data
 from . import phy_data_folder
 
@@ -542,129 +543,48 @@ class TestAfgenBatched:
         assert torch.isclose(result, torch.tensor(5.0, dtype=DTYPE))
 
 
-class TestCheckDrvShape:
-    """Tests for _check_drv_shape function."""
+class TestGetDrvParam:
+    """Tests for _get_drv_var function."""
 
-    def test_scalar_drv(self):
-        """Test that drv accepts scalar variables for any expected shape."""
-        from diffwofost.physical_models.utils import _check_drv_shape
-
-        expected_shape = (3, 2)  # Example batch shape
-
-        # Read weather data from test YAML
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
-        test_data = get_test_data(test_data_url)
-        weather_data_provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
-
-        # Get weather data for a specific date using the provider's __call__ method
-        first_date = weather_data_provider.first_date
-        wdc = weather_data_provider(first_date)
-
-        # Check that the weather data container has valid shape
-        # (all scalar values should pass for any expected_shape)
-        _check_drv_shape(wdc, expected_shape)
-
-    def test_single_vector_variable(self):
-        """Test that each weather variable can individually be vectorized to expected_shape."""
-        from diffwofost.physical_models.utils import _check_drv_shape
-
-        expected_shape = (3, 2)  # Example batch shape
-
-        # Read weather data from test YAML
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
-        test_data = get_test_data(test_data_url)
-        weather_data_provider = WeatherDataProviderTestHelper(
-            test_data["WeatherVariables"], meteo_range_checks=False
-        )
-
-        # List of all weather variables to test
-        vector_vars = [
-            "LAT",
-            "LON",
-            "ELEV",
-            "IRRAD",
-            "TMIN",
-            "TMAX",
-            "VAP",
-            "RAIN",
-            "WIND",
-            "E0",
-            "ES0",
-            "ET0",
-            "TEMP",
-        ]
-
-        first_date = weather_data_provider.first_date
-
-        # Test each variable individually
-        for var_name in vector_vars:
-            wdc = weather_data_provider(first_date)
-
-            # Vectorize only this one variable
-            original_value = getattr(wdc, var_name)
-            setattr(wdc, var_name, torch.ones(expected_shape, dtype=DTYPE) * original_value)
-
-            # Should not raise an exception (scalar + one vectorized variable is valid)
-            _check_drv_shape(wdc, expected_shape)
-
-    def test_all_vector_variables(self):
-        """Test that all weather variables can be vectorized together to expected_shape."""
-        from diffwofost.physical_models.utils import _check_drv_shape
-
-        expected_shape = (3, 2)  # Example batch shape
-
-        # Read weather data from test YAML
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
-        test_data = get_test_data(test_data_url)
-        weather_data_provider = WeatherDataProviderTestHelper(
-            test_data["WeatherVariables"], meteo_range_checks=False
-        )
-
-        # Get weather data for a specific date
-        first_date = weather_data_provider.first_date
-        wdc = weather_data_provider(first_date)
-
-        # Vectorize all weather variables to the same expected_shape
-        wdc.LAT = torch.ones(expected_shape, dtype=DTYPE) * wdc.LAT
-        wdc.LON = torch.ones(expected_shape, dtype=DTYPE) * wdc.LON
-        wdc.ELEV = torch.ones(expected_shape, dtype=DTYPE) * wdc.ELEV
-        wdc.IRRAD = torch.ones(expected_shape, dtype=DTYPE) * wdc.IRRAD
-        wdc.TMIN = torch.ones(expected_shape, dtype=DTYPE) * wdc.TMIN
-        wdc.TMAX = torch.ones(expected_shape, dtype=DTYPE) * wdc.TMAX
-        wdc.VAP = torch.ones(expected_shape, dtype=DTYPE) * wdc.VAP
-        wdc.RAIN = torch.ones(expected_shape, dtype=DTYPE) * wdc.RAIN
-        wdc.WIND = torch.ones(expected_shape, dtype=DTYPE) * wdc.WIND
-        wdc.E0 = torch.ones(expected_shape, dtype=DTYPE) * wdc.E0
-        wdc.ES0 = torch.ones(expected_shape, dtype=DTYPE) * wdc.ES0
-        wdc.ET0 = torch.ones(expected_shape, dtype=DTYPE) * wdc.ET0
-        wdc.TEMP = torch.ones(expected_shape, dtype=DTYPE) * wdc.TEMP
-
-        # Should not raise an exception (all same shape)
-        _check_drv_shape(wdc, expected_shape)
-
-    def test_mixed_shapes_raises_error(self):
-        """Test that two variables with different non-scalar shapes raise ValueError."""
-        from diffwofost.physical_models.utils import _check_drv_shape
-
+    def test_float_broadcast(self):
         expected_shape = (3, 2)
-        wrong_shape = (2, 3)
-
-        # Read weather data from test YAML
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        weather_data_provider = WeatherDataProviderTestHelper(
-            test_data["WeatherVariables"], meteo_range_checks=False
-        )
+        provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
+        wdc = provider(provider.first_date)
+        scalar = wdc.TEMP
+        out = _get_drv_var(scalar, expected_shape)
+        assert out.shape == expected_shape
+        assert torch.allclose(out, torch.full(expected_shape, scalar, dtype=torch.float32))
 
-        first_date = weather_data_provider.first_date
-        wdc = weather_data_provider(first_date)
+    def test_scalar_broadcast(self):
+        expected_shape = (3, 2)
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
+        provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
+        wdc = provider(provider.first_date)
+        scalar = torch.tensor(wdc.IRRAD, dtype=DTYPE)  # 0-d tensor
+        out = _get_drv_var(scalar, expected_shape)
+        assert out.shape == expected_shape
+        assert torch.allclose(out, torch.full(expected_shape, scalar.item(), dtype=DTYPE))
 
-        # Set IRRAD to expected_shape
-        wdc.IRRAD = torch.ones(expected_shape, dtype=DTYPE) * wdc.IRRAD
+    def test_matching_shape_pass_through(self):
+        expected_shape = (3, 2)
+        base_val = torch.tensor(12.34, dtype=DTYPE)
+        var = torch.ones(expected_shape, dtype=DTYPE) * base_val
+        out = _get_drv_var(var, expected_shape)
+        assert out.shape == expected_shape
+        # Should be the same object (no copy)
+        assert out.data_ptr() == var.data_ptr()
 
-        # Set TMIN to a different wrong_shape
-        wdc.TMIN = torch.ones(wrong_shape, dtype=DTYPE) * wdc.TMIN
-
-        # Should raise ValueError because shapes don't match
+    def test_wrong_shape_raises(self):
+        expected_shape = (3, 2)
+        wrong = torch.ones(2, 3, dtype=DTYPE)
         with pytest.raises(ValueError, match="incompatible shape"):
-            _check_drv_shape(wdc, expected_shape)
+            _get_drv_var(wrong, expected_shape)
+
+    def test_one_dim_shape_raises(self):
+        expected_shape = (3, 2)
+        one_dim = torch.ones(3, dtype=DTYPE)
+        with pytest.raises(ValueError, match="incompatible shape"):
+            _get_drv_var(one_dim, expected_shape)
