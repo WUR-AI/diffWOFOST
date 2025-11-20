@@ -302,7 +302,7 @@ class TestLeafDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting an array with arbitrary shape (and one value)
@@ -313,6 +313,9 @@ class TestLeafDynamics:
             else:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
+
+        for (_, _), wdc in weather_data_provider.store.items():
+            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
