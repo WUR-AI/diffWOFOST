@@ -555,7 +555,7 @@ class TestGetDrvParam:
         scalar = wdc.TEMP
         out = _get_drv(scalar, expected_shape)
         assert out.shape == expected_shape
-        assert torch.allclose(out, torch.full(expected_shape, scalar, dtype=torch.float32))
+        assert torch.allclose(out, torch.full(expected_shape, scalar, dtype=DTYPE))
 
     def test_scalar_broadcast(self):
         expected_shape = (3, 2)
