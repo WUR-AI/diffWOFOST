@@ -14,7 +14,6 @@ from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _check_drv_shape
 from diffwofost.physical_models.utils import _get_params_shape
 
 DTYPE = torch.float64  # Default data type for tensors in this module
@@ -109,7 +108,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     | LAI    | TDWI, SPAN, RGRLAI, TBASE, KDIFTB, SLATB |
     | TWLV   | TDWI, PERDL                              |
 
-    [!] Notice that the following gradient are zero:
+    [!] Notice that the following gradients are zero:
         - ∂SPAN/∂LAI
         - ∂PERDL/∂TWLV
         - ∂KDIFTB/∂LAI
@@ -119,6 +118,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     # on the leaf classes during the time integration: leaf area, age, and biomass.
     START_DATE = None  # Start date of the simulation
     MAX_DAYS = 365  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
+    params_shape = None  # Shape of the parameters and the drv data
 
     class Parameters(ParamTemplate):
         RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -128,7 +128,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
         SLATB = AfgenTrait()
         KDIFTB = AfgenTrait()
-        shape = None  # shape of the parameters (set during initialization)
 
     class StateVariables(StatesTemplate):
         LV = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
@@ -186,18 +185,18 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         DVS = self.kiosk["DVS"]
 
         params = self.params
-        params.shape = _get_params_shape(params)
+        self.params_shape = _get_params_shape(params)
         self._shape_finalized = False  # Track if shape has been updated with drv data
 
         # Initial leaf biomass
         WLV = (params.TDWI * (1 - FR)) * FL
-        DWLV = torch.zeros(params.shape, dtype=DTYPE)
+        DWLV = torch.zeros(self.params_shape, dtype=DTYPE)
         TWLV = WLV + DWLV
 
         # Initialize leaf classes (SLA, age and weight)
-        SLA = torch.zeros((*params.shape, self.MAX_DAYS), dtype=DTYPE)
-        LVAGE = torch.zeros((*params.shape, self.MAX_DAYS), dtype=DTYPE)
-        LV = torch.zeros((*params.shape, self.MAX_DAYS), dtype=DTYPE)
+        SLA = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
+        LVAGE = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
+        LV = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
         SLA[..., 0] = params.SLATB(DVS)
         LV[..., 0] = WLV
 
@@ -232,50 +231,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         total_LAI = self.states.LASUM + SAI + PAI
         return total_LAI
 
-    def _ensure_shape_finalized(self, drv: WeatherDataContainer) -> None:
-        """Ensure that the parameter and state variable shapes are finalized."""
-        p = self.params
-        s = self.states
-
-        if not self._shape_finalized:
-            TEMP = torch.as_tensor(drv.TEMP, dtype=DTYPE)
-            temp_shape = TEMP.shape if TEMP.ndim > 0 else ()
-            if temp_shape != p.shape:
-                old_shape = p.shape
-                try:
-                    p.shape = torch.broadcast_shapes(p.shape, temp_shape)
-                except RuntimeError as e:
-                    raise ValueError(
-                        f"Parameter shape {p.shape} and weather driver shape {temp_shape} "
-                        f"have incompatible shape and cannot be broadcasted together. "
-                        f"Original error: {e}"
-                    ) from e
-
-                # Reshape state variables to match new parameter shape
-                if len(old_shape) == 0:
-                    s.LV = s.LV.unsqueeze(0).expand(*p.shape, self.MAX_DAYS)
-                    s.SLA = s.SLA.unsqueeze(0).expand(*p.shape, self.MAX_DAYS)
-                    s.LVAGE = s.LVAGE.unsqueeze(0).expand(*p.shape, self.MAX_DAYS)
-                else:
-                    s.LV = s.LV.expand(*p.shape, self.MAX_DAYS)
-                    s.SLA = s.SLA.expand(*p.shape, self.MAX_DAYS)
-                    s.LVAGE = s.LVAGE.expand(*p.shape, self.MAX_DAYS)
-
-                # For scalar state variables, use _broadcast_to
-                s.LAIEM = _broadcast_to(s.LAIEM, p.shape)
-                s.LASUM = _broadcast_to(s.LASUM, p.shape)
-                s.LAIEXP = _broadcast_to(s.LAIEXP, p.shape)
-                s.LAIMAX = _broadcast_to(s.LAIMAX, p.shape)
-                s.LAI = _broadcast_to(s.LAI, p.shape)
-                s.WLV = _broadcast_to(s.WLV, p.shape)
-                s.DWLV = _broadcast_to(s.DWLV, p.shape)
-                s.TWLV = _broadcast_to(s.TWLV, p.shape)
-
-            self._shape_finalized = True
-
-        # Finally check if drv shape is consistent
-        _check_drv_shape(drv, p.shape)
-
     @prepare_rates
     def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
         """Calculate the rates of change for the leaf dynamics.
@@ -290,9 +245,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         s = self.states
         p = self.params
         k = self.kiosk
-
-        # Update shape if needed based on drv.TEMP
-        self._ensure_shape_finalized(drv)
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
         # A mask (0 if DVS < 0, 1 if DVS >= 0)
@@ -355,10 +307,17 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.DRLV = torch.maximum(r.DSLV, r.DALV)
 
         # Get the temperature from the drv
-        TEMP = _broadcast_to(torch.as_tensor(drv.TEMP, dtype=DTYPE), p.shape)
+        if isinstance(drv.TEMP, torch.Tensor):
+            if drv.TEMP.shape != self.params_shape:
+                raise ValueError(
+                    f"Weather driver TEMP shape {drv.TEMP.shape} is not compatible with "
+                    f"parameter shape {self.params_shape}."
+                )
+        else:
+            TEMP = _broadcast_to(torch.as_tensor(drv.TEMP, dtype=DTYPE), self.params_shape)
 
         # physiologic ageing of leaves per time step
-        TBASE = _broadcast_to(p.TBASE, p.shape)
+        TBASE = _broadcast_to(p.TBASE, self.params_shape)
         FYSAGE = (TEMP - TBASE) / (35.0 - TBASE)
         r.FYSAGE = dvs_mask * torch.clamp(FYSAGE, 0.0)
 

@@ -163,27 +163,41 @@ class TestLeafDynamics:
             repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
-            crop_model_params_provider,
-            weather_data_provider,
-            agro_management_inputs,
-            config_path,
-            external_states,
-        )
-        engine.run_till_terminate()
-        actual_results = engine.get_output()
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        assert len(actual_results) == len(expected_results)
-
-        for reference, model in zip(expected_results, actual_results, strict=False):
-            assert reference["DAY"] == model["day"]
-            assert all(
-                all(abs(reference[var] - model[var]) < precision)
-                for var, precision in expected_precision.items()
+        if param == "TEMP":
+            # Expect error due to incompatible shapes
+            # (By defaults parameters are not reshaped following weather variables)
+            with pytest.raises(ValueError):
+                engine = EngineTestHelper(
+                    crop_model_params_provider,
+                    weather_data_provider,
+                    agro_management_inputs,
+                    config_path,
+                    external_states,
+                )
+                engine.run_till_terminate()
+                actual_results = engine.get_output()
+        else:
+            engine = EngineTestHelper(
+                crop_model_params_provider,
+                weather_data_provider,
+                agro_management_inputs,
+                config_path,
+                external_states,
             )
+            engine.run_till_terminate()
+            actual_results = engine.get_output()
+
+            # get expected results from YAML test data
+            expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+            assert len(actual_results) == len(expected_results)
+
+            for reference, model in zip(expected_results, actual_results, strict=False):
+                assert reference["DAY"] == model["day"]
+                assert all(
+                    all(abs(reference[var] - model[var]) < precision)
+                    for var, precision in expected_precision.items()
+                )
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -376,7 +390,7 @@ class TestLeafDynamics:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
-        with pytest.raises(ValueError, match="incompatible shape"):
+        with pytest.raises(ValueError):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
