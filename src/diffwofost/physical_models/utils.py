@@ -28,6 +28,7 @@ from pcse.engine import BaseEngine
 from pcse.engine import Engine
 from pcse.settings import settings
 from pcse.timer import Timer
+from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
 
 DTYPE = torch.float64  # Default data type for tensors in this module
@@ -50,7 +51,7 @@ class VariableKioskTestHelper(VariableKiosk):
     def __init__(self, external_state_list):
         super().__init__()
         self.current_externals = {}
-        if external_state_list is not None:
+        if external_state_list:
             self.external_state_list = external_state_list
 
     def __call__(self, day):
@@ -59,7 +60,7 @@ class VariableKioskTestHelper(VariableKiosk):
         Returns True if the list of external state/rate variables is exhausted,
         otherwise False.
         """
-        if self.external_state_list is not None:
+        if self.external_state_list:
             current_externals = self.external_state_list.pop(0)
             forcing_day = current_externals.pop("DAY")
             msg = "Failure updating VariableKiosk with external states: days are not matching!"
@@ -226,13 +227,15 @@ def prepare_engine_input(
         test_data["WeatherVariables"], meteo_range_checks=meteo_range_checks
     )
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
-    external_states = test_data["ExternalStates"]
+    external_states = test_data.get("ExternalStates") or []
 
     # convert parameters to tensors
     crop_model_params_provider.clear_override()
     for name in crop_model_params:
-        value = torch.tensor(crop_model_params_provider[name], dtype=dtype)
-        crop_model_params_provider.set_override(name, value, check=False)
+        # if name is missing in the YAML, skip it
+        if name in crop_model_params_provider:
+            value = torch.tensor(crop_model_params_provider[name], dtype=dtype)
+            crop_model_params_provider.set_override(name, value, check=False)
 
     # convert external states to tensors
     tensor_external_states = [
@@ -558,6 +561,9 @@ def _get_params_shape(params):
         if parname.startswith("trait"):
             continue
         param = getattr(params, parname)
+        # Skip Enum and str parameters
+        if isinstance(param, Enum) or isinstance(param, str):
+            continue
         # Parameters that are not zero dimensional should all have the same shape
         if param.shape and not shape:
             shape = param.shape
