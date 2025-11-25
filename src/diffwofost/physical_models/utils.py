@@ -506,7 +506,6 @@ class Afgen:
             output = torch.stack(results).reshape(self.batch_shape)
             return output
 
-        # Original scalar logic - now tensor compatible
         # Ensure contiguous memory layout for searchsorted
         x_list_contig = self.x_list.contiguous()
         x_contig = x.contiguous() if isinstance(x, torch.Tensor) and x.dim() > 0 else x

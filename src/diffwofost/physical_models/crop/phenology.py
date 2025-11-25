@@ -151,7 +151,7 @@ class Vernalisation(SimulationObject):
                     f"Vernalisation params shape {self.params_shape}"
                     + " incompatible with dvs_shape {dvs_shape}"
                 )
-        self.rates = self.RateVariables(kiosk, publish=["VERNFAC"])
+        self.rates = self.RateVariables(kiosk, publish=["VERNFAC", "VERNR"])
         self.kiosk = kiosk
 
         # Explicitly broadcast all parameters to params_shape
@@ -198,12 +198,14 @@ class Vernalisation(SimulationObject):
         self.rates.VERNFAC = torch.zeros(self.params_shape, dtype=DTYPE)
 
         TEMP = _get_drv(drv.TEMP, self.params_shape)
+        print(f"\nVernalisation calc_rates called with TEMP={TEMP} at day {day}")
 
         if not self.states.ISVERNALISED:
             if torch.all(DVS < VERNDVS):
                 self.rates.VERNR = _broadcast_to(params.VERNRTB(TEMP), self.params_shape)
                 r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
                 self.rates.VERNFAC = torch.clamp(r, 0.0, 1.0)
+                print("branch all below VERNDVS")
             else:
                 # In batch mode, some might be below VERNDVS, some above
                 below_threshold = DVS < VERNDVS
@@ -220,9 +222,12 @@ class Vernalisation(SimulationObject):
                 # Set flag if any crossed threshold
                 if torch.any(~below_threshold):
                     self._force_vernalisation = True
+                print("branch mixed VERNDVS")
         else:
             self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
             self.rates.VERNFAC = torch.ones(self.params_shape, dtype=DTYPE)
+            print("branch all vernalised")
+        print(f" VERNR={self.rates.VERNR}, VERNFAC={self.rates.VERNFAC}")
 
     @prepare_states
     def integrate(self, day, delt=1.0):
