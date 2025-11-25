@@ -204,6 +204,11 @@ class TestLeafDynamics:
         [
             ("TDWI", 0.1),
             ("SPAN", 5),
+            ("TBASE", 2.0),
+            ("PERDL", 0.01),
+            ("RGRLAI", 0.002),
+            ("KDIFTB", 0.1),
+            ("SLATB", 0.0005),
         ],
     )
     def test_leaf_dynamics_with_different_parameter_values(self, param, delta):
@@ -222,7 +227,17 @@ class TestLeafDynamics:
         # Setting a vector with multiple values for the selected parameter
         test_value = crop_model_params_provider[param]
         # We set the value for which test data are available as the last element
-        param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
+        if param in ("KDIFTB", "SLATB"):
+            # AfgenTrait parameters need to have shape (N, M)
+            param_vec = torch.tensor(
+                [
+                    [test_value[0] - delta, test_value[1] - delta],
+                    [test_value[0] + delta, test_value[1] + delta],
+                    [test_value[0], test_value[1]],
+                ]
+            )
+        else:
+            param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
         engine = EngineTestHelper(

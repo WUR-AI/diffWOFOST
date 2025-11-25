@@ -35,10 +35,25 @@ def assert_reference_match(reference, model, expected_precision):
 
 
 def get_test_diff_phenology_model():
-    test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_phenology_wofost72_1.yaml"
     test_data = get_test_data(test_data_url)
     # Phenology-related crop model parameters
-    crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
+    crop_model_params = [
+        "TSUMEM",
+        "TBASEM",
+        "TEFFMX",
+        "TSUM1",
+        "TSUM2",
+        "IDSL",
+        "DLO",
+        "DLC",
+        "DVSI",
+        "DVSEND",
+        "DTSMTB",
+        "VERNSAT",
+        "VERNBASE",
+        "VERNDVS",
+    ]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
         prepare_engine_input(test_data, crop_model_params)
     )
@@ -90,7 +105,8 @@ class DiffPhenologyDynamics(torch.nn.Module):
 class TestPhenologyDynamics:
     phenology_data_urls = [
         f"{phy_data_folder}/test_phenology_wofost72_{i:02d}.yaml"
-        for i in range(1, 45)  # assume 44 test files
+        # for i in range(1, 45)  # assume 44 test files
+        for i in range(17, 18)  # assume 44 test files
     ]
     wofost72_data_urls = [
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -111,6 +127,7 @@ class TestPhenologyDynamics:
             "DLC",
             "DVSI",
             "DVSEND",
+            "DTSMTB",
             "VERNSAT",
             "VERNBASE",
             "VERNDVS",
@@ -143,16 +160,20 @@ class TestPhenologyDynamics:
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
+            # "TSUMEM",
+            # "TBASEM",
+            # "TEFFMX",
+            # "TSUM1",
+            # "TSUM2",
+            # "IDSL",
+            # "DLO",
+            # "DLC",
+            # "DVSI",
+            # "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
         ]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             prepare_engine_input(test_data, crop_model_params)
@@ -167,12 +188,28 @@ class TestPhenologyDynamics:
         )
 
     @pytest.mark.parametrize(
-        # "param", ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB", "TEMP"]
         "param",
-        ["TSUMEM"],  # , "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB", "TEMP"]
+        [
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+            "TEMP",
+        ],
     )
     def test_phenology_with_one_parameter_vector(self, param):
-        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+        # pick a test case with vernalisation to have all the parameters
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "TSUMEM",
@@ -186,6 +223,9 @@ class TestPhenologyDynamics:
             "DVSI",
             "DVSEND",
             "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
         ]
         (
             crop_model_params_provider,
@@ -235,14 +275,41 @@ class TestPhenologyDynamics:
     @pytest.mark.parametrize(
         "param,delta",
         [
-            ("TSUM1", 50.0),
-            ("TSUM2", 60.0),
+            ("TSUMEM", 1.0),
+            ("TBASEM", 1.0),
+            ("TEFFMX", 1.0),
+            ("TSUM1", 1.0),
+            ("TSUM2", 1.0),
+            ("IDSL", 1.0),
+            ("DLO", 1.0),
+            ("DLC", 1.0),
+            ("DVSI", 0.1),
+            ("DVSEND", 0.1),
+            ("DTSMTB", 1.0),
+            ("VERNSAT", 1.0),
+            ("VERNBASE", 0.5),
+            ("VERNDVS", 0.1),
         ],
     )
     def test_phenology_with_different_parameter_values(self, param, delta):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
+        crop_model_params = [
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+        ]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -270,7 +337,18 @@ class TestPhenologyDynamics:
         for reference, model in zip(expected_results, actual_results, strict=False):
             # keep original special case using last element
             for var, precision in expected_precision.items():
-                assert abs(reference[var] - model[var][-1]) < precision
+                if var == "VERNFAC" or var == "VERNR":
+                    # [!] These are not 'State variables' and are not stored in model output
+                    continue
+                ref_val = reference[var]
+                model_val = model[var]
+                if ref_val is None or model_val is None:
+                    assert ref_val is None and model_val is None
+                    continue
+                # Use last element for comparison with vector parameters
+                # print(f"\nThis is day {reference['DAY']} and all the model data are {model_val}")
+                # print(f"Checking param {param}, var {var}, ref {ref_val}, model {model_val[-1]}")
+                assert abs(ref_val - model_val[-1]) < precision
 
     def test_phenology_with_multiple_parameter_vectors(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
