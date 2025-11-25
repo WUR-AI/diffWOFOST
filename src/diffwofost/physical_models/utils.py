@@ -478,16 +478,27 @@ class Afgen:
                 else:
                     x_val = flat_x[0]  # Broadcast first value
 
-                # Boundary conditions
-                if x_val <= x_list[0]:
-                    result = y_list[0]
-                elif x_val >= x_list[-1]:
-                    result = y_list[-1]
-                else:
-                    # Find interval and interpolate
-                    i = torch.searchsorted(x_list, x_val, right=False) - 1
-                    i = torch.clamp(i, 0, len(x_list) - 2)
-                    result = y_list[i] + slopes[i] * (x_val - x_list[i])
+                # Ensure contiguous memory layout for searchsorted
+                x_list_contig = x_list.contiguous()
+                x_val_contig = (
+                    x_val.contiguous()
+                    if isinstance(x_val, torch.Tensor) and x_val.dim() > 0
+                    else x_val
+                )
+
+                # Find interval and interpolate using torch.where for differentiability
+                i = torch.searchsorted(x_list_contig, x_val_contig, right=False) - 1
+                i = torch.clamp(i, 0, len(x_list) - 2)
+
+                # Calculate interpolated value
+                interp_result = y_list[i] + slopes[i] * (x_val - x_list[i])
+
+                # Apply boundary conditions using torch.where
+                result = torch.where(
+                    x_val <= x_list[0],
+                    y_list[0],
+                    torch.where(x_val >= x_list[-1], y_list[-1], interp_result),
+                )
 
                 results.append(result)
 
@@ -495,20 +506,26 @@ class Afgen:
             output = torch.stack(results).reshape(self.batch_shape)
             return output
 
-        # Original scalar logic from pcse
-        # Clamp to boundaries
-        if x <= self.x_list[0]:
-            return self.y_list[0]
-        if x >= self.x_list[-1]:
-            return self.y_list[-1]
+        # Original scalar logic - now tensor compatible
+        # Ensure contiguous memory layout for searchsorted
+        x_list_contig = self.x_list.contiguous()
+        x_contig = x.contiguous() if isinstance(x, torch.Tensor) and x.dim() > 0 else x
 
         # Find interval index using torch.searchsorted for differentiability
-        i = torch.searchsorted(self.x_list, x, right=False) - 1
+        i = torch.searchsorted(x_list_contig, x_contig, right=False) - 1
         i = torch.clamp(i, 0, len(self.x_list) - 2)
 
-        # Linear interpolation
-        v = self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
-        return v
+        # Calculate interpolated value
+        interp_value = self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
+
+        # Apply boundary conditions using torch.where
+        result = torch.where(
+            x <= self.x_list[0],
+            self.y_list[0],
+            torch.where(x >= self.x_list[-1], self.y_list[-1], interp_value),
+        )
+
+        return result
 
     @property
     def shape(self):

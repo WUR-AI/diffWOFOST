@@ -197,9 +197,11 @@ class Vernalisation(SimulationObject):
         self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
         self.rates.VERNFAC = torch.zeros(self.params_shape, dtype=DTYPE)
 
+        TEMP = _get_drv(drv.TEMP, self.params_shape)
+
         if not self.states.ISVERNALISED:
             if torch.all(DVS < VERNDVS):
-                self.rates.VERNR = _broadcast_to(params.VERNRTB(drv.TEMP), self.params_shape)
+                self.rates.VERNR = _broadcast_to(params.VERNRTB(TEMP), self.params_shape)
                 r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
                 self.rates.VERNFAC = torch.clamp(r, 0.0, 1.0)
             else:
@@ -207,7 +209,7 @@ class Vernalisation(SimulationObject):
                 below_threshold = DVS < VERNDVS
                 self.rates.VERNR = torch.where(
                     below_threshold,
-                    _broadcast_to(params.VERNRTB(drv.TEMP), self.params_shape),
+                    _broadcast_to(params.VERNRTB(TEMP), self.params_shape),
                     torch.zeros(self.params_shape, dtype=DTYPE),
                 )
                 r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
@@ -578,7 +580,7 @@ class DVS_Phenology(SimulationObject):
         # Compute rates for vegetative stage (STAGE == 1)
         is_vegetative = s.STAGE == 1
         if torch.any(is_vegetative):
-            base_rate = _broadcast_to(p.DTSMTB(drv.TEMP), shape)
+            base_rate = _broadcast_to(p.DTSMTB(TEMP), shape)
             TSUM1 = _broadcast_to(p.TSUM1, shape)
             dtsum_vegetative = base_rate * VERNFAC * DVRED
             dvr_vegetative = dtsum_vegetative / TSUM1
@@ -589,7 +591,7 @@ class DVS_Phenology(SimulationObject):
         # Compute rates for reproductive stage (STAGE == 2)
         is_reproductive = s.STAGE == 2
         if torch.any(is_reproductive):
-            base_rate = _broadcast_to(p.DTSMTB(drv.TEMP), shape)
+            base_rate = _broadcast_to(p.DTSMTB(TEMP), shape)
             TSUM2 = _broadcast_to(p.TSUM2, shape)
             dtsum_reproductive = base_rate
             dvr_reproductive = dtsum_reproductive / TSUM2
