@@ -159,11 +159,13 @@ class Vernalisation(SimulationObject):
         self.params.VERNBASE = _broadcast_to(self.params.VERNBASE, self.params_shape)
         self.params.VERNDVS = _broadcast_to(self.params.VERNDVS, self.params_shape)
 
+        # Initialize VERNFAC rate to 0.0
+        self.rates.VERNFAC = torch.zeros(self.params_shape, dtype=DTYPE)
+
         # Define initial states
         self.states = self.StateVariables(
             kiosk,
             VERN=torch.zeros(self.params_shape, dtype=DTYPE),
-            VERNFAC=torch.zeros(self.params_shape, dtype=DTYPE),
             DOV=torch.full(self.params_shape, -1.0, dtype=DTYPE),  # -1 indicates not yet fulfilled
             ISVERNALISED=False,
             publish=["ISVERNALISED"],
@@ -191,15 +193,31 @@ class Vernalisation(SimulationObject):
         VERNBASE = _broadcast_to(params.VERNBASE, self.params_shape)
         DVS = _broadcast_to(self.kiosk["DVS"], self.params_shape)
 
+        # Initialize rates to zero
+        self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
+        self.rates.VERNFAC = torch.zeros(self.params_shape, dtype=DTYPE)
+
         if not self.states.ISVERNALISED:
             if torch.all(DVS < VERNDVS):
                 self.rates.VERNR = _broadcast_to(params.VERNRTB(drv.TEMP), self.params_shape)
                 r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
                 self.rates.VERNFAC = torch.clamp(r, 0.0, 1.0)
             else:
-                self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
-                self.rates.VERNFAC = torch.ones(self.params_shape, dtype=DTYPE)
-                self._force_vernalisation = True
+                # In batch mode, some might be below VERNDVS, some above
+                below_threshold = DVS < VERNDVS
+                self.rates.VERNR = torch.where(
+                    below_threshold,
+                    _broadcast_to(params.VERNRTB(drv.TEMP), self.params_shape),
+                    torch.zeros(self.params_shape, dtype=DTYPE),
+                )
+                r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
+                vernfac_computed = torch.clamp(r, 0.0, 1.0)
+                self.rates.VERNFAC = torch.where(
+                    below_threshold, vernfac_computed, torch.ones(self.params_shape, dtype=DTYPE)
+                )
+                # Set flag if any crossed threshold
+                if torch.any(~below_threshold):
+                    self._force_vernalisation = True
         else:
             self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
             self.rates.VERNFAC = torch.ones(self.params_shape, dtype=DTYPE)
@@ -523,10 +541,10 @@ class DVS_Phenology(SimulationObject):
         dvred_active = torch.clamp((DAYLP_t - DLC) / (DLO - DLC), 0.0, 1.0)
         DVRED = torch.where(IDSL >= 1, dvred_active, torch.ones(shape, dtype=DTYPE))
 
-        # Vernalisation factor
+        # Vernalisation factor - always compute if module exists
         VERNFAC = torch.ones(shape, dtype=DTYPE)
-        # Always compute vernalisation rates if module exists (for differentiability)
         if hasattr(self, "vernalisation") and self.vernalisation is not None:
+            # Always call calc_rates (it handles stage internally now)
             self.vernalisation.calc_rates(day, drv)
             vernfac_value = _broadcast_to(self.kiosk["VERNFAC"], shape)
             # Apply vernalisation only where IDSL >= 2 AND in vegetative stage
@@ -616,9 +634,11 @@ class DVS_Phenology(SimulationObject):
         s = self.states
         shape = self.params_shape
 
-        # Integrate vernalisation module
+        # Integrate vernalisation module - always call if it exists, it will handle masking
         if self.vernalisation is not None:
-            self.vernalisation.integrate(day, delt)
+            # Check if any element is in vegetative stage
+            if torch.any(s.STAGE == 1):
+                self.vernalisation.integrate(day, delt)
 
         # Integrate phenologic states
         s.TSUME = s.TSUME + r.DTSUME
