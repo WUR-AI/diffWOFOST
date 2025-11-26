@@ -105,8 +105,7 @@ class DiffPhenologyDynamics(torch.nn.Module):
 class TestPhenologyDynamics:
     phenology_data_urls = [
         f"{phy_data_folder}/test_phenology_wofost72_{i:02d}.yaml"
-        for i in range(17, 18)  # assume 44 test files
-        # for i in range(1, 45)  # assume 44 test files
+        for i in range(1, 45)  # assume 44 test files
     ]
     wofost72_data_urls = [
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -275,20 +274,20 @@ class TestPhenologyDynamics:
     @pytest.mark.parametrize(
         "param,delta",
         [
-            # ("TSUMEM", 1.0),
+            ("TSUMEM", 1.0),
             ("TBASEM", 1.0),
-            # ("TEFFMX", 1.0),
-            # ("TSUM1", 1.0),
-            # ("TSUM2", 1.0),
-            # ("IDSL", 1.0),
-            # ("DLO", 1.0),
-            # ("DLC", 1.0),
-            # ("DVSI", 0.1),
-            # ("DVSEND", 0.1),
-            # ("DTSMTB", 1.0),
-            # ("VERNSAT", 1.0),
-            # ("VERNBASE", 0.5),
-            # ("VERNDVS", 0.1),
+            ("TEFFMX", 1.0),
+            ("TSUM1", 1.0),
+            ("TSUM2", 1.0),
+            ("IDSL", 1.0),
+            ("DLO", 1.0),
+            ("DLC", 1.0),
+            ("DVSI", 0.1),
+            ("DVSEND", 0.1),
+            ("DTSMTB", 1.0),
+            ("VERNSAT", 1.0),
+            ("VERNBASE", 0.5),
+            ("VERNDVS", 0.1),
         ],
     )
     def test_phenology_with_different_parameter_values(self, param, delta):
@@ -352,7 +351,7 @@ class TestPhenologyDynamics:
         actual_results = engine.get_output()
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
-        # assert len(actual_results) == len(expected_results)
+        assert len(actual_results) == len(expected_results)
         for reference, model in zip(expected_results, actual_results, strict=False):
             # keep original special case using last element
             for var, precision in expected_precision.items():
@@ -365,14 +364,27 @@ class TestPhenologyDynamics:
                     assert ref_val is None and model_val is None
                     continue
                 # Use last element for comparison with vector parameters
-                print(f"\nThis is day {reference['DAY']} and all the model data are {model_val}")
-                print(f"Checking param {param}, var {var}, ref {ref_val}, model {model_val[-1]}")
                 assert abs(ref_val - model_val[-1]) < precision
 
     def test_phenology_with_multiple_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
+        crop_model_params = [
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+        ]
         (
             crop_model_params_provider,
             weather_data_provider,
