@@ -151,7 +151,7 @@ class Vernalisation(SimulationObject):
                     f"Vernalisation params shape {self.params_shape}"
                     + " incompatible with dvs_shape {dvs_shape}"
                 )
-        self.rates = self.RateVariables(kiosk, publish=["VERNFAC", "VERNR"])
+        self.rates = self.RateVariables(kiosk, publish=["VERNFAC"])
         self.kiosk = kiosk
 
         # Explicitly broadcast all parameters to params_shape
@@ -159,13 +159,11 @@ class Vernalisation(SimulationObject):
         self.params.VERNBASE = _broadcast_to(self.params.VERNBASE, self.params_shape)
         self.params.VERNDVS = _broadcast_to(self.params.VERNDVS, self.params_shape)
 
-        # Initialize VERNFAC rate to 0.0
-        self.rates.VERNFAC = torch.zeros(self.params_shape, dtype=DTYPE)
-
         # Define initial states
         self.states = self.StateVariables(
             kiosk,
             VERN=torch.zeros(self.params_shape, dtype=DTYPE),
+            VERNFAC=torch.zeros(self.params_shape, dtype=DTYPE),
             DOV=torch.full(self.params_shape, -1.0, dtype=DTYPE),  # -1 indicates not yet fulfilled
             ISVERNALISED=False,
             publish=["ISVERNALISED"],
@@ -186,32 +184,24 @@ class Vernalisation(SimulationObject):
             - After fulfillment: VERNR=0, VERNFAC=1.
         """
         params = self.params
-
-        # broadcast critical params
-        VERNDVS = _broadcast_to(params.VERNDVS, self.params_shape)
-        VERNSAT = _broadcast_to(params.VERNSAT, self.params_shape)
-        VERNBASE = _broadcast_to(params.VERNBASE, self.params_shape)
-        DVS = _broadcast_to(self.kiosk["DVS"], self.params_shape)
-
-        # Initialize rates to zero
-        self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
-        self.rates.VERNFAC = torch.zeros(self.params_shape, dtype=DTYPE)
+        VERNDVS = params.VERNDVS
+        VERNSAT = params.VERNSAT
+        VERNBASE = params.VERNBASE
+        DVS = self.kiosk["DVS"]
 
         TEMP = _get_drv(drv.TEMP, self.params_shape)
-        print(f"\nVernalisation calc_rates called with TEMP={TEMP} at day {day}")
 
         if not self.states.ISVERNALISED:
             if torch.all(DVS < VERNDVS):
-                self.rates.VERNR = _broadcast_to(params.VERNRTB(TEMP), self.params_shape)
+                self.rates.VERNR = params.VERNRTB(TEMP)
                 r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
                 self.rates.VERNFAC = torch.clamp(r, 0.0, 1.0)
-                print("branch all below VERNDVS")
             else:
                 # In batch mode, some might be below VERNDVS, some above
                 below_threshold = DVS < VERNDVS
                 self.rates.VERNR = torch.where(
                     below_threshold,
-                    _broadcast_to(params.VERNRTB(TEMP), self.params_shape),
+                    params.VERNRTB(TEMP),
                     torch.zeros(self.params_shape, dtype=DTYPE),
                 )
                 r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
@@ -222,12 +212,9 @@ class Vernalisation(SimulationObject):
                 # Set flag if any crossed threshold
                 if torch.any(~below_threshold):
                     self._force_vernalisation = True
-                print("branch mixed VERNDVS")
         else:
             self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
             self.rates.VERNFAC = torch.ones(self.params_shape, dtype=DTYPE)
-            print("branch all vernalised")
-        print(f" VERNR={self.rates.VERNR}, VERNFAC={self.rates.VERNFAC}")
 
     @prepare_states
     def integrate(self, day, delt=1.0):
@@ -252,7 +239,7 @@ class Vernalisation(SimulationObject):
         rates = self.rates
         params = self.params
 
-        VERNSAT = _broadcast_to(params.VERNSAT, self.params_shape)
+        VERNSAT = params.VERNSAT
         states.VERN = states.VERN + rates.VERNR
 
         reached = states.VERN >= VERNSAT
@@ -536,28 +523,21 @@ class DVS_Phenology(SimulationObject):
         shape = self.params_shape
 
         # Day length sensitivity
-        IDSL = _broadcast_to(p.IDSL, shape)
-
-        # Always compute daylength components (for differentiability)
         DAYLP = daylength(day, drv.LAT)
         DAYLP_t = _broadcast_to(DAYLP, shape)
-        DLC = _broadcast_to(p.DLC, shape)
-        DLO = _broadcast_to(p.DLO, shape)
-
         # Compute DVRED conditionally based on IDSL >= 1
-        dvred_active = torch.clamp((DAYLP_t - DLC) / (DLO - DLC), 0.0, 1.0)
-        DVRED = torch.where(IDSL >= 1, dvred_active, torch.ones(shape, dtype=DTYPE))
+        dvred_active = torch.clamp((DAYLP_t - p.DLC) / (p.DLO - p.DLC), 0.0, 1.0)
+        DVRED = torch.where(p.IDSL >= 1, dvred_active, torch.ones(shape, dtype=DTYPE))
 
         # Vernalisation factor - always compute if module exists
         VERNFAC = torch.ones(shape, dtype=DTYPE)
         if hasattr(self, "vernalisation") and self.vernalisation is not None:
             # Always call calc_rates (it handles stage internally now)
             self.vernalisation.calc_rates(day, drv)
-            vernfac_value = _broadcast_to(self.kiosk["VERNFAC"], shape)
             # Apply vernalisation only where IDSL >= 2 AND in vegetative stage
             is_vegetative = s.STAGE == 1
             VERNFAC = torch.where(
-                (IDSL >= 2) & is_vegetative, vernfac_value, torch.ones(shape, dtype=DTYPE)
+                (p.IDSL >= 2) & is_vegetative, self.kiosk["VERNFAC"], torch.ones(shape, dtype=DTYPE)
             )
 
         TEMP = _get_drv(drv.TEMP, shape)
@@ -570,14 +550,11 @@ class DVS_Phenology(SimulationObject):
         # Compute rates for emerging stage (STAGE == 0)
         is_emerging = s.STAGE == 0
         if torch.any(is_emerging):
-            TEFFMX = _broadcast_to(p.TEFFMX, shape)
-            TBASEM = _broadcast_to(p.TBASEM, shape)
-            TSUMEM = _broadcast_to(p.TSUMEM, shape)
-            temp_diff = TEMP - TBASEM
-            max_diff = TEFFMX - TBASEM
+            temp_diff = TEMP - p.TBASEM
+            max_diff = p.TEFFMX - p.TBASEM
             dtsume_emerging = torch.clamp(temp_diff, min=0.0)
             dtsume_emerging = torch.minimum(dtsume_emerging, max_diff)
-            dvr_emerging = torch.mul(dtsume_emerging, 0.1) / TSUMEM
+            dvr_emerging = 0.1 * dtsume_emerging / p.TSUMEM
 
             r.DTSUME = torch.where(is_emerging, dtsume_emerging, r.DTSUME)
             r.DVR = torch.where(is_emerging, dvr_emerging, r.DVR)
@@ -585,10 +562,8 @@ class DVS_Phenology(SimulationObject):
         # Compute rates for vegetative stage (STAGE == 1)
         is_vegetative = s.STAGE == 1
         if torch.any(is_vegetative):
-            base_rate = _broadcast_to(p.DTSMTB(TEMP), shape)
-            TSUM1 = _broadcast_to(p.TSUM1, shape)
-            dtsum_vegetative = base_rate * VERNFAC * DVRED
-            dvr_vegetative = dtsum_vegetative / TSUM1
+            dtsum_vegetative = p.DTSMTB(TEMP) * VERNFAC * DVRED
+            dvr_vegetative = dtsum_vegetative / p.TSUM1
 
             r.DTSUM = torch.where(is_vegetative, dtsum_vegetative, r.DTSUM)
             r.DVR = torch.where(is_vegetative, dvr_vegetative, r.DVR)
@@ -596,10 +571,8 @@ class DVS_Phenology(SimulationObject):
         # Compute rates for reproductive stage (STAGE == 2)
         is_reproductive = s.STAGE == 2
         if torch.any(is_reproductive):
-            base_rate = _broadcast_to(p.DTSMTB(TEMP), shape)
-            TSUM2 = _broadcast_to(p.TSUM2, shape)
-            dtsum_reproductive = base_rate
-            dvr_reproductive = dtsum_reproductive / TSUM2
+            dtsum_reproductive = p.DTSMTB(TEMP)
+            dvr_reproductive = dtsum_reproductive / p.TSUM2
 
             r.DTSUM = torch.where(is_reproductive, dtsum_reproductive, r.DTSUM)
             r.DVR = torch.where(is_reproductive, dvr_reproductive, r.DVR)
@@ -676,12 +649,11 @@ class DVS_Phenology(SimulationObject):
 
         # Check transitions for reproductive -> mature (STAGE 2 -> 3)
         is_reproductive = s.STAGE == 2
-        DVSEND = _broadcast_to(p.DVSEND, shape)
-        should_mature = is_reproductive & (s.DVS >= DVSEND)
+        should_mature = is_reproductive & (s.DVS >= p.DVSEND)
         if torch.any(should_mature):
             s.STAGE = torch.where(should_mature, torch.full(shape, 3, dtype=torch.long), s.STAGE)
             s.DOM = torch.where(should_mature, torch.full(shape, day_ordinal, dtype=DTYPE), s.DOM)
-            s.DVS = torch.where(should_mature, torch.minimum(s.DVS, DVSEND), s.DVS)
+            s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
 
             # Send crop_finish signal if any crop matured
             if torch.any(should_mature) and p.CROP_END_TYPE in ["maturity", "earliest"]:
@@ -691,18 +663,6 @@ class DVS_Phenology(SimulationObject):
 
         msg = "Finished state integration for %s"
         self.logger.debug(msg % day)
-
-    def _next_stage(self, day):
-        """Advance to next phenological stage and record event date.
-
-        NOTE: This method is deprecated in favor of element-wise transitions in integrate().
-        Kept for backward compatibility but should not be called with tensor-based states.
-
-        Args:
-            day (datetime.date): Date when transition occurs.
-        """
-        msg = "_next_stage() called but element-wise transitions are handled in integrate()"
-        self.logger.warning(msg)
 
     def _on_CROP_FINISH(self, day, finish_type=None):
         """Handle external crop finish signal to set harvest date.
