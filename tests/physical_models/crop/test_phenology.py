@@ -35,7 +35,7 @@ def assert_reference_match(reference, model, expected_precision):
 
 
 def get_test_diff_phenology_model():
-    test_data_url = f"{phy_data_folder}/test_phenology_wofost72_1.yaml"
+    test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     # Phenology-related crop model parameters
     crop_model_params = [
