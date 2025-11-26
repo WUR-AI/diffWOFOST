@@ -151,7 +151,10 @@ class Vernalisation(SimulationObject):
                     f"Vernalisation params shape {self.params_shape}"
                     + " incompatible with dvs_shape {dvs_shape}"
                 )
+        # Explicitly initialize rates
         self.rates = self.RateVariables(kiosk, publish=["VERNFAC"])
+        self.rates.VERNR = _broadcast_to(self.rates.VERNR, self.params_shape)
+        self.rates.VERNFAC = _broadcast_to(self.rates.VERNFAC, self.params_shape)
         self.kiosk = kiosk
 
         # Explicitly broadcast all parameters to params_shape
@@ -163,7 +166,6 @@ class Vernalisation(SimulationObject):
         self.states = self.StateVariables(
             kiosk,
             VERN=torch.zeros(self.params_shape, dtype=DTYPE),
-            VERNFAC=torch.zeros(self.params_shape, dtype=DTYPE),
             DOV=torch.full(self.params_shape, -1.0, dtype=DTYPE),  # -1 indicates not yet fulfilled
             ISVERNALISED=False,
             publish=["ISVERNALISED"],
@@ -192,26 +194,34 @@ class Vernalisation(SimulationObject):
         TEMP = _get_drv(drv.TEMP, self.params_shape)
 
         if not self.states.ISVERNALISED:
-            if torch.all(DVS < VERNDVS):
-                self.rates.VERNR = params.VERNRTB(TEMP)
-                r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
-                self.rates.VERNFAC = torch.clamp(r, 0.0, 1.0)
-            else:
-                # In batch mode, some might be below VERNDVS, some above
-                below_threshold = DVS < VERNDVS
+            # Only consider plants that are in the vegetative window:
+            # vegetative_mask == True for 0 <= DVS < VERNDVS
+            vegetative_mask = (DVS >= 0.0) & (DVS < VERNDVS)
+
+            if torch.any(vegetative_mask):
+                # VERNR only for vegetative elements
                 self.rates.VERNR = torch.where(
-                    below_threshold,
+                    vegetative_mask,
                     params.VERNRTB(TEMP),
                     torch.zeros(self.params_shape, dtype=DTYPE),
                 )
+
                 r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
                 vernfac_computed = torch.clamp(r, 0.0, 1.0)
                 self.rates.VERNFAC = torch.where(
-                    below_threshold, vernfac_computed, torch.ones(self.params_shape, dtype=DTYPE)
+                    vegetative_mask,
+                    vernfac_computed,
+                    torch.ones(self.params_shape, dtype=DTYPE),
                 )
-                # Set flag if any crossed threshold
-                if torch.any(~below_threshold):
+
+                # If any element is outside vegetative_mask and not vernalised yet,
+                # mark force flag so integrate() can handle forced vernalisation.
+                if torch.any(~vegetative_mask):
                     self._force_vernalisation = True
+            else:
+                # no vegetative elements -> nothing to accumulate
+                self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
+                self.rates.VERNFAC = torch.ones(self.params_shape, dtype=DTYPE)
         else:
             self.rates.VERNR = torch.zeros(self.params_shape, dtype=DTYPE)
             self.rates.VERNFAC = torch.ones(self.params_shape, dtype=DTYPE)
@@ -240,6 +250,7 @@ class Vernalisation(SimulationObject):
         params = self.params
 
         VERNSAT = params.VERNSAT
+        print(f"VERN increase on day {day}: {rates.VERNR}")
         states.VERN = states.VERN + rates.VERNR
 
         reached = states.VERN >= VERNSAT
@@ -255,13 +266,11 @@ class Vernalisation(SimulationObject):
             states.ISVERNALISED = True
 
             # Write log message to warn about forced vernalisation
-            msg = (
-                "Critical DVS for vernalization (VERNDVS) reached "
-                + "at day %s, "
-                + "but vernalization requirements not yet fulfilled. "
-                + "Forcing vernalization now (VERN=%f)."
+            self.logger.warning(
+                f"Critical DVS for vernalization (VERNDVS) reached at day {day}, "
+                f"but vernalization requirements not yet fulfilled. "
+                f"Forcing vernalization now (VERN={states.VERN})."
             )
-            self.logger.warning(msg % (day, states.VERN))
 
         else:  # Reduction factor for phenologic development
             states.ISVERNALISED = False
@@ -551,13 +560,16 @@ class DVS_Phenology(SimulationObject):
         is_emerging = s.STAGE == 0
         if torch.any(is_emerging):
             temp_diff = TEMP - p.TBASEM
-            max_diff = p.TEFFMX - p.TBASEM
+            print(f"temp_diff for emerging on day {day}: {temp_diff}")
+            # Ensure the maximum effective temperature difference is non-negative
+            max_diff = torch.clamp(p.TEFFMX - p.TBASEM, min=0.0)
             dtsume_emerging = torch.clamp(temp_diff, min=0.0)
             dtsume_emerging = torch.minimum(dtsume_emerging, max_diff)
             dvr_emerging = 0.1 * dtsume_emerging / p.TSUMEM
 
             r.DTSUME = torch.where(is_emerging, dtsume_emerging, r.DTSUME)
             r.DVR = torch.where(is_emerging, dvr_emerging, r.DVR)
+            print(f"DTSUME for emerging on day {day}: {r.DTSUME}\nDVR: {r.DVR}")
 
         # Compute rates for vegetative stage (STAGE == 1)
         is_vegetative = s.STAGE == 1
