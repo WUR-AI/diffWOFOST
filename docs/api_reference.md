@@ -15,7 +15,7 @@ hide:
 
 ::: diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics
 
-::: diffwofost.physical_models.crop.phenology.DVS_phenology
+::: diffwofost.physical_models.crop.phenology.DVS_Phenology
 
 ## **Utility (under development)**
 
