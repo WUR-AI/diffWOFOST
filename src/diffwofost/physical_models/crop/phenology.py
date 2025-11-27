@@ -143,7 +143,7 @@ class Vernalisation(SimulationObject):
         if dvs_shape is not None:
             if self.params_shape == ():
                 self.params_shape = dvs_shape
-            else:
+            elif self.params_shape != dvs_shape:
                 raise ValueError(
                     f"Vernalisation params shape {self.params_shape}"
                     + " incompatible with dvs_shape {dvs_shape}"

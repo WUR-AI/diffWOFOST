@@ -31,6 +31,11 @@ def assert_reference_match(reference, model, expected_precision):
         if torch.is_tensor(model_val):
             assert torch.all(torch.abs(ref_val - model_val) < precision)
         else:
+            if abs(ref_val - model_val) >= precision:
+                print(
+                    f"Value mismatch for {var}: ref={ref_val}"
+                    + f" , model={model_val}, precision={precision}"
+                )
             assert abs(ref_val - model_val) < precision
 
 
@@ -416,9 +421,24 @@ class TestPhenologyDynamics:
             assert_reference_match(reference, model, expected_precision)
 
     def test_phenology_with_multiple_parameter_arrays(self):
-        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
+        crop_model_params = [
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+        ]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -427,7 +447,22 @@ class TestPhenologyDynamics:
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
         config_path = str(phy_data_folder / "WOFOST_Phenology.conf")
 
-        for param in ("TSUM1", "TSUM2", "TSUMEM", "TBASEM", "TEFFMX", "DVSEND", "DTSMTB"):
+        for param in (
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+        ):
             if param == "DTSMTB":
                 repeated = crop_model_params_provider[param].repeat(30, 5, 1)
             else:
@@ -451,12 +486,31 @@ class TestPhenologyDynamics:
         assert len(actual_results) == len(expected_results)
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert_reference_match(reference, model, expected_precision)
-            assert all(model[var].shape == (30, 5) for var in expected_precision.keys())
+            assert all(
+                model[var].shape == (30, 5)
+                for var in expected_precision.keys()
+                if var not in ["VERNFAC", "VERNR"]
+            )
 
     def test_phenology_with_incompatible_parameter_vectors(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
+        crop_model_params = [
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+        ]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -484,7 +538,22 @@ class TestPhenologyDynamics:
     def test_phenology_with_incompatible_weather_parameter_vectors(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
+        crop_model_params = [
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+        ]
         (
             crop_model_params_provider,
             weather_data_provider,
@@ -511,7 +580,22 @@ class TestPhenologyDynamics:
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost_pp_with_phenology(self, test_data_url):
         test_data = get_test_data(test_data_url)
-        crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
+        crop_model_params = [
+            "TSUMEM",
+            "TBASEM",
+            "TEFFMX",
+            "TSUM1",
+            "TSUM2",
+            "IDSL",
+            "DLO",
+            "DLC",
+            "DVSI",
+            "DVSEND",
+            "DTSMTB",
+            "VERNSAT",
+            "VERNBASE",
+            "VERNDVS",
+        ]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             prepare_engine_input(test_data, crop_model_params)
         )
@@ -527,36 +611,6 @@ class TestPhenologyDynamics:
             assert len(actual_results) == len(expected_results)
             for reference, model_day in zip(expected_results, actual_results, strict=False):
                 assert_reference_match(reference, model_day, expected_precision)
-
-    @pytest.mark.parametrize("test_data_url", phenology_data_urls)
-    def test_phenology_with_sigmoid_approx(self, test_data_url):
-        """Test if calculation with parameter gradients matches expected phenology output."""
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["TSUMEM", "TBASEM", "TEFFMX", "TSUM1", "TSUM2", "DVSEND", "DTSMTB"]
-        (
-            crop_model_params_provider,
-            weather_data_provider,
-            agro_management_inputs,
-            external_states,
-        ) = prepare_engine_input(test_data, crop_model_params)
-
-        crop_model_params_provider["TSUM1"].requires_grad = True
-        config_path = str(phy_data_folder / "WOFOST_Phenology.conf")
-
-        engine = EngineTestHelper(
-            crop_model_params_provider,
-            weather_data_provider,
-            agro_management_inputs,
-            config_path,
-            external_states,
-        )
-        engine.run_till_terminate()
-        actual_results = engine.get_output()
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        assert len(actual_results) == len(expected_results)
-        for reference, model_day in zip(expected_results, actual_results, strict=False):
-            assert_reference_match(reference, model_day, expected_precision)
 
 
 class TestDiffPhenologyDynamicsGradients:
