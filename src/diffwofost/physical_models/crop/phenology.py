@@ -27,6 +27,7 @@ from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import _get_params_shape
 
 DTYPE = torch.float64  # Default data type for tensors in this module
+EPS = torch.tensor(1e-8, dtype=DTYPE)  # Small epsilon to avoid div by zero
 
 
 class Vernalisation(SimulationObject):
@@ -203,7 +204,9 @@ class Vernalisation(SimulationObject):
         )
 
         # compute VERNFAC from current VERN for vegetative elements; others = 1
-        r = (self.states.VERN - VERNBASE) / (VERNSAT - VERNBASE)
+        safe_den = VERNSAT - VERNBASE
+        safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+        r = (self.states.VERN - VERNBASE) / safe_den
         vernfac_computed = torch.clamp(r, 0.0, 1.0)
         self.rates.VERNFAC = torch.where(
             vegetative_mask, vernfac_computed, torch.ones(self.params_shape, dtype=DTYPE)
@@ -333,6 +336,18 @@ class DVS_Phenology(SimulationObject):
 
     `DVS_Phenology` sends the `crop_finish` signal when maturity is
     reached and the `end_type` is 'maturity' or 'earliest'.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                |
+    |--------|------------------------------------------|
+    | DVS    | ... |
+    | TSUM   | ... |
+
+    [!] Notice that the following gradients are zero:
+        - ∂DVS/∂TEFFMX
+
+    [!] The parameter IDSL it is not differentiable since it is a switch
     """
 
     # Placeholder for start/stop types and vernalisation module
@@ -434,8 +449,8 @@ class DVS_Phenology(SimulationObject):
         STAGE = _broadcast_to(STAGE, self.params_shape)
 
         # Also ensure TSUM and TSUME are properly shaped
-        TSUM = torch.zeros(self.params_shape, dtype=DTYPE)
-        TSUME = torch.zeros(self.params_shape, dtype=DTYPE)
+        TSUM = torch.zeros(self.params_shape, dtype=DTYPE, requires_grad=True)
+        TSUME = torch.zeros(self.params_shape, dtype=DTYPE, requires_grad=True)
 
         self.states = self.StateVariables(
             kiosk,
@@ -526,7 +541,9 @@ class DVS_Phenology(SimulationObject):
         DAYLP = daylength(day, drv.LAT)
         DAYLP_t = _broadcast_to(DAYLP, shape)
         # Compute DVRED conditionally based on IDSL >= 1
-        dvred_active = torch.clamp((DAYLP_t - p.DLC) / (p.DLO - p.DLC), 0.0, 1.0)
+        safe_den = p.DLO - p.DLC
+        safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+        dvred_active = torch.clamp((DAYLP_t - p.DLC) / safe_den, 0.0, 1.0)
         DVRED = torch.where(p.IDSL >= 1, dvred_active, torch.ones(shape, dtype=DTYPE))
 
         # Vernalisation factor - always compute if module exists
@@ -555,7 +572,9 @@ class DVS_Phenology(SimulationObject):
             max_diff = torch.clamp(p.TEFFMX - p.TBASEM, min=0.0)
             dtsume_emerging = torch.clamp(temp_diff, min=0.0)
             dtsume_emerging = torch.minimum(dtsume_emerging, max_diff)
-            dvr_emerging = 0.1 * dtsume_emerging / p.TSUMEM
+            safe_den = p.TSUMEM
+            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+            dvr_emerging = 0.1 * dtsume_emerging / safe_den
 
             r.DTSUME = torch.where(is_emerging, dtsume_emerging, r.DTSUME)
             r.DVR = torch.where(is_emerging, dvr_emerging, r.DVR)
@@ -564,7 +583,9 @@ class DVS_Phenology(SimulationObject):
         is_vegetative = s.STAGE == 1
         if torch.any(is_vegetative):
             dtsum_vegetative = p.DTSMTB(TEMP) * VERNFAC * DVRED
-            dvr_vegetative = dtsum_vegetative / p.TSUM1
+            safe_den = p.TSUM1
+            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+            dvr_vegetative = dtsum_vegetative / safe_den
 
             r.DTSUM = torch.where(is_vegetative, dtsum_vegetative, r.DTSUM)
             r.DVR = torch.where(is_vegetative, dvr_vegetative, r.DVR)
@@ -573,7 +594,9 @@ class DVS_Phenology(SimulationObject):
         is_reproductive = s.STAGE == 2
         if torch.any(is_reproductive):
             dtsum_reproductive = p.DTSMTB(TEMP)
-            dvr_reproductive = dtsum_reproductive / p.TSUM2
+            safe_den = p.TSUM2
+            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+            dvr_reproductive = dtsum_reproductive / safe_den
 
             r.DTSUM = torch.where(is_reproductive, dtsum_reproductive, r.DTSUM)
             r.DVR = torch.where(is_reproductive, dvr_reproductive, r.DVR)

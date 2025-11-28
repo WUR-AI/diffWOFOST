@@ -3,7 +3,6 @@ import warnings
 from unittest.mock import patch
 import pytest
 import torch
-from numpy.testing import assert_array_almost_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.phenology import DVS_Phenology
@@ -616,45 +615,74 @@ class TestPhenologyDynamics:
 class TestDiffPhenologyDynamicsGradients:
     """Parametrized tests for gradient calculations in phenology dynamics."""
 
-    param_names = ["TSUMEM", "TSUM1", "TSUM2", "TBASEM", "TEFFMX", "DVSEND", "DTSMTB"]
+    # Check if they contribute to gradients of outputs
+    param_names = [
+        "TSUMEM",
+        "TBASEM",
+        "TEFFMX",
+        "TSUM1",
+        "TSUM2",
+        "DLO",
+        "DLC",
+        "DVSEND",
+        "DTSMTB",
+        # "VERNSAT",  [!] Not yet finalized
+        # "VERNBASE",
+        # "VERNDVS",
+    ]
     output_names = ["DVS", "TSUM"]
 
     param_configs = {
         "single": {
             "TSUMEM": (50.0, torch.float64),
-            "TSUM1": (500.0, torch.float64),
-            "TSUM2": (600.0, torch.float64),
             "TBASEM": (0.0, torch.float64),
             "TEFFMX": (35.0, torch.float64),
+            "TSUM1": (500.0, torch.float64),
+            "TSUM2": (600.0, torch.float64),
+            "DLO": (0.5, torch.float64),
+            "DLC": (0.5, torch.float64),
             "DVSEND": (2.0, torch.float64),
-            "DTSMTB": ([[0, 0], [10, 5], [20, 15], [30, 20]], torch.float64),
+            "DTSMTB": ([0.0, 0.0, 35.0, 35.0, 45.0, 35.0], torch.float64),
+            "VERNSAT": (15.0, torch.float64),
+            "VERNBASE": (5.0, torch.float64),
+            "VERNDVS": (0.5, torch.float64),
         },
         "tensor": {
             "TSUMEM": ([45.0, 50.0, 55.0], torch.float64),
-            "TSUM1": ([450.0, 500.0, 550.0], torch.float64),
-            "TSUM2": ([550.0, 600.0, 650.0], torch.float64),
             "TBASEM": ([-2.0, 0.0, 2.0], torch.float64),
             "TEFFMX": ([32.0, 35.0, 38.0], torch.float64),
+            "TSUM1": ([450.0, 500.0, 550.0], torch.float64),
+            "TSUM2": ([550.0, 600.0, 650.0], torch.float64),
+            "DLO": ([0.4, 0.5, 0.6], torch.float64),
+            "DLC": ([0.4, 0.5, 0.6], torch.float64),
             "DVSEND": ([1.9, 2.0, 2.1], torch.float64),
             "DTSMTB": (
                 [
                     [0, 0, 15, 8, 30, 18],
-                    [0, 0, 15, 9, 30, 19],
-                    [0, 0, 15, 10, 30, 20],
+                    [0, 0, 5, 9, 10, 19],
+                    [0, 0, 25, 1, 30, 20],
                 ],
                 torch.float64,
             ),
+            "VERNSAT": ([14.0, 15.0, 16.0], torch.float64),
+            "VERNBASE": ([4.0, 5.0, 6.0], torch.float64),
+            "VERNDVS": ([0.4, 0.5, 0.6], torch.float64),
         },
     }
-
     gradient_mapping = {
-        "TSUMEM": ["DVS", "TSUM"],
-        "TSUM1": ["DVS", "TSUM"],
-        "TSUM2": ["DVS", "TSUM"],
-        "TBASEM": ["DVS", "TSUM"],
-        "TEFFMX": ["DVS", "TSUM"],
+        "TSUMEM": ["DVS"],
+        "TBASEM": ["DVS"],
+        "TEFFMX": ["DVS"],
+        "TSUM1": ["DVS"],
+        "TSUM2": ["DVS"],
+        "DLO": ["DVS"],
+        "DLC": ["DVS"],
+        "DVSI": ["DVS", "TSUM"],
+        "DVSEND": ["DVS"],
         "DTSMTB": ["DVS", "TSUM"],
-        "DVSEND": [],  # acts as cap; treat as no gradient target
+        "VERNSAT": ["DVS", "TSUM"],
+        "VERNBASE": ["DVS", "TSUM"],
+        "VERNDVS": ["DVS", "TSUM"],
     }
 
     gradient_params = []
@@ -708,7 +736,10 @@ class TestDiffPhenologyDynamicsGradients:
         output = model({param_name: param})
         loss = output[output_name].sum()
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
-        assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
+        rtol = 0.005
+        assert torch.all(
+            torch.abs(numerical_grad - grads.data) / (torch.abs(grads.data) + 1e-8) < rtol
+        )
         if torch.all(grads == 0):
             warnings.warn(
                 f"Gradient for par '{param_name}' wrt out '{output_name}' is zero: {grads.data}",
