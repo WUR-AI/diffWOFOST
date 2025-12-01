@@ -732,14 +732,13 @@ class DVS_Phenology(SimulationObject):
     def get_variable(self, varname):
         # TODO: should be removed while fixing #49. this is needed because
         # conditions are applied on STAGE in pcse.crop.wofost72.py
-        """ Return the value of the specified state or rate variable.
+        """Return the value of the specified state or rate variable.
 
         :param varname: Name of the variable.
 
         Note that the `get_variable()` will searches for `varname` exactly
         as specified (case sensitive).
         """
-
         if varname == "STAGE":
             # Return string representation of current stage
             stage_map = {
@@ -748,7 +747,7 @@ class DVS_Phenology(SimulationObject):
                 2: "reproductive",
                 3: "mature",
             }
-            stage_value = getattr(self.states, "STAGE")
+            stage_value = self.states.STAGE
             if stage_value.dim() != 0:
                 stage_id = stage_value.flatten()[0].item()
             else:
