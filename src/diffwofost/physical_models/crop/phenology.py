@@ -106,9 +106,9 @@ class Vernalisation(SimulationObject):
         )  # Critical DVS for vernalisation fulfillment
 
     class RateVariables(RatesTemplate):
-        VERNR = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))  # Rate of vernalisation
+        VERNR = Any(default_value=torch.tensor(0.0, dtype=DTYPE))  # Rate of vernalisation
         VERNFAC = Any(
-            default_value=torch.tensor(-99.0, dtype=DTYPE)
+            default_value=torch.tensor(0.0, dtype=DTYPE)
         )  # Red. factor for phenol. devel.
 
     class StateVariables(StatesTemplate):
@@ -385,10 +385,10 @@ class DVS_Phenology(SimulationObject):
 
     class RateVariables(RatesTemplate):
         DTSUME = Any(
-            default_value=torch.tensor(-99.0, dtype=DTYPE)
+            default_value=torch.tensor(0.0, dtype=DTYPE)
         )  # increase in temperature sum for emergence
-        DTSUM = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))  # increase in temperature sum
-        DVR = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))  # development rate
+        DTSUM = Any(default_value=torch.tensor(0.0, dtype=DTYPE))  # increase in temperature sum
+        DVR = Any(default_value=torch.tensor(0.0, dtype=DTYPE))  # development rate
 
     class StateVariables(StatesTemplate):
         DVS = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))  # Development stage
@@ -728,3 +728,43 @@ class DVS_Phenology(SimulationObject):
         if finish_type in ["harvest", "earliest"]:
             day_ordinal = torch.tensor(day.toordinal(), dtype=DTYPE)
             self._for_finalize["DOH"] = torch.full(self.params_shape, day_ordinal, dtype=DTYPE)
+
+    def get_variable(self, varname):
+        # TODO: should be removed while fixing #49. this is needed because
+        # conditions are applied on STAGE in pcse.crop.wofost72.py
+        """ Return the value of the specified state or rate variable.
+
+        :param varname: Name of the variable.
+
+        Note that the `get_variable()` will searches for `varname` exactly
+        as specified (case sensitive).
+        """
+
+        if varname == "STAGE":
+            # Return string representation of current stage
+            stage_map = {
+                0: "emerging",
+                1: "vegetative",
+                2: "reproductive",
+                3: "mature",
+            }
+            stage_value = getattr(self.states, "STAGE")
+            if stage_value.dim() != 0:
+                stage_id = stage_value.flatten()[0].item()
+            else:
+                stage_id = stage_value.item()
+            return stage_map[stage_id]
+
+        # Search for variable in the current object, then traverse the hierarchy
+        value = None
+        if hasattr(self.states, varname):
+            value = getattr(self.states, varname)
+        elif hasattr(self.rates, varname):
+            value = getattr(self.rates, varname)
+        # Query individual sub-SimObject for existence of variable v
+        else:
+            for simobj in self.subSimObjects:
+                value = simobj.get_variable(varname)
+                if value is not None:
+                    break
+        return value
