@@ -31,6 +31,7 @@ DTYPE = torch.float64  # Default data type for tensors in this module
 
 logging.disable(logging.CRITICAL)
 
+
 class VariableKioskTestHelper(VariableKiosk):
     """Variable Kiosk for testing purposes which allows to use external states."""
 

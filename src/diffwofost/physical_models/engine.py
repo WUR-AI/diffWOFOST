@@ -10,6 +10,7 @@ from .config import Configuration
 
 class Engine(Engine):
     mconf = Instance(Configuration)
+
     def __init__(
         self,
         parameterprovider,

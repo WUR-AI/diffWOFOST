@@ -10,13 +10,14 @@ from pcse.base import SimulationObject
 @dataclass(frozen=True)
 class Configuration:
     """Class to store model configuration from a PCSE configuration files."""
+
     CROP: type[SimulationObject]
     AGROMANAGEMENT: type[AncillaryObject]
     SOIL: type[SimulationObject] | None = None
     OUTPUT_VARS: list = field(default_factory=list)
     SUMMARY_OUTPUT_VARS: list = field(default_factory=list)
     TERMINAL_OUTPUT_VARS: list = field(default_factory=list)
-    OUTPUT_INTERVAL: str = "daily" # "daily"|"dekadal"|"monthly"
+    OUTPUT_INTERVAL: str = "daily"  # "daily"|"dekadal"|"monthly"
     OUTPUT_INTERVAL_DAYS: int = 1
     OUTPUT_WEEKDAY: int = 0
     model_config_file: str | Path | None = None
@@ -58,7 +59,7 @@ class Configuration:
         # Load file using execfile
         try:
             loc = {}
-            bytecode = compile(open(model_config_file).read(), model_config_file, 'exec')
+            bytecode = compile(open(model_config_file).read(), model_config_file, "exec")
             exec(bytecode, {}, loc)
         except Exception as e:
             msg = f"Failed to load configuration from file {model_config_file}"
@@ -108,8 +109,9 @@ class Configuration:
             TypeError: if the type of the input arguments is not recognized
         """
         config_varnames = ["OUTPUT_VARS", "SUMMARY_OUTPUT_VARS", "TERMINAL_OUTPUT_VARS"]
-        for varitems, config_varname in zip([output_vars, summary_vars, terminal_vars],
-                                            config_varnames, strict=True):
+        for varitems, config_varname in zip(
+            [output_vars, summary_vars, terminal_vars], config_varnames, strict=True
+        ):
             if varitems is None:
                 continue
             else:
