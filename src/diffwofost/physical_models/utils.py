@@ -637,3 +637,13 @@ def _broadcast_to(x, shape):
     # the dimension along which the time integration is carried out.
     # We first append an axis to x, then expand to the given shape
     return x.unsqueeze(-1).expand(shape)
+
+
+def _snapshot_state(obj):
+    return {name: val.clone() for name, val in obj.__dict__.items()
+            if torch.is_tensor(val)}
+
+
+def _restore_state(obj, snapshot):
+    for name, val in snapshot.items():
+        setattr(obj, name, val)

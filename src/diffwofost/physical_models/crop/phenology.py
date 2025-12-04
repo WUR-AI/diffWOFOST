@@ -25,6 +25,8 @@ from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import _get_params_shape
+from diffwofost.physical_models.utils import _restore_state
+from diffwofost.physical_models.utils import _snapshot_state
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 EPS = torch.tensor(1e-8, dtype=DTYPE)  # Small epsilon to avoid div by zero
@@ -638,11 +640,35 @@ class DVS_Phenology(SimulationObject):
         s = self.states
         shape = self.params_shape
 
-        # Integrate vernalisation module - always call if it exists, it will handle masking
-        if self.vernalisation is not None:
-            # Check if any element is in vegetative stage
-            if torch.any(s.STAGE == 1):
-                self.vernalisation.integrate(day, delt)
+        # Integrate vernalisation module
+        if self.vernalisation:
+            # Save a copy of state
+            state_copy = _snapshot_state(self.vernalisation.states)
+            mask_IDSL = p.IDSL >= 2
+
+            # Check if any element is in vegetative stage i.e. stage 1
+            mask_STAGE = mask_IDSL & (s.STAGE == 1)
+            self.vernalisation.integrate(day, delt)
+            state_integrated = _snapshot_state(self.vernalisation.states)
+
+            # Restore original state
+            _restore_state(self.vernalisation.states, state_copy)
+            self.vernalisation.touch()
+            state_touched = _snapshot_state(self.vernalisation.states)
+
+            # Apply the masks
+            for name in state_copy:
+                # results of vernalisation module
+                vernalisation_states = torch.where(
+                    mask_STAGE,
+                    state_integrated[name],
+                    state_touched[name]
+                    )
+                setattr(
+                    self.vernalisation.states,
+                    name,
+                    torch.where(mask_IDSL, vernalisation_states, state_copy[name])
+                )
 
         # Integrate phenologic states
         s.TSUME = s.TSUME + r.DTSUME
