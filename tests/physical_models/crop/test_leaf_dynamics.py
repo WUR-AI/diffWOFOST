@@ -6,6 +6,7 @@ import torch
 from numpy.testing import assert_array_almost_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
+from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
@@ -16,6 +17,9 @@ from .. import phy_data_folder
 # Ignore deprecation warnings from pcse.base.simulationobject
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
 
+leaf_dynamics_config = Configuration.from_pcse_config_file(
+    phy_data_folder / "WOFOST_Leaf_Dynamics.conf"
+)
 
 def get_test_diff_leaf_model():
     test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
@@ -24,12 +28,11 @@ def get_test_diff_leaf_model():
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
         prepare_engine_input(test_data, crop_model_params)
     )
-    config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
     return DiffLeafDynamics(
         copy.deepcopy(crop_model_params_provider),
         weather_data_provider,
         agro_management_inputs,
-        config_path,
+        leaf_dynamics_config,
         copy.deepcopy(external_states),
     )
 
