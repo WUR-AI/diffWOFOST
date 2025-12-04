@@ -3,6 +3,7 @@ from dataclasses import field
 from pathlib import Path
 from typing import Self
 import pcse
+from pcse.agromanager import AgroManager
 from pcse.base import AncillaryObject
 from pcse.base import SimulationObject
 
@@ -12,8 +13,8 @@ class Configuration:
     """Class to store model configuration from a PCSE configuration files."""
 
     CROP: type[SimulationObject]
-    AGROMANAGEMENT: type[AncillaryObject]
     SOIL: type[SimulationObject] | None = None
+    AGROMANAGEMENT: type[AncillaryObject] = AgroManager
     OUTPUT_VARS: list = field(default_factory=list)
     SUMMARY_OUTPUT_VARS: list = field(default_factory=list)
     TERMINAL_OUTPUT_VARS: list = field(default_factory=list)
