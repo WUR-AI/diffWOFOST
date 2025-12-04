@@ -3,8 +3,6 @@
 It contains:
     - VariableKioskTestHelper: A subclass of the VariableKiosk that can use externally
       forced states/rates
-    - ConfigurationLoaderTestHelper: An subclass of ConfigurationLoader that allows to
-      specify the simbojects to be test dynamically
     - EngineTestHelper: engine specifically for running the YAML tests.
     - WeatherDataProviderTestHelper: a weatherdata provides that takes the weather
       inputs from the YAML file.
@@ -13,7 +11,6 @@ Note that the code here is *not* python2 compatible.
 """
 
 import logging
-import os
 from collections.abc import Iterable
 import torch
 import yaml
@@ -33,14 +30,6 @@ from pcse.traitlets import TraitType
 DTYPE = torch.float64  # Default data type for tensors in this module
 
 logging.disable(logging.CRITICAL)
-
-this_dir = os.path.dirname(__file__)
-
-
-def nothing(*args, **kwargs):
-    """A function that does nothing."""
-    pass
-
 
 class VariableKioskTestHelper(VariableKiosk):
     """Variable Kiosk for testing purposes which allows to use external states."""
@@ -95,21 +84,6 @@ class VariableKioskTestHelper(VariableKiosk):
     def __contains__(self, key):
         """Override __contains__ to first look in external states."""
         return key in self.current_externals or dict.__contains__(self, key)
-
-
-class ConfigurationLoaderTestHelper(ConfigurationLoader):
-    def __init__(self, YAML_test_inputs, simobject, waterbalance=None):
-        self.model_config_file = "Test config"
-        self.description = "Configuration loader for running YAML tests"
-        self.CROP = simobject
-        self.SOIL = waterbalance
-        self.AGROMANAGEMENT = AgroManager
-        self.OUTPUT_INTERVAL = "daily"
-        self.OUTPUT_INTERVAL_DAYS = 1
-        self.OUTPUT_WEEKDAY = 0
-        self.OUTPUT_VARS = list(YAML_test_inputs["Precision"].keys())
-        self.SUMMARY_OUTPUT_VARS = []
-        self.TERMINAL_OUTPUT_VARS = []
 
 
 class EngineTestHelper(Engine):
