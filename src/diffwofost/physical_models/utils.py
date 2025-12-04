@@ -36,7 +36,7 @@ class VariableKioskTestHelper(VariableKiosk):
 
     external_state_list = None
 
-    def __init__(self, external_state_list):
+    def __init__(self, external_state_list=None):
         super().__init__()
         self.current_externals = {}
         if external_state_list is not None:
