@@ -12,20 +12,20 @@ Note that the code here is *not* python2 compatible.
 
 import logging
 from collections.abc import Iterable
+from pathlib import Path
 import torch
 import yaml
 from pcse import signals
-from pcse.agromanager import AgroManager
-from pcse.base import ConfigurationLoader
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
-from pcse.engine import Engine
 from pcse.settings import settings
 from pcse.timer import Timer
 from pcse.traitlets import TraitType
+from .config import Configuration
+from .engine import Engine
 
 DTYPE = torch.float64  # Default data type for tensors in this module
 
@@ -94,13 +94,17 @@ class EngineTestHelper(Engine):
         parameterprovider,
         weatherdataprovider,
         agromanagement,
-        test_config,
+        config,
         external_states=None,
     ):
         BaseEngine.__init__(self)
 
-        # Load the model configuration
-        self.mconf = ConfigurationLoader(test_config)
+        # If a path is given, load the model configuration from a PCSE config file
+        if isinstance(config, str | Path):
+            self.mconf = Configuration.from_pcse_config_file(config)
+        else:
+            self.mconf = config
+
         self.parameterprovider = parameterprovider
 
         # Variable kiosk for registering and publishing variables
