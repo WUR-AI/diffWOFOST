@@ -28,6 +28,7 @@ from pcse.engine import BaseEngine
 from pcse.engine import Engine
 from pcse.settings import settings
 from pcse.timer import Timer
+from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
 
 DTYPE = torch.float64  # Default data type for tensors in this module
@@ -50,7 +51,7 @@ class VariableKioskTestHelper(VariableKiosk):
     def __init__(self, external_state_list):
         super().__init__()
         self.current_externals = {}
-        if external_state_list is not None:
+        if external_state_list:
             self.external_state_list = external_state_list
 
     def __call__(self, day):
@@ -59,7 +60,7 @@ class VariableKioskTestHelper(VariableKiosk):
         Returns True if the list of external state/rate variables is exhausted,
         otherwise False.
         """
-        if self.external_state_list is not None:
+        if self.external_state_list:
             current_externals = self.external_state_list.pop(0)
             forcing_day = current_externals.pop("DAY")
             msg = "Failure updating VariableKiosk with external states: days are not matching!"
@@ -226,13 +227,15 @@ def prepare_engine_input(
         test_data["WeatherVariables"], meteo_range_checks=meteo_range_checks
     )
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
-    external_states = test_data["ExternalStates"]
+    external_states = test_data.get("ExternalStates") or []
 
     # convert parameters to tensors
     crop_model_params_provider.clear_override()
     for name in crop_model_params:
-        value = torch.tensor(crop_model_params_provider[name], dtype=dtype)
-        crop_model_params_provider.set_override(name, value, check=False)
+        # if name is missing in the YAML, skip it
+        if name in crop_model_params_provider:
+            value = torch.tensor(crop_model_params_provider[name], dtype=dtype)
+            crop_model_params_provider.set_override(name, value, check=False)
 
     # convert external states to tensors
     tensor_external_states = [
@@ -475,16 +478,27 @@ class Afgen:
                 else:
                     x_val = flat_x[0]  # Broadcast first value
 
-                # Boundary conditions
-                if x_val <= x_list[0]:
-                    result = y_list[0]
-                elif x_val >= x_list[-1]:
-                    result = y_list[-1]
-                else:
-                    # Find interval and interpolate
-                    i = torch.searchsorted(x_list, x_val, right=False) - 1
-                    i = torch.clamp(i, 0, len(x_list) - 2)
-                    result = y_list[i] + slopes[i] * (x_val - x_list[i])
+                # Ensure contiguous memory layout for searchsorted
+                x_list_contig = x_list.contiguous()
+                x_val_contig = (
+                    x_val.contiguous()
+                    if isinstance(x_val, torch.Tensor) and x_val.dim() > 0
+                    else x_val
+                )
+
+                # Find interval and interpolate using torch.where for differentiability
+                i = torch.searchsorted(x_list_contig, x_val_contig, right=False) - 1
+                i = torch.clamp(i, 0, len(x_list) - 2)
+
+                # Calculate interpolated value
+                interp_result = y_list[i] + slopes[i] * (x_val - x_list[i])
+
+                # Apply boundary conditions using torch.where
+                result = torch.where(
+                    x_val <= x_list[0],
+                    y_list[0],
+                    torch.where(x_val >= x_list[-1], y_list[-1], interp_result),
+                )
 
                 results.append(result)
 
@@ -492,20 +506,25 @@ class Afgen:
             output = torch.stack(results).reshape(self.batch_shape)
             return output
 
-        # Original scalar logic from pcse
-        # Clamp to boundaries
-        if x <= self.x_list[0]:
-            return self.y_list[0]
-        if x >= self.x_list[-1]:
-            return self.y_list[-1]
+        # Ensure contiguous memory layout for searchsorted
+        x_list_contig = self.x_list.contiguous()
+        x_contig = x.contiguous() if isinstance(x, torch.Tensor) and x.dim() > 0 else x
 
         # Find interval index using torch.searchsorted for differentiability
-        i = torch.searchsorted(self.x_list, x, right=False) - 1
+        i = torch.searchsorted(x_list_contig, x_contig, right=False) - 1
         i = torch.clamp(i, 0, len(self.x_list) - 2)
 
-        # Linear interpolation
-        v = self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
-        return v
+        # Calculate interpolated value
+        interp_value = self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
+
+        # Apply boundary conditions using torch.where
+        result = torch.where(
+            x <= self.x_list[0],
+            self.y_list[0],
+            torch.where(x >= self.x_list[-1], self.y_list[-1], interp_value),
+        )
+
+        return result
 
     @property
     def shape(self):
@@ -558,6 +577,9 @@ def _get_params_shape(params):
         if parname.startswith("trait"):
             continue
         param = getattr(params, parname)
+        # Skip Enum and str parameters
+        if isinstance(param, Enum) or isinstance(param, str):
+            continue
         # Parameters that are not zero dimensional should all have the same shape
         if param.shape and not shape:
             shape = param.shape
@@ -615,3 +637,12 @@ def _broadcast_to(x, shape):
     # the dimension along which the time integration is carried out.
     # We first append an axis to x, then expand to the given shape
     return x.unsqueeze(-1).expand(shape)
+
+
+def _snapshot_state(obj):
+    return {name: val.clone() for name, val in obj.__dict__.items() if torch.is_tensor(val)}
+
+
+def _restore_state(obj, snapshot):
+    for name, val in snapshot.items():
+        setattr(obj, name, val)
