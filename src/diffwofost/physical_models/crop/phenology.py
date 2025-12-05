@@ -7,7 +7,6 @@ exposure.
 anthesis, 2 maturity).
 """
 
-import os
 import torch
 from pcse import exceptions as exc
 from pcse import signals
@@ -660,14 +659,12 @@ class DVS_Phenology(SimulationObject):
             for name in state_copy:
                 # results of vernalisation module
                 vernalisation_states = torch.where(
-                    mask_STAGE,
-                    state_integrated[name],
-                    state_touched[name]
-                    )
+                    mask_STAGE, state_integrated[name], state_touched[name]
+                )
                 setattr(
                     self.vernalisation.states,
                     name,
-                    torch.where(mask_IDSL, vernalisation_states, state_copy[name])
+                    torch.where(mask_IDSL, vernalisation_states, state_copy[name]),
                 )
 
         # Integrate phenologic states

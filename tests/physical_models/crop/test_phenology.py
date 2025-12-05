@@ -27,9 +27,7 @@ def assert_reference_match(reference, model, expected_precision):
         if reference[var] is None and model[var] is None:
             continue
         assert torch.all(
-            torch.abs(
-                torch.as_tensor(reference[var]) - torch.as_tensor(model[var])
-            ) < precision
+            torch.abs(torch.as_tensor(reference[var]) - torch.as_tensor(model[var])) < precision
         )
 
 
@@ -320,7 +318,7 @@ class TestPhenologyDynamics:
             # AfgenTrait parameters need to have shape (N, M)
             # DTSMTB is increase in tempearture, so avoid negative values
             non_zeros_mask = test_value != 0
-            param_vec = torch.stack([test_value + non_zeros_mask*delta, test_value])
+            param_vec = torch.stack([test_value + non_zeros_mask * delta, test_value])
         else:
             param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)

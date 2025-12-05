@@ -640,8 +640,7 @@ def _broadcast_to(x, shape):
 
 
 def _snapshot_state(obj):
-    return {name: val.clone() for name, val in obj.__dict__.items()
-            if torch.is_tensor(val)}
+    return {name: val.clone() for name, val in obj.__dict__.items() if torch.is_tensor(val)}
 
 
 def _restore_state(obj, snapshot):
