@@ -210,13 +210,8 @@ class TestRootDynamics:
         # We set the value for which test data are available as the last element
         if param == "RDRRTB":
             # AfgenTrait parameters need to have shape (N, M)
-            param_vec = torch.tensor(
-                [
-                    [test_value[0] - delta, test_value[1] - delta],
-                    [test_value[0] + delta, test_value[1] + delta],
-                    [test_value[0], test_value[1]],
-                ]
-            )
+            non_zeros_mask = test_value != 0
+            param_vec = torch.stack([test_value + non_zeros_mask*delta, test_value])
         else:
             param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
