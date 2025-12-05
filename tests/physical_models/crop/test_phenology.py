@@ -19,23 +19,18 @@ pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.si
 def assert_reference_match(reference, model, expected_precision):
     assert reference["DAY"] == model["day"]
     for var, precision in expected_precision.items():
-        if var == "VERNFAC" or var == "VERNR":
-            # [!] These are not 'State variables' and are not stored in model output
+        # [!] These are not 'State variables' and are not stored in model output
+        if var in ["VERNFAC", "VERNR"]:
             continue
-        ref_val = reference[var]
-        model_val = model[var]
-        if ref_val is None or model_val is None:
-            assert ref_val is None and model_val is None
+
+        # for some data tests, both reference and model can have None values
+        if reference[var] is None and model[var] is None:
             continue
-        if torch.is_tensor(model_val):
-            assert torch.all(torch.abs(ref_val - model_val) < precision)
-        else:
-            if abs(ref_val - model_val) >= precision:
-                print(
-                    f"Value mismatch for {var}: ref={ref_val}"
-                    + f" , model={model_val}, precision={precision}"
-                )
-            assert abs(ref_val - model_val) < precision
+        assert torch.all(
+            torch.abs(
+                torch.as_tensor(reference[var]) - torch.as_tensor(model[var])
+            ) < precision
+        )
 
 
 def get_test_diff_phenology_model():
@@ -283,11 +278,7 @@ class TestPhenologyDynamics:
             ("TEFFMX", 1.0),
             ("TSUM1", 1.0),
             ("TSUM2", 1.0),
-            ("IDSL", 1.0),
-            ("DLO", 1.0),
-            ("DLC", 1.0),
             ("DVSI", 0.1),
-            ("DVSEND", 0.1),
             ("DTSMTB", 1.0),
             ("VERNSAT", 1.0),
             ("VERNBASE", 0.5),
@@ -295,6 +286,9 @@ class TestPhenologyDynamics:
         ],
     )
     def test_phenology_with_different_parameter_values(self, param, delta):
+        # we dont test IDSL,DLO, DLC, DVSEND because these paramaters controls the
+        # simulation duration
+        # TODO: revisit this choice when Engine is fixed
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
@@ -323,23 +317,10 @@ class TestPhenologyDynamics:
 
         test_value = crop_model_params_provider[param]
         if param == "DTSMTB":
-            # Clean trailing (0,0) pairs that are left in the test data
-            tv = test_value.clone()
-            n_pairs = tv.shape[0] // 2
-            valid_n = n_pairs
-            for i in range(n_pairs - 1, 0, -1):
-                if tv[2 * i] == 0 and tv[2 * i + 1] == 0:
-                    valid_n = i
-                else:
-                    break
-            tv = tv[: 2 * valid_n]
-            # Only modify y-values (odd indices) to maintain x-values ascending order
-            param_vec_list = []
-            for delta_factor in [-1, 1, 0]:  # subtract, add, original
-                modified = tv.clone()
-                modified[1::2] = modified[1::2] + delta_factor * delta
-                param_vec_list.append(modified)
-            param_vec = torch.stack(param_vec_list)
+            # AfgenTrait parameters need to have shape (N, M)
+            # DTSMTB is increase in tempearture, so avoid negative values
+            non_zeros_mask = test_value != 0
+            param_vec = torch.stack([test_value + non_zeros_mask*delta, test_value])
         else:
             param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
@@ -356,19 +337,18 @@ class TestPhenologyDynamics:
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
+
         for reference, model in zip(expected_results, actual_results, strict=False):
             # keep original special case using last element
             for var, precision in expected_precision.items():
-                if var == "VERNFAC" or var == "VERNR":
-                    # [!] These are not 'State variables' and are not stored in model output
+                # [!] These are not 'State variables' and are not stored in model output
+                if var in ["VERNFAC", "VERNR"]:
                     continue
-                ref_val = reference[var]
-                model_val = model[var]
-                if ref_val is None or model_val is None:
-                    assert ref_val is None and model_val is None
+
+                # for some data tests, both reference and model can have None values
+                if reference[var] is None and model[var] is None:
                     continue
-                # Use last element for comparison with vector parameters
-                assert abs(ref_val - model_val[-1]) < precision
+                assert torch.all(torch.abs(reference[var] - model[var][-1]) < precision)
 
     def test_phenology_with_multiple_parameter_vectors(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"

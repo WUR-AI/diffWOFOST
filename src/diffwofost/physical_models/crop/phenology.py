@@ -680,58 +680,38 @@ class DVS_Phenology(SimulationObject):
         # Check transitions for emerging -> vegetative (STAGE 0 -> 1)
         is_emerging = s.STAGE == 0
         should_emerge = is_emerging & (s.DVS >= 0.0)
-        if torch.any(should_emerge):
-            s.STAGE = torch.where(should_emerge, torch.ones(shape, dtype=torch.long), s.STAGE)
-            s.DOE = torch.where(should_emerge, torch.full(shape, day_ordinal, dtype=DTYPE), s.DOE)
-            s.DVS = torch.where(should_emerge, torch.clamp(s.DVS, max=0.0), s.DVS)
+        s.STAGE = torch.where(should_emerge, torch.ones(shape, dtype=torch.long), s.STAGE)
+        s.DOE = torch.where(should_emerge, torch.full(shape, day_ordinal, dtype=DTYPE), s.DOE)
+        s.DVS = torch.where(should_emerge, torch.clamp(s.DVS, max=0.0), s.DVS)
 
-            # Send signal if any crop emerged (only once per day)
-            if torch.any(should_emerge):
-                self._send_signal(signals.crop_emerged)
+        # Send signal if any crop emerged (only once per day)
+        if torch.any(should_emerge):
+            self._send_signal(signals.crop_emerged)
 
         # Check transitions for vegetative -> reproductive (STAGE 1 -> 2)
         is_vegetative = s.STAGE == 1
         should_flower = is_vegetative & (s.DVS >= 1.0)
-        if torch.any(should_flower):
-            s.STAGE = torch.where(should_flower, torch.full(shape, 2, dtype=torch.long), s.STAGE)
-            s.DOA = torch.where(should_flower, torch.full(shape, day_ordinal, dtype=DTYPE), s.DOA)
-            s.DVS = torch.where(should_flower, torch.clamp(s.DVS, max=1.0), s.DVS)
+        s.STAGE = torch.where(should_flower, torch.full(shape, 2, dtype=torch.long), s.STAGE)
+        s.DOA = torch.where(should_flower, torch.full(shape, day_ordinal, dtype=DTYPE), s.DOA)
+        s.DVS = torch.where(should_flower, torch.clamp(s.DVS, max=1.0), s.DVS)
 
         # Check transitions for reproductive -> mature (STAGE 2 -> 3)
         is_reproductive = s.STAGE == 2
         should_mature = is_reproductive & (s.DVS >= p.DVSEND)
-        if torch.any(should_mature):
-            s.STAGE = torch.where(should_mature, torch.full(shape, 3, dtype=torch.long), s.STAGE)
-            s.DOM = torch.where(should_mature, torch.full(shape, day_ordinal, dtype=DTYPE), s.DOM)
-            s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
+        s.STAGE = torch.where(should_mature, torch.full(shape, 3, dtype=torch.long), s.STAGE)
+        s.DOM = torch.where(should_mature, torch.full(shape, day_ordinal, dtype=DTYPE), s.DOM)
+        s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
 
-            # Send crop_finish signal only when ALL elements are mature.
-            if p.CROP_END_TYPE in ["maturity", "earliest"]:
-                # Default: require all elements to be mature.
-                all_mature_now = bool((s.STAGE == 3).all().item())
-
-                # [!] Remove this hack after diffwofost is fully vectorized.
-                # Test-time compatibility: allow enabling the "last-element" hack by setting
-                # env var DIFFWOFOST_TEST_HACK=1 or when running under pytest (PYTEST_CURRENT_TEST).
-                test_hack = os.environ.get("DIFFWOFOST_TEST_HACK") or os.environ.get(
-                    "PYTEST_CURRENT_TEST"
-                )
-                if test_hack:
-                    # preserve previous behaviour used in tests: base the stop on the last element
-                    try:
-                        # safe indexing in case of scalar shape
-                        last_is_mature = bool((s.STAGE.flatten()[-1] == 3).item())
-                    except Exception:
-                        last_is_mature = all_mature_now
-                    all_mature_now = last_is_mature
-
-                if all_mature_now:
-                    self._send_signal(
-                        signal=signals.crop_finish,
-                        day=day,
-                        finish_type="maturity",
-                        crop_delete=True,
-                    )
+        # Send crop_finish signal if maturity reached for one.
+        # assumption is that all elements mature simultaneously
+        # TODO: revisit this when fixing engine for agromanager
+        if torch.any(should_mature) and p.CROP_END_TYPE in ["maturity", "earliest"]:
+            self._send_signal(
+                signal=signals.crop_finish,
+                day=day,
+                finish_type="maturity",
+                crop_delete=True,
+            )
 
         msg = "Finished state integration for %s"
         self.logger.debug(msg % day)
