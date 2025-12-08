@@ -345,10 +345,10 @@ class DVS_Phenology(SimulationObject):
     | DVS    | ... |
     | TSUM   | ... |
 
-    [!] Notice that the following gradients are zero:
+   Notice that the following gradients are zero:
         - ∂DVS/∂TEFFMX
 
-    [!] The parameter IDSL it is not differentiable since it is a switch
+    The parameter IDSL it is not differentiable since it is a switch
     """
 
     # Placeholder for start/stop types and vernalisation module
