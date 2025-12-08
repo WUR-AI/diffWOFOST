@@ -89,7 +89,8 @@ class WOFOST_Root_Dynamics(SimulationObject):
     | RD     | RDI, RRI, RDMCR, RDMSOL    |
     | TWRT   | TDWI, RDRRTB               |
 
-    [!] Notice that the gradient ∂TWRT/∂RDRRTB is zero.
+    [!NOTE]
+    Notice that the gradient ∂TWRT/∂RDRRTB is zero.
 
     **IMPORTANT NOTICE**
 
