@@ -604,9 +604,6 @@ class TestDiffPhenologyDynamicsGradients:
         "DLC",
         "DVSEND",
         "DTSMTB",
-        # "VERNSAT",  [!] Not yet finalized
-        # "VERNBASE",
-        # "VERNDVS",
     ]
     output_names = ["DVS", "TSUM"]
 
