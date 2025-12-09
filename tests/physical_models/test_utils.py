@@ -274,6 +274,56 @@ class TestAfgenEdgeCases:
         expected = torch.tensor(7.5, dtype=DTYPE)
         assert torch.isclose(result, expected)
 
+    def test_tensor_input_at_boundaries(self):
+        """Test tensor inputs at boundary conditions with gradients."""
+        afgen = Afgen([0, 5, 10, 15])
+
+        # Test below lower bound with gradient
+        x_low = torch.tensor(-2.0, dtype=DTYPE, requires_grad=True)
+        result_low = afgen(x_low)
+        assert result_low == 5.0
+        result_low.backward()
+        # Gradient should be 0 when clamped at boundary
+        assert x_low.grad == 0.0
+
+        # Test above upper bound with gradient
+        x_high = torch.tensor(15.0, dtype=DTYPE, requires_grad=True)
+        result_high = afgen(x_high)
+        assert result_high == 15.0
+        result_high.backward()
+        # Gradient should be 0 when clamped at boundary
+        assert x_high.grad == 0.0
+
+    def test_tensor_input_near_boundaries(self):
+        """Test tensor inputs just inside boundaries maintain gradients."""
+        afgen = Afgen([0, 0, 10, 10])
+
+        # Just above lower bound
+        x_near_low = torch.tensor(0.1, dtype=DTYPE, requires_grad=True)
+        result = afgen(x_near_low)
+        result.backward()
+        # Should have gradient of 1 (slope of the line)
+        assert torch.isclose(x_near_low.grad, torch.tensor(1.0, dtype=DTYPE), atol=1e-5)
+
+        # Just below upper bound
+        x_near_high = torch.tensor(9.9, dtype=DTYPE, requires_grad=True)
+        result = afgen(x_near_high)
+        result.backward()
+        assert torch.isclose(x_near_high.grad, torch.tensor(1.0, dtype=DTYPE), atol=1e-5)
+
+    def test_1d_tensor_batch_input(self):
+        """Test that we can pass a 1D tensor to evaluate multiple points at once."""
+        afgen = Afgen([0, 0, 10, 10])
+
+        # Process multiple values in a vectorized manner
+        x_batch = torch.tensor([2.0, 5.0, 8.0], dtype=DTYPE)
+        results = torch.stack([afgen(x) for x in x_batch])
+
+        assert results.shape == (3,)
+        assert torch.isclose(results[0], torch.tensor(2.0, dtype=DTYPE))
+        assert torch.isclose(results[1], torch.tensor(5.0, dtype=DTYPE))
+        assert torch.isclose(results[2], torch.tensor(8.0, dtype=DTYPE))
+
 
 class TestAfgenBatched:
     """Tests for batched Afgen functionality with multidimensional tensors."""
@@ -541,6 +591,36 @@ class TestAfgenBatched:
         assert isinstance(result, torch.Tensor)
         assert result.dim() == 0  # Scalar tensor
         assert torch.isclose(result, torch.tensor(5.0, dtype=DTYPE))
+
+    def test_batched_gradient_at_boundaries(self):
+        """Test gradients at boundaries for batched tables."""
+        tables = torch.tensor(
+            [
+                [0, 0, 10, 10],
+                [0, 5, 10, 15],
+            ],
+            dtype=DTYPE,
+        )
+
+        afgen = Afgen(tables)
+
+        # Test at lower boundary
+        x = torch.tensor(-1.0, dtype=DTYPE, requires_grad=True)
+        result = afgen(x)
+        loss = result.sum()
+        loss.backward()
+
+        # Both tables clamped at lower bound, gradient should be 0
+        assert x.grad == 0.0
+
+        # Test in interpolation region
+        x2 = torch.tensor(5.0, dtype=DTYPE, requires_grad=True)
+        result2 = afgen(x2)
+        loss2 = result2.sum()
+        loss2.backward()
+
+        # Sum of slopes: 1 + 1 = 2
+        assert torch.isclose(x2.grad, torch.tensor(2.0, dtype=DTYPE), atol=1e-5)
 
 
 class TestGetDrvParam:

@@ -185,6 +185,11 @@ class TestRootDynamics:
         [
             ("RDI", 1.0),
             ("RRI", 0.1),
+            ("RDMCR", 10.0),
+            ("RDMSOL", 10.0),
+            ("TDWI", 0.05),
+            ("IAIRDU", 0.05),
+            ("RDRRTB", 0.01),
         ],
     )
     def test_root_dynamics_with_different_parameter_values(self, param, delta):
@@ -203,7 +208,12 @@ class TestRootDynamics:
         # Setting a vector with multiple values for the selected parameter
         test_value = crop_model_params_provider[param]
         # We set the value for which test data are available as the last element
-        param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
+        if param == "RDRRTB":
+            # AfgenTrait parameters need to have shape (N, M)
+            non_zeros_mask = test_value != 0
+            param_vec = torch.stack([test_value + non_zeros_mask * delta, test_value])
+        else:
+            param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
         engine = EngineTestHelper(

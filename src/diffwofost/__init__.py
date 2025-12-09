@@ -3,6 +3,7 @@
 import logging
 from diffwofost.physical_models import utils
 from diffwofost.physical_models.crop import leaf_dynamics
+from diffwofost.physical_models.crop import phenology
 from diffwofost.physical_models.crop import root_dynamics
 
 logging.getLogger(__name__).addHandler(logging.NullHandler())
@@ -14,5 +15,6 @@ __version__ = "0.2.0"
 __all__ = [
     "leaf_dynamics",
     "root_dynamics",
+    "phenology",
     "utils",
 ]

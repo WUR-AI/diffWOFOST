@@ -109,7 +109,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     | LAI    | TDWI, SPAN, RGRLAI, TBASE, KDIFTB, SLATB |
     | TWLV   | TDWI, PERDL                              |
 
-    [!] Notice that the following gradients are zero:
+    [!NOTE]
+    Notice that the following gradients are zero:
         - ∂SPAN/∂LAI
         - ∂PERDL/∂TWLV
         - ∂KDIFTB/∂LAI
