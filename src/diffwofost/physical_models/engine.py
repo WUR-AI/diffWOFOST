@@ -32,9 +32,9 @@ class Engine(Engine):
         self.kiosk = VariableKiosk()
 
         # Placeholder for variables to be saved during a model run
-        self._saved_output = list()
-        self._saved_summary_output = list()
-        self._saved_terminal_output = dict()
+        self._saved_output = []
+        self._saved_summary_output = []
+        self._saved_terminal_output = {}
 
         # register handlers for starting/finishing the crop simulation, for
         # handling output and terminating the system

@@ -40,7 +40,7 @@ class Configuration:
             FileNotFoundError: if the configuraiton file does not exist
             RuntimeError: if parsing the configuration file fails
         """
-        config = dict()
+        config = {}
 
         path = Path(filename)
         if path.is_file():
@@ -73,10 +73,10 @@ class Configuration:
                 description = desc
                 if description[-1] != "\n":
                     description += "\n"
-            config["descrition"]
+            config["descrition"] = description
 
         # Loop through the attributes in the configuration file
-        for key, value in list(loc.items()):
+        for key, value in loc.items():
             if key.isupper():
                 config[key] = value
         return cls(**config)
