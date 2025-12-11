@@ -11,8 +11,20 @@
 
 # diffWOFOST
 
-The python package `diffWOFOST` is a differentiable implementation of WOFOST models using [`torch`](https://pytorch.org/),
-allowing gradients to flow through the simulations for optimization and data assimilation.
+
+<div style="display: flex; align-items: center; justify-content: space-between;">
+
+<div style="flex: 1; padding-right: 1rem;">
+
+The python package `diffWOFOST` is a differentiable implementation of WOFOST models using [`torch`](https://pytorch.org/), allowing gradients to flow through the simulations for optimization and data assimilation.
+
+
+</div>
+
+<img src="./docs/logo/diffwofost.png" width="120" alt="Logo" />
+
+</div>
+
 
 ## Installation
 
