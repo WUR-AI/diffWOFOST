@@ -7,12 +7,24 @@
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=WUR-AI_diffWOFOST&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=WUR-AI_diffWOFOST)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17474960.svg)](https://doi.org/10.5281/zenodo.17474960)
 
+![diffWOFOST banner](https://raw.githubusercontent.com/WUR-AI/diffWOFOST/main/docs/logo/diffwofost_banner.png)
+
 # diffWOFOST
 
-<img align="right" width="90" alt="Logo" src="./docs/logo/diffwofost.png">
 
-The python package `diffWOFOST` is a differentiable implementation of WOFOST models using [`torch`](https://pytorch.org/),
-allowing gradients to flow through the simulations for optimization and data assimilation.
+<div style="display: flex; align-items: center; justify-content: space-between;">
+
+<div style="flex: 1; padding-right: 1rem;">
+
+The python package `diffWOFOST` is a differentiable implementation of WOFOST models using [`torch`](https://pytorch.org/), allowing gradients to flow through the simulations for optimization and data assimilation.
+
+
+</div>
+
+<img src="./docs/logo/diffwofost.png" width="120" alt="Logo" />
+
+</div>
+
 
 ## Installation
 
