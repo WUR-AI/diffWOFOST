@@ -31,9 +31,19 @@ class TestConfiguration:
         config = Configuration.from_pcse_config_file(config_file_path)
         assert isinstance(config, Configuration)
         assert config.model_config_file == config_file_path.resolve()
+        assert config.description is not None  # Description is parsed from the module docstring
 
     def test_output_variables_can_be_updated(self):
         config = Configuration(CROP=WOFOST_Leaf_Dynamics)
         assert not config.OUTPUT_VARS
-        config.update_output_variable_lists(output_vars=["DVS", "LAI"])
+        assert not config.SUMMARY_OUTPUT_VARS
+        assert not config.TERMINAL_OUTPUT_VARS
+        # Test all accepted data types
+        config.update_output_variable_lists(
+            output_vars=["DVS", "LAI"],  # list
+            summary_vars="LAI",  # str
+            terminal_vars={"DVS"},  # set
+        )
         assert config.OUTPUT_VARS == ["DVS", "LAI"]
+        assert config.SUMMARY_OUTPUT_VARS == ["LAI"]
+        assert config.TERMINAL_OUTPUT_VARS == ["DVS"]
