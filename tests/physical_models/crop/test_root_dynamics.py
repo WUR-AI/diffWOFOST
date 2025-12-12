@@ -44,14 +44,14 @@ class DiffRootDynamics(torch.nn.Module):
         crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
-        config_path,
+        config,
         external_states,
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
         self.weather_data_provider = weather_data_provider
         self.agro_management_inputs = agro_management_inputs
-        self.config_path = config_path
+        self.config = config
         self.external_states = external_states
 
     def forward(self, params_dict):
@@ -63,7 +63,7 @@ class DiffRootDynamics(torch.nn.Module):
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config_path,
+            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -95,13 +95,12 @@ class TestRootDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         engine = EngineTestHelper(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -151,7 +150,6 @@ class TestRootDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
         # If the parameter is an Afgen table (like RDRRTB), the repeat will create a
@@ -166,7 +164,7 @@ class TestRootDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -207,7 +205,6 @@ class TestRootDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector with multiple values for the selected parameter
         test_value = crop_model_params_provider[param]
@@ -224,7 +221,7 @@ class TestRootDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -254,7 +251,6 @@ class TestRootDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the RDI and RRI parameters
         for param in ("RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"):
@@ -270,7 +266,7 @@ class TestRootDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -299,7 +295,6 @@ class TestRootDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting an array with arbitrary shape (and one value)
         for param in ("RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"):
@@ -313,7 +308,7 @@ class TestRootDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -345,7 +340,6 @@ class TestRootDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
 
         # Setting a vector (with one value) for the RDI and RRI parameters,
         # but with different lengths
@@ -361,7 +355,7 @@ class TestRootDynamics:
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                config_path,
+                root_dynamics_config,
                 external_states,
             )
 
