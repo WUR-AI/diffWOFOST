@@ -62,6 +62,7 @@ venv3
 ENV/
 env.bak/
 venv.bak/
+.vscode/
 
 # vim
 *.swp
