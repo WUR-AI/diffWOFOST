@@ -20,9 +20,9 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Natural Language :: English",
     "Programming Language :: Python :: 3",
-    "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
 ]
 dependencies = [
     "torch",
@@ -33,7 +33,7 @@ keywords = ["wofost", "pytorch", "differentiable", "crop", "optimization"]
 license = {file = "LICENSE"}
 name = "diffwofost"
 readme = {file = "README.md", content-type = "text/markdown"}
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 version = "0.2.0"
 
 [project.optional-dependencies]

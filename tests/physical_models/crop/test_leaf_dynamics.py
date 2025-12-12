@@ -6,6 +6,7 @@ import torch
 from numpy.testing import assert_array_almost_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
+from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
@@ -16,6 +17,10 @@ from .. import phy_data_folder
 # Ignore deprecation warnings from pcse.base.simulationobject
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
 
+leaf_dynamics_config = Configuration.from_pcse_config_file(
+    phy_data_folder / "WOFOST_Leaf_Dynamics.conf"
+)
+
 
 def get_test_diff_leaf_model():
     test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
@@ -24,12 +29,11 @@ def get_test_diff_leaf_model():
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
         prepare_engine_input(test_data, crop_model_params)
     )
-    config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
     return DiffLeafDynamics(
         copy.deepcopy(crop_model_params_provider),
         weather_data_provider,
         agro_management_inputs,
-        config_path,
+        leaf_dynamics_config,
         copy.deepcopy(external_states),
     )
 
@@ -40,14 +44,14 @@ class DiffLeafDynamics(torch.nn.Module):
         crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
-        config_path,
+        config,
         external_states,
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
         self.weather_data_provider = weather_data_provider
         self.agro_management_inputs = agro_management_inputs
-        self.config_path = config_path
+        self.config = config
         self.external_states = external_states
 
     def forward(self, params_dict):
@@ -59,7 +63,7 @@ class DiffLeafDynamics(torch.nn.Module):
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config_path,
+            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -91,13 +95,12 @@ class TestLeafDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         engine = EngineTestHelper(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -148,7 +151,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
@@ -171,7 +173,7 @@ class TestLeafDynamics:
                     crop_model_params_provider,
                     weather_data_provider,
                     agro_management_inputs,
-                    config_path,
+                    leaf_dynamics_config,
                     external_states,
                 )
                 engine.run_till_terminate()
@@ -181,7 +183,7 @@ class TestLeafDynamics:
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                config_path,
+                leaf_dynamics_config,
                 external_states,
             )
             engine.run_till_terminate()
@@ -222,7 +224,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector with multiple values for the selected parameter
         test_value = crop_model_params_provider[param]
@@ -239,7 +240,7 @@ class TestLeafDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -269,7 +270,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the TDWI and SPAN parameters
         for param in ("TDWI", "SPAN", "RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB"):
@@ -284,7 +284,7 @@ class TestLeafDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -313,7 +313,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting an array with arbitrary shape (and one value)
         for param in ("RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB"):
@@ -331,7 +330,7 @@ class TestLeafDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -363,7 +362,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the TDWI and SPAN parameters,
         # but with different lengths
@@ -379,7 +377,7 @@ class TestLeafDynamics:
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                config_path,
+                leaf_dynamics_config,
                 external_states,
             )
 
@@ -394,7 +392,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting vectors with incompatible shapes: TDWI and TEMP
         crop_model_params_provider.set_override(
@@ -408,7 +405,7 @@ class TestLeafDynamics:
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                config_path,
+                leaf_dynamics_config,
                 external_states,
             )
 
@@ -456,13 +453,11 @@ class TestLeafDynamics:
         # Make SPAN a parameter requiring gradients
         crop_model_params_provider["SPAN"].requires_grad = True
 
-        config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
-
         engine = EngineTestHelper(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            config_path,
+            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
