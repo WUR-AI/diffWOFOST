@@ -1,4 +1,5 @@
 from pcse.agromanager import AgroManager
+from pcse.crop.phenology import DVS_Phenology
 from pcse.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
@@ -26,7 +27,13 @@ class TestConfiguration:
         )
         assert isinstance(config, Configuration)
 
-    def test_config_can_be_instantiated_from_a_pcse_config_file(self):
+    def test_config_can_be_instantiated_from_a_default_pcse_config_file(self):
+        config = Configuration.from_pcse_config_file("Wofost72_Pheno.conf")
+        assert config.SOIL is None
+        assert config.CROP == DVS_Phenology
+        assert config.AGROMANAGEMENT == AgroManager
+
+    def test_config_can_be_instantiated_from_a_custom_pcse_config_file(self):
         config_file_path = phy_data_folder / "WOFOST_Leaf_Dynamics.conf"
         config = Configuration.from_pcse_config_file(config_file_path)
         assert isinstance(config, Configuration)

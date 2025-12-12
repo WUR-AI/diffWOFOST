@@ -43,16 +43,16 @@ class Configuration:
         config = {}
 
         path = Path(filename)
-        if path.is_file():
+        if path.is_absolute() or path.is_file():
             model_config_file = path
         else:
-            pcse_dir = Path(pcse.__path__)
+            pcse_dir = Path(pcse.__path__[0])
             model_config_file = pcse_dir / "conf" / path
         model_config_file = model_config_file.resolve()
 
         # check that configuration file exists
         if not model_config_file.exists():
-            msg = f"PCSE model configuration file does not exist: {model_config_file}"
+            msg = f"PCSE model configuration file does not exist: {model_config_file.name}"
             raise FileNotFoundError(msg)
         # store for later use
         config["model_config_file"] = model_config_file
