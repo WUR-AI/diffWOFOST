@@ -73,7 +73,7 @@ class Configuration:
                 description = desc
                 if description[-1] != "\n":
                     description += "\n"
-            config["descrition"] = description
+            config["description"] = description
 
         # Loop through the attributes in the configuration file
         for key, value in loc.items():
