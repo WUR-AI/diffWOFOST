@@ -16,7 +16,10 @@ from .. import phy_data_folder
 # Ignore deprecation warnings from pcse.base.simulationobject
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
 
-phenology_config = Configuration.from_pcse_config_file(phy_data_folder / "WOFOST_Phenology.conf")
+phenology_config = Configuration(
+    CROP=DVS_Phenology,
+    OUTPUT_VARS=["DVR", "DVS", "TSUM", "TSUME", "VERN"],
+)
 
 
 def assert_reference_match(reference, model, expected_precision):

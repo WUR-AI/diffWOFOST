@@ -17,8 +17,9 @@ from .. import phy_data_folder
 # Ignore deprecation warnings from pcse.base.simulationobject
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
 
-root_dynamics_config = Configuration.from_pcse_config_file(
-    phy_data_folder / "WOFOST_Root_Dynamics.conf"
+root_dynamics_config = Configuration(
+    CROP=WOFOST_Root_Dynamics,
+    OUTPUT_VARS=["RD", "TWRT"],
 )
 
 
