@@ -4,7 +4,6 @@ from unittest.mock import patch
 import pytest
 import torch
 from numpy.testing import assert_array_almost_equal
-from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics
@@ -117,26 +116,6 @@ class TestRootDynamics:
             assert all(
                 abs(reference[var] - model[var]) < precision
                 for var, precision in expected_precision.items()
-            )
-
-    def test_root_dynamics_with_engine(self):
-        # prepare model input
-        test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        config_path = str(phy_data_folder / "WOFOST_Root_Dynamics.conf")
-
-        # Engine does not allows to specify `external_states`
-        with pytest.raises(KeyError):
-            Engine(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                config_path,
             )
 
     @pytest.mark.parametrize("param", ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"])

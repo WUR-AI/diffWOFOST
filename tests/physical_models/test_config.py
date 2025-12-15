@@ -34,7 +34,7 @@ class TestConfiguration:
         assert config.AGROMANAGEMENT == AgroManager
 
     def test_config_can_be_instantiated_from_a_custom_pcse_config_file(self):
-        config_file_path = phy_data_folder / "WOFOST_Leaf_Dynamics.conf"
+        config_file_path = phy_data_folder / "Wofost72_Pheno_test.conf"
         config = Configuration.from_pcse_config_file(config_file_path)
         assert isinstance(config, Configuration)
         assert config.model_config_file == config_file_path.resolve()
