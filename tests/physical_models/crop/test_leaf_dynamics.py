@@ -3,7 +3,6 @@ import warnings
 from unittest.mock import patch
 import pytest
 import torch
-from numpy.testing import assert_array_almost_equal
 from pcse.engine import Engine
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
@@ -590,8 +589,11 @@ class TestDiffLeafDynamicsGradients:
         """Test that analytical gradients match numerical gradients."""
         value, _ = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64))
+
+        # we pass `param` and not `param.data` because we want `requires_grad=True`
+        # for parameter `SPAN`
         numerical_grad = calculate_numerical_grad(
-            get_test_diff_leaf_model, param_name, param.data, output_name
+            get_test_diff_leaf_model, param_name, param, output_name
         )
 
         model = get_test_diff_leaf_model()
@@ -601,7 +603,13 @@ class TestDiffLeafDynamicsGradients:
         # this is ∂loss/∂param, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
+        # assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
+        torch.testing.assert_close(
+            numerical_grad,
+            grads,
+            rtol=1e-3,
+            atol=1e-3,
+        )
 
         # Warn if gradient is zero (but this shouldn't happen for gradient_params)
         if torch.all(grads == 0):
