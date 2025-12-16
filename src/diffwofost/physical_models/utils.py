@@ -133,7 +133,7 @@ class EngineTestHelper(Engine):
         # Configure device and dtype on crop module class if it supports them
         if hasattr(self.mconf.CROP, "device") and device is not None:
             self.mconf.CROP.device = device
-        if hasattr(self.mconf.CROP, "dtype"):
+        if hasattr(self.mconf.CROP, "dtype") and dtype is not None:
             self.mconf.CROP.dtype = dtype
 
         # Variable kiosk for registering and publishing variables
