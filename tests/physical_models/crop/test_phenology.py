@@ -56,7 +56,7 @@ def get_test_diff_phenology_model():
         "VERNBASE",
         "VERNDVS",
     ]
-    (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
+    (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
         prepare_engine_input(test_data, crop_model_params)
     )
     return DiffPhenologyDynamics(
@@ -64,7 +64,6 @@ def get_test_diff_phenology_model():
         weather_data_provider,
         agro_management_inputs,
         phenology_config,
-        copy.deepcopy(external_states),
     )
 
 
@@ -75,14 +74,12 @@ class DiffPhenologyDynamics(torch.nn.Module):
         weather_data_provider,
         agro_management_inputs,
         config,
-        external_states,
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
         self.weather_data_provider = weather_data_provider
         self.agro_management_inputs = agro_management_inputs
         self.config = config
-        self.external_states = external_states
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
@@ -94,7 +91,6 @@ class DiffPhenologyDynamics(torch.nn.Module):
             self.weather_data_provider,
             self.agro_management_inputs,
             self.config,
-            self.external_states,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -114,7 +110,6 @@ class TestPhenologyDynamics:
 
     @pytest.mark.parametrize("test_data_url", phenology_data_urls)
     def test_phenology_with_testengine(self, test_data_url):
-        """EngineTestHelper because it allows to specify `external_states`."""
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "TSUMEM",
@@ -136,7 +131,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states,
+            _,
         ) = prepare_engine_input(test_data, crop_model_params)
 
         engine = EngineTestHelper(
@@ -144,7 +139,6 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            external_states,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -199,7 +193,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states,
+            _,
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         if param == "TEMP":
@@ -219,7 +213,6 @@ class TestPhenologyDynamics:
                     weather_data_provider,
                     agro_management_inputs,
                     phenology_config,
-                    external_states,
                 )
                 engine.run_till_terminate()
                 _ = engine.get_output()
@@ -229,7 +222,6 @@ class TestPhenologyDynamics:
                 weather_data_provider,
                 agro_management_inputs,
                 phenology_config,
-                external_states,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -280,7 +272,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states,
+            _,
         ) = prepare_engine_input(test_data, crop_model_params)
 
         test_value = crop_model_params_provider[param]
@@ -298,7 +290,6 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            external_states,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -341,7 +332,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states,
+            _,
         ) = prepare_engine_input(test_data, crop_model_params)
 
         for param in crop_model_params:
@@ -356,7 +347,6 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            external_states,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -389,7 +379,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states,
+            _,
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         for param in (
@@ -422,7 +412,6 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            external_states,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -460,7 +449,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states,
+            _,
         ) = prepare_engine_input(test_data, crop_model_params)
 
         crop_model_params_provider.set_override(
@@ -476,7 +465,6 @@ class TestPhenologyDynamics:
                 weather_data_provider,
                 agro_management_inputs,
                 phenology_config,
-                external_states,
             )
 
     def test_phenology_with_incompatible_weather_parameter_vectors(self):
@@ -502,7 +490,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            external_states,
+            _,
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         crop_model_params_provider.set_override(
@@ -517,7 +505,6 @@ class TestPhenologyDynamics:
                 weather_data_provider,
                 agro_management_inputs,
                 phenology_config,
-                external_states,
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
