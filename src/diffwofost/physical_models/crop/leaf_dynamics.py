@@ -17,8 +17,6 @@ from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import _get_params_shape
 
-DTYPE = torch.float64  # Default data type for tensors in this module
-
 
 class WOFOST_Leaf_Dynamics(SimulationObject):
     """Leaf dynamics for the WOFOST crop model.
@@ -122,40 +120,118 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     MAX_DAYS = 365  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
     params_shape = None  # Shape of the parameters tensors
 
+    # Default values that can be overridden before instantiation
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    dtype = torch.float64
+
     class Parameters(ParamTemplate):
-        RGRLAI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        SPAN = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        TBASE = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        PERDL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RGRLAI = Any()
+        SPAN = Any()
+        TBASE = Any()
+        PERDL = Any()
+        TDWI = Any()
         SLATB = AfgenTrait()
         KDIFTB = AfgenTrait()
 
+        def __init__(self, parvalues, dtype=None, device=None):
+            # Get dtype and device from parent class if not provided
+            if dtype is None:
+                dtype = WOFOST_Leaf_Dynamics.dtype
+            if device is None:
+                device = WOFOST_Leaf_Dynamics.device
+
+            # Set default values using the provided dtype and device
+            self.RGRLAI = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.SPAN = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.TBASE = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.PERDL = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.TDWI = [torch.tensor(-99.0, dtype=dtype, device=device)]
+
+            # Call parent init
+            super().__init__(parvalues)
+
     class StateVariables(StatesTemplate):
-        LV = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        SLA = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        LVAGE = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        LAIEM = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        LASUM = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        LAIEXP = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        LAIMAX = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        LAI = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        WLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        DWLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
-        TWLV = Any(default_value=torch.tensor(-99.0, dtype=DTYPE))
+        LV = Any()
+        SLA = Any()
+        LVAGE = Any()
+        LAIEM = Any()
+        LASUM = Any()
+        LAIEXP = Any()
+        LAIMAX = Any()
+        LAI = Any()
+        WLV = Any()
+        DWLV = Any()
+        TWLV = Any()
+
+        def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
+            # Get dtype and device from parent class if not provided
+            if dtype is None:
+                dtype = WOFOST_Leaf_Dynamics.dtype
+            if device is None:
+                device = WOFOST_Leaf_Dynamics.device
+
+            # Set default values using the provided dtype and device if not in kwargs
+            if "LV" not in kwargs:
+                self.LV = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            if "SLA" not in kwargs:
+                self.SLA = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            if "LVAGE" not in kwargs:
+                self.LVAGE = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            if "LAIEM" not in kwargs:
+                self.LAIEM = torch.tensor(-99.0, dtype=dtype, device=device)
+            if "LASUM" not in kwargs:
+                self.LASUM = torch.tensor(-99.0, dtype=dtype, device=device)
+            if "LAIEXP" not in kwargs:
+                self.LAIEXP = torch.tensor(-99.0, dtype=dtype, device=device)
+            if "LAIMAX" not in kwargs:
+                self.LAIMAX = torch.tensor(-99.0, dtype=dtype, device=device)
+            if "LAI" not in kwargs:
+                self.LAI = torch.tensor(-99.0, dtype=dtype, device=device)
+            if "WLV" not in kwargs:
+                self.WLV = torch.tensor(-99.0, dtype=dtype, device=device)
+            if "DWLV" not in kwargs:
+                self.DWLV = torch.tensor(-99.0, dtype=dtype, device=device)
+            if "TWLV" not in kwargs:
+                self.TWLV = torch.tensor(-99.0, dtype=dtype, device=device)
+
+            # Call parent init
+            super().__init__(kiosk, publish=publish, **kwargs)
 
     class RateVariables(RatesTemplate):
-        GRLV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        DSLV1 = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        DSLV2 = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        DSLV3 = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        DSLV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        DALV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        DRLV = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        SLAT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        FYSAGE = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        GLAIEX = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        GLASOL = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        GRLV = Any()
+        DSLV1 = Any()
+        DSLV2 = Any()
+        DSLV3 = Any()
+        DSLV = Any()
+        DALV = Any()
+        DRLV = Any()
+        SLAT = Any()
+        FYSAGE = Any()
+        GLAIEX = Any()
+        GLASOL = Any()
+
+        def __init__(self, kiosk, dtype=None, device=None):
+            # Get dtype and device from parent class if not provided
+            if dtype is None:
+                dtype = WOFOST_Leaf_Dynamics.dtype
+            if device is None:
+                device = WOFOST_Leaf_Dynamics.device
+
+            # Set default values using the provided dtype and device
+            self.GRLV = torch.tensor(0.0, dtype=dtype, device=device)
+            self.DSLV1 = torch.tensor(0.0, dtype=dtype, device=device)
+            self.DSLV2 = torch.tensor(0.0, dtype=dtype, device=device)
+            self.DSLV3 = torch.tensor(0.0, dtype=dtype, device=device)
+            self.DSLV = torch.tensor(0.0, dtype=dtype, device=device)
+            self.DALV = torch.tensor(0.0, dtype=dtype, device=device)
+            self.DRLV = torch.tensor(0.0, dtype=dtype, device=device)
+            self.SLAT = torch.tensor(0.0, dtype=dtype, device=device)
+            self.FYSAGE = torch.tensor(0.0, dtype=dtype, device=device)
+            self.GLAIEX = torch.tensor(0.0, dtype=dtype, device=device)
+            self.GLASOL = torch.tensor(0.0, dtype=dtype, device=device)
+
+            # Call parent init
+            super().__init__(kiosk)
 
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
@@ -191,13 +267,15 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # Initial leaf biomass
         WLV = (params.TDWI * (1 - FR)) * FL
-        DWLV = torch.zeros(self.params_shape, dtype=DTYPE)
+        DWLV = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
         TWLV = WLV + DWLV
 
         # Initialize leaf classes (SLA, age and weight)
-        SLA = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
-        LVAGE = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
-        LV = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=DTYPE)
+        SLA = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=self.dtype, device=self.device)
+        LVAGE = torch.zeros(
+            (*self.params_shape, self.MAX_DAYS), dtype=self.dtype, device=self.device
+        )
+        LV = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=self.dtype, device=self.device)
         SLA[..., 0] = params.SLATB(DVS)
         LV[..., 0] = WLV
 
@@ -249,8 +327,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
         # A mask (0 if DVS < 0, 1 if DVS >= 0)
-        DVS = torch.as_tensor(k["DVS"], dtype=DTYPE)
-        dvs_mask = (DVS >= 0).to(dtype=DTYPE)
+        DVS = torch.as_tensor(k["DVS"], dtype=self.dtype, device=self.device)
+        dvs_mask = (DVS >= 0).to(dtype=self.dtype)
 
         # Growth rate leaves
         # weight of new leaves
@@ -269,7 +347,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         if "RF_FROST" in self.kiosk:
             r.DSLV3 = s.WLV * k.RF_FROST
         else:
-            r.DSLV3 = torch.zeros_like(s.WLV, dtype=DTYPE)
+            r.DSLV3 = torch.zeros_like(s.WLV, dtype=self.dtype)
 
         r.DSLV3 = dvs_mask * r.DSLV3
 
@@ -292,14 +370,14 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         if p.SPAN.requires_grad:
             # 1e-16 is chosen empirically for cases when s.LVAGE - tSPAN is very
             # small and mask should be 1
-            sharpness = torch.tensor(1e-16, dtype=DTYPE)
+            sharpness = torch.tensor(1e-16, dtype=self.dtype, device=self.device)
 
             # 1e-14 is chosen empirically for cases when s.LVAGE - tSPAN is
             # equal to zero and mask should be 0.0
             epsilon = 1e-14
-            span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=DTYPE)
+            span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=self.dtype)
         else:
-            span_mask = (s.LVAGE > tSPAN).to(dtype=DTYPE)
+            span_mask = (s.LVAGE > tSPAN).to(dtype=self.dtype)
 
         r.DALV = torch.sum(span_mask * s.LV, dim=-1)
         r.DALV = dvs_mask * r.DALV
@@ -329,14 +407,14 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.GLAIEX = torch.where(
             dvs_mask.bool(),
             torch.where(is_lai_exp, s.LAIEXP * p.RGRLAI * DTEFF, r.GLAIEX),
-            torch.tensor(0.0, dtype=DTYPE),
+            torch.tensor(0.0, dtype=self.dtype, device=self.device),
         )
 
         # source-limited increase in leaf area
         r.GLASOL = torch.where(
             dvs_mask.bool(),
             torch.where(is_lai_exp, r.GRLV * r.SLAT, r.GLASOL),
-            torch.tensor(0.0, dtype=DTYPE),
+            torch.tensor(0.0, dtype=self.dtype, device=self.device),
         )
 
         # sink-limited increase in leaf area
@@ -347,7 +425,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.SLAT = torch.where(
             dvs_mask.bool(),
             torch.where(is_lai_exp & (r.GRLV > epsilon), GLA / (r.GRLV + epsilon), r.SLAT),
-            torch.tensor(0.0, dtype=DTYPE),
+            torch.tensor(0.0, dtype=self.dtype, device=self.device),
         )
 
     @prepare_states
