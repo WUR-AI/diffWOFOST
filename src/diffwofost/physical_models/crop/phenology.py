@@ -27,9 +27,6 @@ from diffwofost.physical_models.utils import _get_params_shape
 from diffwofost.physical_models.utils import _restore_state
 from diffwofost.physical_models.utils import _snapshot_state
 
-DTYPE = torch.float64  # Default data type for tensors in this module
-EPS = torch.tensor(1e-8, dtype=DTYPE)  # Small epsilon to avoid div by zero
-
 
 class Vernalisation(SimulationObject):
     """Modification of phenological development due to vernalisation.
@@ -255,16 +252,21 @@ class Vernalisation(SimulationObject):
 
         # VERNR only for vegetative elements
         self.rates.VERNR = torch.where(
-            vegetative_mask, params.VERNRTB(TEMP), torch.zeros(self.params_shape, dtype=DTYPE)
+            vegetative_mask,
+            params.VERNRTB(TEMP),
+            torch.zeros(self.params_shape, dtype=self.dtype, device=self.device),
         )
 
         # compute VERNFAC from current VERN for vegetative elements; others = 1
         safe_den = VERNSAT - VERNBASE
+        EPS = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
         safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
         r = (self.states.VERN - VERNBASE) / safe_den
         vernfac_computed = torch.clamp(r, 0.0, 1.0)
         self.rates.VERNFAC = torch.where(
-            vegetative_mask, vernfac_computed, torch.ones(self.params_shape, dtype=DTYPE)
+            vegetative_mask,
+            vernfac_computed,
+            torch.ones(self.params_shape, dtype=self.dtype, device=self.device),
         )
 
         # mark per-element force flags for elements that passed VERNDVS but aren't vernalised
@@ -597,26 +599,26 @@ class DVS_Phenology(SimulationObject):
                 STAGE (Tensor): Integer stage code (0=emerging, 1=vegetative).
         """
         p = self.params
-        day_ordinal = torch.tensor(day.toordinal(), dtype=DTYPE)
+        day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
 
         # Define initial stage type (emergence/sowing) and fill the
         # respective day of sowing/emergence (DOS/DOE)
         if p.CROP_START_TYPE == "emergence":
-            STAGE = torch.tensor(1, dtype=torch.long)  # 1 = vegetative
+            STAGE = torch.tensor(1, dtype=torch.long, device=self.device)  # 1 = vegetative
             DOE = day_ordinal
-            DOS = torch.tensor(-1.0, dtype=DTYPE)  # Not applicable
+            DOS = torch.tensor(-1.0, dtype=self.dtype, device=self.device)  # Not applicable
             DVS = p.DVSI
             if not isinstance(DVS, torch.Tensor):
-                DVS = torch.tensor(DVS, dtype=DTYPE)
+                DVS = torch.tensor(DVS, dtype=self.dtype, device=self.device)
 
             # send signal to indicate crop emergence
             self._send_signal(signals.crop_emerged)
 
         elif p.CROP_START_TYPE == "sowing":
-            STAGE = torch.tensor(0, dtype=torch.long)  # 0 = emerging
+            STAGE = torch.tensor(0, dtype=torch.long, device=self.device)  # 0 = emerging
             DOS = day_ordinal
-            DOE = torch.tensor(-1.0, dtype=DTYPE)  # Not yet occurred
-            DVS = torch.tensor(-0.1, dtype=DTYPE)
+            DOE = torch.tensor(-1.0, dtype=self.dtype, device=self.device)  # Not yet occurred
+            DVS = torch.tensor(-0.1, dtype=self.dtype, device=self.device)
 
         else:
             msg = f"Unknown start type: {p.CROP_START_TYPE}"
@@ -657,6 +659,7 @@ class DVS_Phenology(SimulationObject):
         DAYLP = daylength(day, drv.LAT)
         DAYLP_t = _broadcast_to(DAYLP, shape, dtype=self.dtype, device=self.device)
         # Compute DVRED conditionally based on IDSL >= 1
+        EPS = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
         safe_den = p.DLO - p.DLC
         safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
         dvred_active = torch.clamp((DAYLP_t - p.DLC) / safe_den, 0.0, 1.0)

@@ -126,18 +126,12 @@ class EngineTestHelper(Engine):
     ):
         BaseEngine.__init__(self)
 
-        # Set device and dtype on crop modules if provided
-        if device is None:
-            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-        if dtype is None:
-            dtype = torch.float64
-
         # Load the model configuration
         self.mconf = ConfigurationLoader(test_config)
         self.parameterprovider = parameterprovider
 
         # Configure device and dtype on crop module class if it supports them
-        if hasattr(self.mconf.CROP, "device"):
+        if hasattr(self.mconf.CROP, "device") and device is not None:
             self.mconf.CROP.device = device
         if hasattr(self.mconf.CROP, "dtype"):
             self.mconf.CROP.dtype = dtype

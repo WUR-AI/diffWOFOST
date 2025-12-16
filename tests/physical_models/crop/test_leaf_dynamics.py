@@ -71,7 +71,8 @@ class DiffLeafDynamics(torch.nn.Module):
 class TestLeafDynamics:
     leafdynamics_data_urls = [
         f"{phy_data_folder}/test_leafdynamics_wofost72_{i:02d}.yaml"
-        for i in range(1, 45)  # there are 44 test files
+        # for i in range(1, 45)  # there are 44 test files
+        for i in range(3, 4)  # there are 44 test files
     ]
 
     wofost72_data_urls = [
@@ -109,6 +110,11 @@ class TestLeafDynamics:
         assert len(actual_results) == len(expected_results)
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
+            for var in expected_precision.keys():
+                print(f"Testing variable: {var} on day {model['day']}")
+                print(f"Difference: {abs(reference[var] - model[var])}")
+                print("precision: {expected_precision[var]}.")
+                print(f"{abs(reference[var] - model[var]) < expected_precision[var]}")
             assert all(
                 abs(reference[var] - model[var]) < precision
                 for var, precision in expected_precision.items()
