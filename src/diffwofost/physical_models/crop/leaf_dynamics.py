@@ -111,7 +111,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
     [!NOTE]
     Notice that the following gradients are zero:
-        - ∂SPAN/∂LAI
+        - ∂SPAN/∂TWLV
         - ∂PERDL/∂TWLV
         - ∂KDIFTB/∂LAI
     """  # noqa: E501
