@@ -31,8 +31,6 @@ from pcse.timer import Timer
 from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
 
-DTYPE = torch.float64  # Default data type for tensors in this module
-
 logging.disable(logging.CRITICAL)
 
 this_dir = os.path.dirname(__file__)
@@ -387,9 +385,13 @@ class Afgen:
 
         return list(range(valid_n))
 
-    def __init__(self, tbl_xy):
+    def __init__(self, tbl_xy, dtype=torch.float64):
         # Convert to tensor if needed
-        tbl_xy = torch.as_tensor(tbl_xy, dtype=DTYPE)
+        tbl_xy = torch.as_tensor(tbl_xy, dtype=dtype)
+
+        # Store dtype and device from the input table
+        self.dtype = tbl_xy.dtype
+        self.device = tbl_xy.device
 
         # Detect if we have batched tables (>1D)
         self.is_batched = tbl_xy.dim() > 1
@@ -427,7 +429,7 @@ class Afgen:
                 if len(x_vals) > 1:
                     slopes = (y_vals[1:] - y_vals[:-1]) / (x_vals[1:] - x_vals[:-1])
                 else:
-                    slopes = torch.tensor([], dtype=DTYPE)
+                    slopes = torch.tensor([], dtype=self.dtype, device=self.device)
 
                 x_list_batch.append(x_vals)
                 y_list_batch.append(y_vals)
@@ -466,7 +468,7 @@ class Afgen:
         Returns:
             torch.Tensor: The interpolated value, preserving batch dimensions.
         """
-        x = torch.as_tensor(x, dtype=DTYPE)
+        x = torch.as_tensor(x, dtype=self.dtype, device=self.device)
 
         if self.is_batched:
             # Ensure x has compatible shape for broadcasting
@@ -636,11 +638,23 @@ def _get_drv(drv_var, expected_shape):
         )
 
 
-def _broadcast_to(x, shape):
-    """Create a view of tensor X with the given shape."""
+def _broadcast_to(x, shape, dtype=None, device=None):
+    """Create a view of tensor X with the given shape.
+
+    Args:
+        x: The tensor or value to broadcast
+        shape: The target shape
+        dtype: Optional dtype for the tensor (inferred from x if not provided)
+        device: Optional device for the tensor (inferred from x if not provided)
+    """
     # If x is not a tensor, convert it
     if not isinstance(x, torch.Tensor):
-        x = torch.tensor(x, dtype=DTYPE)
+        x = torch.tensor(x)
+    # Ensure correct dtype and device
+    if dtype is not None:
+        x = x.to(dtype=dtype)
+    if device is not None:
+        x = x.to(device=device)
     # If already the correct shape, return as-is
     if x.shape == shape:
         return x

@@ -339,8 +339,16 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # death due to self shading cause by high LAI
         DVS = self.kiosk["DVS"]
-        LAICR = 3.2 / p.KDIFTB(DVS)
-        r.DSLV2 = dvs_mask * s.WLV * torch.clamp(0.03 * (s.LAI - LAICR) / LAICR, 0.0, 0.03)
+        LAICR = torch.tensor(3.2, dtype=self.dtype, device=self.device) / p.KDIFTB(DVS)
+        r.DSLV2 = (
+            dvs_mask
+            * s.WLV
+            * torch.clamp(
+                torch.tensor(0.03, dtype=self.dtype, device=self.device) * (s.LAI - LAICR) / LAICR,
+                torch.tensor(0.0, dtype=self.dtype, device=self.device),
+                torch.tensor(0.03, dtype=self.dtype, device=self.device),
+            )
+        )
 
         # Death of leaves due to frost damage as determined by
         # Reduction Factor Frost "RF_FROST"
@@ -360,7 +368,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # in DALV.
         # Note that the actual leaf death is imposed on the array LV during the
         # state integration step.
-        tSPAN = _broadcast_to(p.SPAN, s.LVAGE.shape)  # Broadcast to same shape
+        tSPAN = _broadcast_to(
+            p.SPAN, s.LVAGE.shape, dtype=self.dtype, device=self.device
+        )  # Broadcast to same shape
 
         # Using a sigmoid here instead of a conditional statement on the value of
         # SPAN because the latter would not allow for the gradient to be tracked.
@@ -374,7 +384,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
             # 1e-14 is chosen empirically for cases when s.LVAGE - tSPAN is
             # equal to zero and mask should be 0.0
-            epsilon = 1e-14
+            epsilon = torch.tensor(1e-14, dtype=self.dtype, device=self.device)
             span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=self.dtype)
         else:
             span_mask = (s.LVAGE > tSPAN).to(dtype=self.dtype)
@@ -389,16 +399,18 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         TEMP = _get_drv(drv.TEMP, self.params_shape)
 
         # physiologic ageing of leaves per time step
-        TBASE = _broadcast_to(p.TBASE, self.params_shape)
-        FYSAGE = (TEMP - TBASE) / (35.0 - TBASE)
-        r.FYSAGE = dvs_mask * torch.clamp(FYSAGE, 0.0)
+        TBASE = _broadcast_to(p.TBASE, self.params_shape, dtype=self.dtype, device=self.device)
+        FYSAGE = (TEMP - TBASE) / (torch.tensor(35.0, dtype=self.dtype, device=self.device) - TBASE)
+        r.FYSAGE = dvs_mask * torch.clamp(
+            FYSAGE, torch.tensor(0.0, dtype=self.dtype, device=self.device)
+        )
 
         # specific leaf area of leaves per time step
         r.SLAT = dvs_mask * p.SLATB(DVS)
 
         # leaf area not to exceed exponential growth curve
-        is_lai_exp = s.LAIEXP < 6.0
-        DTEFF = torch.clamp(TEMP - TBASE, 0.0)
+        is_lai_exp = s.LAIEXP < torch.tensor(6.0, dtype=self.dtype, device=self.device)
+        DTEFF = torch.clamp(TEMP - TBASE, torch.tensor(0.0, dtype=self.dtype, device=self.device))
 
         # NOTE: conditional statements do not allow for the gradient to be
         # tracked through the condition. Thus, the gradient with respect to
@@ -421,7 +433,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         GLA = torch.minimum(r.GLAIEX, r.GLASOL)
 
         # adjustment of specific leaf area of youngest leaf class
-        epsilon = 1e-10  # small value to avoid division by zero
+        epsilon = torch.tensor(
+            1e-10, dtype=self.dtype, device=self.device
+        )  # small value to avoid division by zero
         r.SLAT = torch.where(
             dvs_mask.bool(),
             torch.where(is_lai_exp & (r.GRLV > epsilon), GLA / (r.GRLV + epsilon), r.SLAT),
@@ -444,7 +458,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         tLV = states.LV.clone()
         tSLA = states.SLA.clone()
         tLVAGE = states.LVAGE.clone()
-        tDRLV = _broadcast_to(rates.DRLV, tLV.shape)
+        tDRLV = _broadcast_to(rates.DRLV, tLV.shape, dtype=self.dtype, device=self.device)
 
         # Leaf death is imposed on leaves from the oldest ones.
         # Calculate the cumulative sum of weights after leaf death, and
@@ -455,7 +469,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # Adjust value of oldest leaf class, i.e. the first non-zero
         # weight along the time axis (the last dimension).
         # Cast argument to int because torch.argmax requires it to be numeric
-        idx_oldest = torch.argmax(is_alive.type(torch.int), dim=-1, keepdim=True)
+        idx_oldest = torch.argmax(is_alive.type(torch.int), dim=-1, keepdim=True).to(
+            device=self.device
+        )
         new_biomass = torch.take_along_dim(weight_cumsum, indices=idx_oldest, dim=-1)
         tLV = torch.scatter(tLV, dim=-1, index=idx_oldest, src=new_biomass)
 
@@ -464,16 +480,18 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # NOTE: conditional statements do not allow for the gradient to be
         # tracked through the condition. Thus, the gradient with respect to
         # parameters that contribute to `is_alive` are expected to be incorrect.
-        tLV = torch.where(is_alive, tLV, 0.0)
+        tLV = torch.where(is_alive, tLV, torch.tensor(0.0, dtype=self.dtype, device=self.device))
         tLVAGE = tLVAGE + rates.FYSAGE.unsqueeze(-1)
-        tLVAGE = torch.where(is_alive, tLVAGE, 0.0)
-        tSLA = torch.where(is_alive, tSLA, 0.0)
+        tLVAGE = torch.where(
+            is_alive, tLVAGE, torch.tensor(0.0, dtype=self.dtype, device=self.device)
+        )
+        tSLA = torch.where(is_alive, tSLA, torch.tensor(0.0, dtype=self.dtype, device=self.device))
 
         # --------- leave growth ---------
         idx = int((day - self.START_DATE).days / delt)
         tLV[..., idx] = rates.GRLV
         tSLA[..., idx] = rates.SLAT
-        tLVAGE[..., idx] = 0.0
+        tLVAGE[..., idx] = torch.tensor(0.0, dtype=self.dtype, device=self.device)
 
         # calculation of new leaf area
         states.LASUM = torch.sum(tLV * tSLA, dim=-1)

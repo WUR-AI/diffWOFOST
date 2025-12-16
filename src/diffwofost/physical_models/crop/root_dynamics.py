@@ -221,11 +221,13 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
         # Initial root depth states
         rdmax = torch.max(params.RDI, torch.min(params.RDMCR, params.RDMSOL))
-        RDM = _broadcast_to(rdmax, shape)
-        RD = _broadcast_to(params.RDI, shape)
+        RDM = _broadcast_to(rdmax, shape, dtype=self.dtype, device=self.device)
+        RD = _broadcast_to(params.RDI, shape, dtype=self.dtype, device=self.device)
 
         # Initial root biomass states
-        WRT = _broadcast_to(params.TDWI * self.kiosk.FR, shape)
+        WRT = _broadcast_to(
+            params.TDWI * self.kiosk.FR, shape, dtype=self.dtype, device=self.device
+        )
         DWRT = (
             torch.zeros_like(WRT)
             if shape
