@@ -61,6 +61,7 @@ class DiffRootDynamics(torch.nn.Module):
             self.agro_management_inputs,
             self.config_path,
             self.external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -99,6 +100,7 @@ class TestRootDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -164,6 +166,7 @@ class TestRootDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -222,6 +225,7 @@ class TestRootDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -268,6 +272,7 @@ class TestRootDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -311,6 +316,7 @@ class TestRootDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -359,6 +365,7 @@ class TestRootDynamics:
                 agro_management_inputs,
                 config_path,
                 external_states,
+                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)

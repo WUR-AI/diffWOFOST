@@ -2,13 +2,14 @@
 
 import pytest
 import torch
-from diffwofost.physical_models.utils import DTYPE
 from diffwofost.physical_models.utils import Afgen
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import WeatherDataProviderTestHelper
 from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import get_test_data
 from . import phy_data_folder
+
+DTYPE = torch.float32  # Default dtype for tests
 
 
 class TestAfgen:
@@ -633,7 +634,7 @@ class TestGetDrvParam:
         provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
         wdc = provider(provider.first_date)
         scalar = wdc.TEMP
-        out = _get_drv(scalar, expected_shape)
+        out = _get_drv(scalar, expected_shape, dtype=DTYPE)
         assert out.shape == expected_shape
         assert torch.allclose(out, torch.full(expected_shape, scalar, dtype=DTYPE))
 
@@ -644,7 +645,7 @@ class TestGetDrvParam:
         provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
         wdc = provider(provider.first_date)
         scalar = torch.tensor(wdc.IRRAD, dtype=DTYPE)  # 0-d tensor
-        out = _get_drv(scalar, expected_shape)
+        out = _get_drv(scalar, expected_shape, dtype=DTYPE)
         assert out.shape == expected_shape
         assert torch.allclose(out, torch.full(expected_shape, scalar.item(), dtype=DTYPE))
 
@@ -652,7 +653,7 @@ class TestGetDrvParam:
         expected_shape = (3, 2)
         base_val = torch.tensor(12.34, dtype=DTYPE)
         var = torch.ones(expected_shape, dtype=DTYPE) * base_val
-        out = _get_drv(var, expected_shape)
+        out = _get_drv(var, expected_shape, dtype=DTYPE)
         assert out.shape == expected_shape
         # Should be the same object (no copy)
         assert out.data_ptr() == var.data_ptr()
@@ -661,10 +662,10 @@ class TestGetDrvParam:
         expected_shape = (3, 2)
         wrong = torch.ones(2, 3, dtype=DTYPE)
         with pytest.raises(ValueError, match="incompatible shape"):
-            _get_drv(wrong, expected_shape)
+            _get_drv(wrong, expected_shape, dtype=DTYPE)
 
     def test_one_dim_shape_raises(self):
         expected_shape = (3, 2)
         one_dim = torch.ones(3, dtype=DTYPE)
         with pytest.raises(ValueError, match="incompatible shape"):
-            _get_drv(one_dim, expected_shape)
+            _get_drv(one_dim, expected_shape, dtype=DTYPE)

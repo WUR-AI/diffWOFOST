@@ -31,6 +31,8 @@ from pcse.timer import Timer
 from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
 
+DTYPE = torch.float64  # Default data type for tensors in this module
+
 logging.disable(logging.CRITICAL)
 
 this_dir = os.path.dirname(__file__)
@@ -121,20 +123,12 @@ class EngineTestHelper(Engine):
         agromanagement,
         test_config,
         external_states=None,
-        device=None,
-        dtype=None,
     ):
         BaseEngine.__init__(self)
 
         # Load the model configuration
         self.mconf = ConfigurationLoader(test_config)
         self.parameterprovider = parameterprovider
-
-        # Configure device and dtype on crop module class if it supports them
-        if hasattr(self.mconf.CROP, "device") and device is not None:
-            self.mconf.CROP.device = device
-        if hasattr(self.mconf.CROP, "dtype") and dtype is not None:
-            self.mconf.CROP.dtype = dtype
 
         # Variable kiosk for registering and publishing variables
         self.kiosk = VariableKioskTestHelper(external_states)
@@ -223,7 +217,7 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
 
 
 def prepare_engine_input(
-    test_data, crop_model_params, meteo_range_checks=True, dtype=torch.float64, device="cpu"
+    test_data, crop_model_params, meteo_range_checks=True, dtype=torch.float64
 ):
     """Prepare the inputs for the engine from the YAML file."""
     agro_management_inputs = test_data["AgroManagement"]
@@ -240,7 +234,7 @@ def prepare_engine_input(
     for name in crop_model_params:
         # if name is missing in the YAML, skip it
         if name in crop_model_params_provider:
-            value = torch.tensor(crop_model_params_provider[name], dtype=dtype, device=device)
+            value = torch.tensor(crop_model_params_provider[name], dtype=dtype)
             crop_model_params_provider.set_override(name, value, check=False)
 
     # convert external states to tensors
@@ -381,7 +375,7 @@ class Afgen:
 
     def __init__(self, tbl_xy):
         # Convert to tensor if needed
-        tbl_xy = torch.as_tensor(tbl_xy)
+        tbl_xy = torch.as_tensor(tbl_xy, dtype=DTYPE)
 
         # Detect if we have batched tables (>1D)
         self.is_batched = tbl_xy.dim() > 1
@@ -419,7 +413,7 @@ class Afgen:
                 if len(x_vals) > 1:
                     slopes = (y_vals[1:] - y_vals[:-1]) / (x_vals[1:] - x_vals[:-1])
                 else:
-                    slopes = torch.tensor([], dtype=torch.float64)
+                    slopes = torch.tensor([], dtype=DTYPE)
 
                 x_list_batch.append(x_vals)
                 y_list_batch.append(y_vals)
@@ -458,16 +452,7 @@ class Afgen:
         Returns:
             torch.Tensor: The interpolated value, preserving batch dimensions.
         """
-        # Convert to tensor and ensure it's on the same device as the tables
-        if self.is_batched:
-            # Get device and dtype from the first table
-            target_device = self.x_list_batch[0].device
-            target_dtype = self.x_list_batch[0].dtype
-        else:
-            # Get device and dtype from the tables
-            target_device = self.x_list.device
-            target_dtype = self.x_list.dtype
-        x = torch.as_tensor(x, dtype=target_dtype, device=target_device)
+        x = torch.as_tensor(x, dtype=DTYPE)
 
         if self.is_batched:
             # Ensure x has compatible shape for broadcasting
@@ -605,7 +590,7 @@ def _get_params_shape(params):
     return shape
 
 
-def _get_drv(drv_var, expected_shape, dtype, device=None):
+def _get_drv(drv_var, expected_shape):
     """Check that the driving variables have the expected shape and fetch them.
 
     Driving variables can be scalars (0-dimensional) or match the expected shape.
@@ -616,8 +601,6 @@ def _get_drv(drv_var, expected_shape, dtype, device=None):
     Args:
         drv_var: driving variable in WeatherDataContainer
         expected_shape: Expected shape tuple for non-scalar variables
-        dtype: dtype for the tensor
-        device: Optional device for the tensor
 
     Raises:
         ValueError: If any variable has incompatible shape
@@ -628,13 +611,9 @@ def _get_drv(drv_var, expected_shape, dtype, device=None):
     # Check shape: must be scalar (0-d) or match expected_shape
     if not isinstance(drv_var, torch.Tensor) or drv_var.dim() == 0:
         # Scalar is valid, will be broadcast
-        return _broadcast_to(drv_var, expected_shape, dtype, device)
+        return _broadcast_to(drv_var, expected_shape)
     elif drv_var.shape == expected_shape:
         # Matches expected shape
-        if dtype is not None:
-            drv_var = drv_var.to(dtype=dtype)
-        if device is not None:
-            drv_var = drv_var.to(device=device)
         return drv_var
     else:
         raise ValueError(
@@ -643,23 +622,11 @@ def _get_drv(drv_var, expected_shape, dtype, device=None):
         )
 
 
-def _broadcast_to(x, shape, dtype, device=None):
-    """Create a view of tensor X with the given shape.
-
-    Args:
-        x: The tensor or value to broadcast
-        shape: The target shape
-        dtype: dtype for the tensor
-        device: Optional device for the tensor
-    """
+def _broadcast_to(x, shape):
+    """Create a view of tensor X with the given shape."""
     # If x is not a tensor, convert it
     if not isinstance(x, torch.Tensor):
-        x = torch.tensor(x, dtype=dtype)
-    # Ensure correct dtype and device
-    if dtype is not None:
-        x = x.to(dtype=dtype)
-    if device is not None:
-        x = x.to(device=device)
+        x = torch.tensor(x, dtype=DTYPE)
     # If already the correct shape, return as-is
     if x.shape == shape:
         return x

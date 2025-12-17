@@ -17,6 +17,15 @@ from .. import phy_data_folder
 pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
 
 
+@pytest.fixture(params=["cpu", "cuda"])
+def device(request):
+    """Fixture to parametrize tests over CPU and GPU devices."""
+    device_name = request.param
+    if device_name == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
+    return device_name
+
+
 def get_test_diff_leaf_model():
     test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
@@ -61,6 +70,7 @@ class DiffLeafDynamics(torch.nn.Module):
             self.agro_management_inputs,
             self.config_path,
             self.external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -71,8 +81,7 @@ class DiffLeafDynamics(torch.nn.Module):
 class TestLeafDynamics:
     leafdynamics_data_urls = [
         f"{phy_data_folder}/test_leafdynamics_wofost72_{i:02d}.yaml"
-        # for i in range(1, 45)  # there are 44 test files
-        for i in range(3, 4)  # there are 44 test files
+        for i in range(1, 45)  # there are 44 test files
     ]
 
     wofost72_data_urls = [
@@ -80,8 +89,8 @@ class TestLeafDynamics:
         for i in range(1, 45)  # there are 44 test files
     ]
 
-    @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)
-    def test_leaf_dynamics_with_testengine(self, test_data_url):
+    @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls[:3])  # Test subset for GPU
+    def test_leaf_dynamics_with_testengine(self, test_data_url, device):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
         # prepare model input
         test_data = get_test_data(test_data_url)
@@ -100,6 +109,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -110,13 +120,13 @@ class TestLeafDynamics:
         assert len(actual_results) == len(expected_results)
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
+            # Verify output is on the correct device
             for var in expected_precision.keys():
-                print(f"Testing variable: {var} on day {model['day']}")
-                print(f"Difference: {abs(reference[var] - model[var])}")
-                print("precision: {expected_precision[var]}.")
-                print(f"{abs(reference[var] - model[var]) < expected_precision[var]}")
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            # Move to CPU for comparison if needed
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
             assert all(
-                abs(reference[var] - model[var]) < precision
+                abs(reference[var] - model_cpu[var]) < precision
                 for var, precision in expected_precision.items()
             )
 
@@ -143,7 +153,7 @@ class TestLeafDynamics:
     @pytest.mark.parametrize(
         "param", ["TDWI", "SPAN", "RGRLAI", "TBASE", "PERDL", "KDIFTB", "SLATB", "TEMP"]
     )
-    def test_leaf_dynamics_with_one_parameter_vector(self, param):
+    def test_leaf_dynamics_with_one_parameter_vector(self, param, device):
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -153,7 +163,9 @@ class TestLeafDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
+        ) = prepare_engine_input(
+            test_data, crop_model_params, meteo_range_checks=False, device=device
+        )
         config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
@@ -179,6 +191,7 @@ class TestLeafDynamics:
                     agro_management_inputs,
                     config_path,
                     external_states,
+                    device=device,
                 )
                 engine.run_till_terminate()
                 actual_results = engine.get_output()
@@ -189,6 +202,7 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 config_path,
                 external_states,
+                device=device,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -200,8 +214,15 @@ class TestLeafDynamics:
 
             for reference, model in zip(expected_results, actual_results, strict=False):
                 assert reference["DAY"] == model["day"]
+                # Verify output is on the correct device
+                for var in expected_precision.keys():
+                    assert model[var].device.type == device, f"{var} should be on {device}"
+                # Move to CPU for comparison
+                model_cpu = {
+                    k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()
+                }
                 assert all(
-                    all(abs(reference[var] - model[var]) < precision)
+                    all(abs(reference[var] - model_cpu[var]) < precision)
                     for var, precision in expected_precision.items()
                 )
 
@@ -217,7 +238,7 @@ class TestLeafDynamics:
             ("SLATB", 0.0005),
         ],
     )
-    def test_leaf_dynamics_with_different_parameter_values(self, param, delta):
+    def test_leaf_dynamics_with_different_parameter_values(self, param, delta, device):
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -247,6 +268,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -258,9 +280,14 @@ class TestLeafDynamics:
 
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
+            # Verify output is on the correct device
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            # Move to CPU for comparison
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
             assert all(
                 # The value for which test data are available is the last element
-                abs(reference[var] - model[var][-1]) < precision
+                abs(reference[var] - model_cpu[var][-1]) < precision
                 for var, precision in expected_precision.items()
             )
 
@@ -292,6 +319,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -339,6 +367,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -387,6 +416,7 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 config_path,
                 external_states,
+                device="cpu",
             )
 
     def test_leaf_dynamics_with_incompatible_weather_parameter_vectors(self):
@@ -416,6 +446,7 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 config_path,
                 external_states,
+                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
@@ -470,6 +501,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             config_path,
             external_states,
+            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()

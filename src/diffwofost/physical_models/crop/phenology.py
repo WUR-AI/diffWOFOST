@@ -243,7 +243,7 @@ class Vernalisation(SimulationObject):
         VERNBASE = params.VERNBASE
         DVS = self.kiosk["DVS"]
 
-        TEMP = _get_drv(drv.TEMP, self.params_shape)
+        TEMP = _get_drv(drv.TEMP, self.params_shape, self.dtype, self.device)
 
         # Operate elementwise only on elements not yet vernalised
         not_vernalised = ~self.states.ISVERNALISED
@@ -680,7 +680,7 @@ class DVS_Phenology(SimulationObject):
                 torch.ones(shape, dtype=self.dtype, device=self.device),
             )
 
-        TEMP = _get_drv(drv.TEMP, shape)
+        TEMP = _get_drv(drv.TEMP, shape, self.dtype, self.device)
 
         # Initialize all rate variables
         r.DTSUME = torch.zeros(shape, dtype=self.dtype, device=self.device)

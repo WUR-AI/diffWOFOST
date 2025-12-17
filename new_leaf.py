@@ -264,10 +264,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         _exist_required_external_variables(self.kiosk)
         # TODO check if external variables are already torch tensors
 
-        # Get kiosk values and ensure they're on the correct device
-        FL = torch.as_tensor(self.kiosk["FL"], dtype=self.dtype, device=self.device)
-        FR = torch.as_tensor(self.kiosk["FR"], dtype=self.dtype, device=self.device)
-        DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)
+        FL = self.kiosk["FL"]
+        FR = self.kiosk["FR"]
+        DVS = self.kiosk["DVS"]
 
         params = self.params
         self.params_shape = _get_params_shape(params)
@@ -283,7 +282,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             (*self.params_shape, self.MAX_DAYS), dtype=self.dtype, device=self.device
         )
         LV = torch.zeros((*self.params_shape, self.MAX_DAYS), dtype=self.dtype, device=self.device)
-        SLA[..., 0] = params.SLATB(DVS).to(dtype=self.dtype, device=self.device)
+        SLA[..., 0] = params.SLATB(DVS)
         LV[..., 0] = WLV
 
         # Initial values for leaf area
@@ -291,9 +290,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         LASUM = LAIEM
         LAIEXP = LAIEM
         LAIMAX = LAIEM
-        SAI = torch.as_tensor(self.kiosk["SAI"], dtype=self.dtype, device=self.device)
-        PAI = torch.as_tensor(self.kiosk["PAI"], dtype=self.dtype, device=self.device)
-        LAI = LASUM + SAI + PAI
+        LAI = LASUM + self.kiosk["SAI"] + self.kiosk["PAI"]
 
         # Initialize StateVariables object
         self.states = self.StateVariables(
@@ -337,7 +334,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
         # A mask (0 if DVS < 0, 1 if DVS >= 0)
         DVS = torch.as_tensor(k["DVS"], dtype=self.dtype, device=self.device)
-        dvs_mask = (DVS >= 0).to(dtype=self.dtype).to(device=self.device)
+        dvs_mask = (DVS >= 0).to(dtype=self.dtype)
 
         # Growth rate leaves
         # weight of new leaves
@@ -396,7 +393,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.DRLV = torch.maximum(r.DSLV, r.DALV)
 
         # Get the temperature from the drv
-        TEMP = _get_drv(drv.TEMP, self.params_shape, self.dtype, self.device)
+        TEMP = _get_drv(drv.TEMP, self.params_shape)
 
         # physiologic ageing of leaves per time step
         TBASE = _broadcast_to(p.TBASE, self.params_shape, dtype=self.dtype, device=self.device)
