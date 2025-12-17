@@ -288,24 +288,26 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # SPAN because the latter would not allow for the gradient to be tracked.
         # the if statement `p.SPAN.requires_grad` to avoid unnecessary
         # approximation when SPAN is not a learnable parameter.
+        # here we use STE (straight through estimator) method.
         # TODO: sharpness can be exposed as a parameter
         if p.SPAN.requires_grad:
-            # 1e-16 is chosen empirically for cases when s.LVAGE - tSPAN is very
-            # small and mask should be 1
-            # sharpness = torch.tensor(1e-16, dtype=DTYPE)
-            sharpness = torch.tensor(1e-4, dtype=DTYPE)
+            # 1000 is chosen empirically to approximate a step function
+            sharpness = torch.tensor(1000, dtype=DTYPE)
 
             # 1e-14 is chosen empirically for cases when s.LVAGE - tSPAN is
             # equal to zero and mask should be 0.0
             epsilon = 1e-14
-            # span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=DTYPE)
 
+            # soft mask using sigmoid
             soft_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness)
 
+            # originial hard mask
             hard_mask = (s.LVAGE > tSPAN).to(DTYPE)
 
+            # STE method. Here detach is used to stop the gradient flow.
+            # This way, during backpropagation, the gradient is computed only through the `soft_mask``,
+            # while during the forward pass, the `hard_mask`` is used.
             span_mask = hard_mask.detach() + soft_mask - soft_mask.detach()
-
         else:
             span_mask = (s.LVAGE > tSPAN).to(dtype=DTYPE)
 
