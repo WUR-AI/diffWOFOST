@@ -14,4 +14,8 @@ hide:
 
 ## **Utility (under development)**
 
+::: diffwofost.physical_models.config.Configuration
+
+::: diffwofost.physical_models.engine.Engine
+
 ::: diffwofost.physical_models.utils.EngineTestHelper
