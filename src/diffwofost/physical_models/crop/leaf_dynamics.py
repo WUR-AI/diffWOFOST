@@ -292,12 +292,20 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         if p.SPAN.requires_grad:
             # 1e-16 is chosen empirically for cases when s.LVAGE - tSPAN is very
             # small and mask should be 1
-            sharpness = torch.tensor(1e-16, dtype=DTYPE)
+            # sharpness = torch.tensor(1e-16, dtype=DTYPE)
+            sharpness = torch.tensor(1e-4, dtype=DTYPE)
 
             # 1e-14 is chosen empirically for cases when s.LVAGE - tSPAN is
             # equal to zero and mask should be 0.0
             epsilon = 1e-14
-            span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=DTYPE)
+            # span_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness).to(dtype=DTYPE)
+
+            soft_mask = torch.sigmoid((s.LVAGE - tSPAN - epsilon) / sharpness)
+
+            hard_mask = (s.LVAGE > tSPAN).to(DTYPE)
+
+            span_mask = hard_mask.detach() + soft_mask - soft_mask.detach()
+
         else:
             span_mask = (s.LVAGE > tSPAN).to(dtype=DTYPE)
 
