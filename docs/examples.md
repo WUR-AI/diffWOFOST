@@ -6,9 +6,10 @@ We provide an example notebook showing optimization of models' parameters with
 `diffWOFOST`. To get familiar with the concepts and implementation, check out
 [`Introduction`](./index.md) in the documentation.
 
-| Open the notebook | Access the source | View the notebook |
-|-------|------------|---------------|
-| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization.ipynb) |
+| Model | Open the notebook | Access the source | View the notebook |
+|---|----|------------|---------------|
+| Leaf and Root dynamics| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][leaf_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][leaf_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization.ipynb) |
+| Phenology | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][pheno_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][pheno_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization_phenology.ipynb) |
 
 !!! note
     When calculating gradients, it is important to ensure that the predicted
@@ -21,6 +22,7 @@ We provide an example notebook showing optimization of models' parameters with
     output w.r.t the parameter will be close to zero, which may not provide
     useful information for optimization.
 
-[colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization.ipynb
-
-[source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization.ipynb
+[leaf_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization.ipynb
+[leaf_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization.ipynb
+[pheno_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_phenology.ipynb
+[pheno_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_phenology.ipynb
