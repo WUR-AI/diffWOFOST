@@ -418,7 +418,11 @@ class TestLeafDynamics:
 
     @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)
     def test_leaf_dynamics_with_sigmoid_approx(self, test_data_url):
-        """Test if sigmoid approximation gives same results as leaf dynamics."""
+        """Test if sigmoid approximation gives same results as leaf dynamics.
+
+        This should be the case since WOFOST_Leaf_Dynamics uses STE method.
+        In practice, no approximation is done when not insterested in gradients.
+        """
         # prepare model input
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
@@ -578,13 +582,16 @@ class TestDiffLeafDynamicsGradients:
         # this is ∂loss/∂param, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        # assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
-        torch.testing.assert_close(
-            numerical_grad,
-            grads,
-            rtol=1e-3,
-            atol=1e-3,
-        )
+        # for span, the numerical gradient can't be equal to the pytorch one
+        # because we are using STE method
+        if (param_name, output_name) not in {("SPAN", "LAI")}:
+            # assert_array_almost_equal(numerical_grad, grads.data, decimal=3)
+            torch.testing.assert_close(
+                numerical_grad,
+                grads,
+                rtol=1e-3,
+                atol=1e-3,
+            )
 
         # Warn if gradient is zero (but this shouldn't happen for gradient_params)
         if torch.all(grads == 0):
