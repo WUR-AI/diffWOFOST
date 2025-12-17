@@ -304,9 +304,10 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             # originial hard mask
             hard_mask = (s.LVAGE > tSPAN).to(DTYPE)
 
-            # STE method. Here detach is used to stop the gradient flow.
-            # This way, during backpropagation, the gradient is computed only through the `soft_mask``,
-            # while during the forward pass, the `hard_mask`` is used.
+            # STE method. Here detach is used to stop the gradient flow. This
+            # way, during backpropagation, the gradient is computed only through
+            # the `soft_mask``, while during the forward pass, the `hard_mask``
+            # is used.
             span_mask = hard_mask.detach() + soft_mask - soft_mask.detach()
         else:
             span_mask = (s.LVAGE > tSPAN).to(dtype=DTYPE)
