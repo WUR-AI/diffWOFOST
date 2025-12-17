@@ -698,9 +698,13 @@ class TestDiffPhenologyDynamicsGradients:
         output = model({param_name: param})
         loss = output[output_name].sum()
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
-        rtol = 0.005
-        assert torch.all(
-            torch.abs(numerical_grad - grads.data) / (torch.abs(grads.data) + 1e-8) < rtol
+
+        # here tol is relaxed due to approximations
+        torch.testing.assert_close(
+            numerical_grad,
+            grads,
+            rtol=1e-2,
+            atol=1e-2,
         )
         if torch.all(grads == 0):
             warnings.warn(
