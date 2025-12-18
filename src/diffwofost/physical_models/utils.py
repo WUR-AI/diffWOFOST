@@ -3,8 +3,6 @@
 It contains:
     - VariableKioskTestHelper: A subclass of the VariableKiosk that can use externally
       forced states/rates
-    - ConfigurationLoaderTestHelper: An subclass of ConfigurationLoader that allows to
-      specify the simbojects to be test dynamically
     - EngineTestHelper: engine specifically for running the YAML tests.
     - WeatherDataProviderTestHelper: a weatherdata provides that takes the weather
       inputs from the YAML file.
@@ -13,32 +11,24 @@ Note that the code here is *not* python2 compatible.
 """
 
 import logging
-import os
 from collections.abc import Iterable
+from pathlib import Path
 import torch
 import yaml
 from pcse import signals
-from pcse.agromanager import AgroManager
-from pcse.base import ConfigurationLoader
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
-from pcse.engine import Engine
 from pcse.settings import settings
 from pcse.timer import Timer
 from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
+from .config import Configuration
+from .engine import Engine
 
 logging.disable(logging.CRITICAL)
-
-this_dir = os.path.dirname(__file__)
-
-
-def nothing(*args, **kwargs):
-    """A function that does nothing."""
-    pass
 
 
 class VariableKioskTestHelper(VariableKiosk):
@@ -46,7 +36,7 @@ class VariableKioskTestHelper(VariableKiosk):
 
     external_state_list = None
 
-    def __init__(self, external_state_list):
+    def __init__(self, external_state_list=None):
         super().__init__()
         self.current_externals = {}
         if external_state_list:
@@ -96,21 +86,6 @@ class VariableKioskTestHelper(VariableKiosk):
         return key in self.current_externals or dict.__contains__(self, key)
 
 
-class ConfigurationLoaderTestHelper(ConfigurationLoader):
-    def __init__(self, YAML_test_inputs, simobject, waterbalance=None):
-        self.model_config_file = "Test config"
-        self.description = "Configuration loader for running YAML tests"
-        self.CROP = simobject
-        self.SOIL = waterbalance
-        self.AGROMANAGEMENT = AgroManager
-        self.OUTPUT_INTERVAL = "daily"
-        self.OUTPUT_INTERVAL_DAYS = 1
-        self.OUTPUT_WEEKDAY = 0
-        self.OUTPUT_VARS = list(YAML_test_inputs["Precision"].keys())
-        self.SUMMARY_OUTPUT_VARS = []
-        self.TERMINAL_OUTPUT_VARS = []
-
-
 class EngineTestHelper(Engine):
     """An engine which is purely for running the YAML unit tests."""
 
@@ -119,15 +94,19 @@ class EngineTestHelper(Engine):
         parameterprovider,
         weatherdataprovider,
         agromanagement,
-        test_config,
+        config,
         external_states=None,
         device=None,
         dtype=None,
     ):
         BaseEngine.__init__(self)
 
-        # Load the model configuration
-        self.mconf = ConfigurationLoader(test_config)
+        # If a path is given, load the model configuration from a PCSE config file
+        if isinstance(config, str | Path):
+            self.mconf = Configuration.from_pcse_config_file(config)
+        else:
+            self.mconf = config
+
         self.parameterprovider = parameterprovider
 
         # Configure device and dtype on crop module class if it supports them
