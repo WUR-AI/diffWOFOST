@@ -273,7 +273,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.params_shape = _get_params_shape(params)
 
         # Initial leaf biomass
-        WLV = (params.TDWI * (1 - FR)) * FL
+        TDWI = _broadcast_to(params.TDWI, self.params_shape, dtype=self.dtype, device=self.device)
+        WLV = (TDWI * (1 - FR)) * FL
         DWLV = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
         TWLV = WLV + DWLV
 
@@ -344,11 +345,16 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.GRLV = dvs_mask * k.ADMI * k.FL
 
         # death of leaves due to water/oxygen stress
-        r.DSLV1 = dvs_mask * s.WLV * (1.0 - k.RFTRA) * p.PERDL
+        RFTRA = _broadcast_to(k.RFTRA, self.params_shape, dtype=self.dtype, device=self.device)
+        PERDL = _broadcast_to(p.PERDL, self.params_shape, dtype=self.dtype, device=self.device)
+        r.DSLV1 = dvs_mask * s.WLV * (1.0 - RFTRA) * PERDL
 
         # death due to self shading cause by high LAI
-        DVS = self.kiosk["DVS"]
-        LAICR = 3.2 / p.KDIFTB(DVS)
+        DVS = _broadcast_to(
+            self.kiosk["DVS"], self.params_shape, dtype=self.dtype, device=self.device
+        )
+        KDIFTB = p.KDIFTB.to(device=self.device, dtype=self.dtype)
+        LAICR = 3.2 / KDIFTB(DVS)
         r.DSLV2 = dvs_mask * s.WLV * torch.clamp(0.03 * (s.LAI - LAICR) / LAICR, 0.0, 0.03)
 
         # Death of leaves due to frost damage as determined by
@@ -404,7 +410,8 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.FYSAGE = dvs_mask * torch.clamp(FYSAGE, 0.0)
 
         # specific leaf area of leaves per time step
-        r.SLAT = dvs_mask * p.SLATB(DVS)
+        SLATB = p.SLATB.to(device=self.device, dtype=self.dtype)
+        r.SLAT = dvs_mask * SLATB(DVS)
 
         # leaf area not to exceed exponential growth curve
         is_lai_exp = s.LAIEXP < 6.0
@@ -414,9 +421,10 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # tracked through the condition. Thus, the gradient with respect to
         # parameters that contribute to `is_lai_exp` (e.g. RGRLAI and TBASE)
         # are expected to be incorrect.
+        RGRLAI = _broadcast_to(p.RGRLAI, self.params_shape, dtype=self.dtype, device=self.device)
         r.GLAIEX = torch.where(
             dvs_mask.bool(),
-            torch.where(is_lai_exp, s.LAIEXP * p.RGRLAI * DTEFF, r.GLAIEX),
+            torch.where(is_lai_exp, s.LAIEXP * RGRLAI * DTEFF, r.GLAIEX),
             self._zero,
         )
 

@@ -163,6 +163,25 @@ class TestAfgen:
         expected = torch.tensor(1.25, dtype=DTYPE)  # Linear interpolation
         assert torch.isclose(result, expected)
 
+    def test_to_moves_dtype_and_device(self):
+        afgen = Afgen([0, 0, 10, 10])
+        returned = afgen.to(dtype=torch.float64)
+        assert returned is afgen
+        out = afgen(torch.tensor(5.0))
+        assert out.dtype == torch.float64
+
+        # Batched tables
+        tbl = torch.tensor([[0.0, 0.0, 10.0, 10.0], [0.0, 0.0, 10.0, 20.0]], dtype=torch.float32)
+        afgen_batched = Afgen(tbl)
+        afgen_batched.to(dtype=torch.float64)
+        out_batched = afgen_batched(torch.tensor([5.0, 5.0]))
+        assert out_batched.dtype == torch.float64
+
+        if torch.cuda.is_available():
+            afgen_cuda = Afgen([0, 0, 10, 10]).to(device="cuda")
+            out_cuda = afgen_cuda(torch.tensor(5.0, device="cuda"))
+            assert out_cuda.device.type == "cuda"
+
 
 class TestAfgenTrait:
     """Tests for the AfgenTrait class."""
