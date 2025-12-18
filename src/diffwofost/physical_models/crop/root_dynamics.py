@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import torch
 from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
@@ -119,6 +119,8 @@ class WOFOST_Root_Dynamics(SimulationObject):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     dtype = torch.float64
 
+    params_shape = None  # Shape of the parameters tensors
+
     class Parameters(ParamTemplate):
         RDI = Any()
         RRI = Any()
@@ -211,28 +213,29 @@ class WOFOST_Root_Dynamics(SimulationObject):
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
         """
+        self.kiosk = kiosk
         self.params = self.Parameters(parvalues)
         self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
-        self.kiosk = kiosk
 
         # INITIAL STATES
         params = self.params
-        shape = _get_params_shape(params)
+        self.params_shape = _get_params_shape(params)
+        shape = self.params_shape
 
         # Initial root depth states
-        rdmax = torch.max(params.RDI, torch.min(params.RDMCR, params.RDMSOL))
-        RDM = _broadcast_to(rdmax, shape, dtype=self.dtype, device=self.device)
-        RD = _broadcast_to(params.RDI, shape, dtype=self.dtype, device=self.device)
+        RDI = _broadcast_to(params.RDI, shape, dtype=self.dtype, device=self.device)
+        RDMCR = _broadcast_to(params.RDMCR, shape, dtype=self.dtype, device=self.device)
+        RDMSOL = _broadcast_to(params.RDMSOL, shape, dtype=self.dtype, device=self.device)
+
+        rdmax = torch.maximum(RDI, torch.minimum(RDMCR, RDMSOL))
+        RDM = rdmax
+        RD = RDI
 
         # Initial root biomass states
-        WRT = _broadcast_to(
-            params.TDWI * self.kiosk.FR, shape, dtype=self.dtype, device=self.device
-        )
-        DWRT = (
-            torch.zeros_like(WRT)
-            if shape
-            else torch.zeros((), dtype=self.dtype, device=self.device)
-        )
+        TDWI = _broadcast_to(params.TDWI, shape, dtype=self.dtype, device=self.device)
+        FR = _broadcast_to(self.kiosk["FR"], shape, dtype=self.dtype, device=self.device)
+        WRT = TDWI * FR
+        DWRT = torch.zeros(shape, dtype=self.dtype, device=self.device)
         TWRT = WRT + DWRT
 
         self.states = self.StateVariables(
@@ -254,22 +257,29 @@ class WOFOST_Root_Dynamics(SimulationObject):
         s = self.states
         k = self.kiosk
 
-        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
+        if self.params_shape is None:
+            self.params_shape = _get_params_shape(p)
+
+        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
-        DVS = torch.as_tensor(k["DVS"], dtype=self.dtype, device=self.device)
+        DVS = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
         dvs_mask = (DVS >= 0).to(dtype=self.dtype)
 
         # Increase in root biomass
-        r.GRRT = dvs_mask * k.FR * k.DMI
-        r.DRRT = dvs_mask * s.WRT * p.RDRRTB(k.DVS)
+        FR = _broadcast_to(k["FR"], self.params_shape, dtype=self.dtype, device=self.device)
+        DMI = _broadcast_to(k["DMI"], self.params_shape, dtype=self.dtype, device=self.device)
+        RDRRTB = p.RDRRTB.to(device=self.device, dtype=self.dtype)
+
+        r.GRRT = dvs_mask * FR * DMI
+        r.DRRT = dvs_mask * s.WRT * RDRRTB(DVS)
         r.GWRT = r.GRRT - r.DRRT
 
         # Increase in root depth
-        r.RR = dvs_mask * torch.min((s.RDM - s.RD), p.RRI)
+        RRI = _broadcast_to(p.RRI, self.params_shape, dtype=self.dtype, device=self.device)
+        r.RR = dvs_mask * torch.minimum((s.RDM - s.RD), RRI)
 
         # Do not let the roots growth if partioning to the roots
         # (variable FR) is zero.
-        FR = torch.as_tensor(k["FR"], dtype=self.dtype, device=self.device)
         mask = (FR > 0.0).to(dtype=self.dtype)
         r.RR = r.RR * mask * dvs_mask
 

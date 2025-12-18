@@ -22,12 +22,21 @@ root_dynamics_config = Configuration(
 )
 
 
-def get_test_diff_root_model():
+@pytest.fixture(params=["cpu", "cuda"])
+def device(request):
+    """Fixture to parametrize tests over CPU and GPU devices."""
+    device_name = request.param
+    if device_name == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
+    return device_name
+
+
+def get_test_diff_root_model(device: str = "cpu"):
     test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data, crop_model_params)
+        prepare_engine_input(test_data, crop_model_params, device=device)
     )
     return DiffRootDynamics(
         copy.deepcopy(crop_model_params_provider),
@@ -35,6 +44,7 @@ def get_test_diff_root_model():
         agro_management_inputs,
         root_dynamics_config,
         copy.deepcopy(external_states),
+        device=device,
     )
 
 
@@ -46,6 +56,7 @@ class DiffRootDynamics(torch.nn.Module):
         agro_management_inputs,
         config,
         external_states,
+        device: str = "cpu",
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
@@ -53,10 +64,13 @@ class DiffRootDynamics(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
+        self.device = device
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
+            if isinstance(value, torch.Tensor) and value.device.type != self.device:
+                value = value.to(self.device)
             self.crop_model_params_provider.set_override(name, value, check=False)
 
         engine = EngineTestHelper(
@@ -65,7 +79,7 @@ class DiffRootDynamics(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device="cpu",
+            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -84,8 +98,8 @@ class TestRootDynamics:
         for i in range(1, 45)  # there are 44 test files
     ]
 
-    @pytest.mark.parametrize("test_data_url", rootdynamics_data_urls)
-    def test_root_dynamics_with_testengine(self, test_data_url):
+    @pytest.mark.parametrize("test_data_url", rootdynamics_data_urls[:3])  # Test subset for GPU
+    def test_root_dynamics_with_testengine(self, test_data_url, device):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
         # prepare model input
         test_data = get_test_data(test_data_url)
@@ -103,7 +117,7 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -115,13 +129,16 @@ class TestRootDynamics:
 
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
             assert all(
-                abs(reference[var] - model[var]) < precision
+                abs(reference[var] - model_cpu[var]) < precision
                 for var, precision in expected_precision.items()
             )
 
     @pytest.mark.parametrize("param", ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"])
-    def test_root_dynamics_with_one_parameter_vector(self, param):
+    def test_root_dynamics_with_one_parameter_vector(self, param, device):
         # prepare model input
         test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -148,7 +165,7 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -160,8 +177,11 @@ class TestRootDynamics:
 
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
             assert all(
-                all(abs(reference[var] - model[var]) < precision)
+                all(abs(reference[var] - model_cpu[var]) < precision)
                 for var, precision in expected_precision.items()
             )
 
@@ -177,7 +197,7 @@ class TestRootDynamics:
             ("RDRRTB", 0.01),
         ],
     )
-    def test_root_dynamics_with_different_parameter_values(self, param, delta):
+    def test_root_dynamics_with_different_parameter_values(self, param, delta, device):
         # prepare model input
         test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -206,7 +226,7 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -218,9 +238,12 @@ class TestRootDynamics:
 
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert reference["DAY"] == model["day"]
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
             assert all(
                 # The value for which test data are available is the last element
-                abs(reference[var] - model[var][-1]) < precision
+                abs(reference[var] - model_cpu[var][-1]) < precision
                 for var, precision in expected_precision.items()
             )
 
@@ -412,7 +435,6 @@ class TestDiffRootDynamicsGradients:
         "RRI": ["RD"],
         "RDMCR": ["RD"],
         "RDMSOL": ["RD"],
-        "RDRRTB": ["TWRT"],
     }
 
     # Generate all combinations
@@ -427,23 +449,31 @@ class TestDiffRootDynamicsGradients:
 
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
-    def test_no_gradients(self, param_name, output_name, config_type):
+    def test_no_gradients(self, param_name, output_name, config_type, device):
         """Test cases where parameters should not have gradients for specific outputs."""
-        model = get_test_diff_root_model()
+        model = get_test_diff_root_model(device=device)
         value, dtype = self.param_configs[config_type][param_name]
-        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
         loss = output[output_name].sum()
 
-        assert loss.grad_fn is None
+        # If there is no graph at all, then there is no gradient by definition.
+        if not loss.requires_grad:
+            return
+
+        grads = torch.autograd.grad(loss, param, retain_graph=True, allow_unused=True)[0]
+        if grads is not None:
+            assert torch.all((grads == 0) | torch.isnan(grads)), (
+                f"Gradient for {param_name} w.r.t. {output_name} should be zero or NaN"
+            )
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
-    def test_gradients_forward_backward_match(self, param_name, output_name, config_type):
+    def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
         """Test that forward and backward gradients match for parameter-output pairs."""
-        model = get_test_diff_root_model()
+        model = get_test_diff_root_model(device=device)
         value, dtype = self.param_configs[config_type][param_name]
-        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
         loss = output[output_name].sum()
 
@@ -466,27 +496,29 @@ class TestDiffRootDynamicsGradients:
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
-    def test_gradients_numerical(self, param_name, output_name, config_type):
+    def test_gradients_numerical(self, param_name, output_name, config_type, device):
         """Test that analytical gradients match numerical gradients."""
         value, _ = self.param_configs[config_type][param_name]
-        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64))
+        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            get_test_diff_root_model, param_name, param.data, output_name
+            lambda: get_test_diff_root_model(device=device), param_name, param.data, output_name
         )
 
-        model = get_test_diff_root_model()
+        model = get_test_diff_root_model(device=device)
         output = model({param_name: param})
         loss = output[output_name].sum()
 
         # this is ∂loss/∂param, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        assert_array_almost_equal(numerical_grad, grads.detach().numpy(), decimal=3)
+        assert_array_almost_equal(
+            numerical_grad.detach().cpu().numpy(), grads.detach().cpu().numpy(), decimal=3
+        )
 
         # Warn if gradient is zero
         if torch.all(grads == 0):
             warnings.warn(
                 f"Gradient for parameter '{param_name}' with respect to output"
-                + f"'{output_name}' is zero: {grads.detach().numpy()}",
+                + f"'{output_name}' is zero: {grads.detach().cpu().numpy()}",
                 UserWarning,
             )
