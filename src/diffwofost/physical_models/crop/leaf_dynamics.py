@@ -253,7 +253,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.params = self.Parameters(parvalues)
         self.rates = self.RateVariables(kiosk)
 
-        # Create scalar constants once to avoid numerical deviations
+        # Create scalar constants once at the beginning to avoid recreating them
         self._zero = torch.tensor(0.0, dtype=self.dtype, device=self.device)
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
         self._sigmoid_sharpness = torch.tensor(1e-16, dtype=self.dtype, device=self.device)
@@ -264,7 +264,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         _exist_required_external_variables(self.kiosk)
         # TODO check if external variables are already torch tensors
 
-        # Get kiosk values and ensure they're on the correct device
+        # Get kiosk values and ensure they are on the correct device
         FL = torch.as_tensor(self.kiosk["FL"], dtype=self.dtype, device=self.device)
         FR = torch.as_tensor(self.kiosk["FR"], dtype=self.dtype, device=self.device)
         DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)

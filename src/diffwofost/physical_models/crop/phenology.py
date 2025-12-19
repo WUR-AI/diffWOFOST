@@ -179,6 +179,9 @@ class Vernalisation(SimulationObject):
         """
         self.params = self.Parameters(parvalues)
         self.params_shape = _get_params_shape(self.params)
+
+        # Small epsilon tensor reused in multiple safe divisions.
+        self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
         if dvs_shape is not None:
             if self.params_shape == ():
                 self.params_shape = dvs_shape
@@ -187,6 +190,10 @@ class Vernalisation(SimulationObject):
                     f"Vernalisation params shape {self.params_shape}"
                     + " incompatible with dvs_shape {dvs_shape}"
                 )
+
+        # Common constant tensors (same shape/dtype/device as this module).
+        self._ones = torch.ones(self.params_shape, dtype=self.dtype, device=self.device)
+        self._zeros = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
         # Explicitly initialize rates
         self.rates = self.RateVariables(kiosk, publish=["VERNFAC"])
         self.rates.VERNR = _broadcast_to(
@@ -254,19 +261,18 @@ class Vernalisation(SimulationObject):
         self.rates.VERNR = torch.where(
             vegetative_mask,
             params.VERNRTB(TEMP),
-            torch.zeros(self.params_shape, dtype=self.dtype, device=self.device),
+            self._zeros,
         )
 
         # compute VERNFAC from current VERN for vegetative elements; others = 1
         safe_den = VERNSAT - VERNBASE
-        EPS = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
-        safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+        safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
         r = (self.states.VERN - VERNBASE) / safe_den
         vernfac_computed = torch.clamp(r, 0.0, 1.0)
         self.rates.VERNFAC = torch.where(
             vegetative_mask,
             vernfac_computed,
-            torch.ones(self.params_shape, dtype=self.dtype, device=self.device),
+            self._ones,
         )
 
         # mark per-element force flags for elements that passed VERNDVS but aren't vernalised
@@ -527,12 +533,15 @@ class DVS_Phenology(SimulationObject):
         self.params = self.Parameters(parvalues)
         self.params_shape = _get_params_shape(self.params)
 
-        # Ensure the Vernalisation submodule (if created) uses the same dtype/device
-        # as this phenology instance. Vernalisation defaults to CUDA when available,
-        # which can otherwise cause device mismatches in CPU runs.
+        # Small epsilon tensor reused in multiple safe divisions.
+        self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
+
+        # Ensure the Vernalisation submodule uses the same dtype/device as this phenology instance
         Vernalisation.device = self.device
         Vernalisation.dtype = self.dtype
 
+        # Helpler function to cast and broadcast all parameters to params_shape.
+        # Necessary if Vernalisation changes the params_shape during initialization.
         def _cast_and_broadcast_params():
             p = self.params
             # Broadcast numeric parameters to the final params_shape and ensure dtype/device.
@@ -578,6 +587,10 @@ class DVS_Phenology(SimulationObject):
 
         # After Vernalisation initialization the final params_shape may have changed.
         _cast_and_broadcast_params()
+
+        # Create scalar constants once at the beginning to avoid recreating them
+        self._ones = torch.ones(self.params_shape, dtype=self.dtype, device=self.device)
+        self._zeros = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
 
         # Initialize rates and kiosk
         self.rates = self.RateVariables(kiosk)
@@ -694,16 +707,13 @@ class DVS_Phenology(SimulationObject):
         DAYLP = daylength(day, drv.LAT)
         DAYLP_t = _broadcast_to(DAYLP, shape, dtype=self.dtype, device=self.device)
         # Compute DVRED conditionally based on IDSL >= 1
-        EPS = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
         safe_den = p.DLO - p.DLC
-        safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+        safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
         dvred_active = torch.clamp((DAYLP_t - p.DLC) / safe_den, 0.0, 1.0)
-        DVRED = torch.where(
-            p.IDSL >= 1, dvred_active, torch.ones(shape, dtype=self.dtype, device=self.device)
-        )
+        DVRED = torch.where(p.IDSL >= 1, dvred_active, self._ones)
 
         # Vernalisation factor - always compute if module exists
-        VERNFAC = torch.ones(shape, dtype=self.dtype, device=self.device)
+        VERNFAC = self._ones
         if hasattr(self, "vernalisation") and self.vernalisation is not None:
             # Always call calc_rates (it handles stage internally now)
             self.vernalisation.calc_rates(day, drv)
@@ -712,15 +722,15 @@ class DVS_Phenology(SimulationObject):
             VERNFAC = torch.where(
                 (p.IDSL >= 2) & is_vegetative,
                 self.kiosk["VERNFAC"],
-                torch.ones(shape, dtype=self.dtype, device=self.device),
+                self._ones,
             )
 
         TEMP = _get_drv(drv.TEMP, shape, self.dtype, self.device)
 
         # Initialize all rate variables
-        r.DTSUME = torch.zeros(shape, dtype=self.dtype, device=self.device)
-        r.DTSUM = torch.zeros(shape, dtype=self.dtype, device=self.device)
-        r.DVR = torch.zeros(shape, dtype=self.dtype, device=self.device)
+        r.DTSUME = self._zeros
+        r.DTSUM = self._zeros
+        r.DVR = self._zeros
 
         # Compute rates for emerging stage (STAGE == 0)
         is_emerging = s.STAGE == 0
@@ -731,7 +741,7 @@ class DVS_Phenology(SimulationObject):
             dtsume_emerging = torch.clamp(temp_diff, min=0.0)
             dtsume_emerging = torch.minimum(dtsume_emerging, max_diff)
             safe_den = p.TSUMEM
-            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
             dvr_emerging = 0.1 * dtsume_emerging / safe_den
 
             r.DTSUME = torch.where(is_emerging, dtsume_emerging, r.DTSUME)
@@ -742,7 +752,7 @@ class DVS_Phenology(SimulationObject):
         if torch.any(is_vegetative):
             dtsum_vegetative = p.DTSMTB(TEMP) * VERNFAC * DVRED
             safe_den = p.TSUM1
-            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
             dvr_vegetative = dtsum_vegetative / safe_den
 
             r.DTSUM = torch.where(is_vegetative, dtsum_vegetative, r.DTSUM)
@@ -753,7 +763,7 @@ class DVS_Phenology(SimulationObject):
         if torch.any(is_reproductive):
             dtsum_reproductive = p.DTSMTB(TEMP)
             safe_den = p.TSUM2
-            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), EPS)
+            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
             dvr_reproductive = dtsum_reproductive / safe_den
 
             r.DTSUM = torch.where(is_reproductive, dtsum_reproductive, r.DTSUM)
