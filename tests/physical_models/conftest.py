@@ -1,9 +1,7 @@
 from pathlib import Path
 import pytest
 import requests
-
-# Load shared fixtures (e.g. cpu/cuda parametrization)
-pytest_plugins = ["tests.physical_models.fixtures"]
+import torch
 
 LOCAL_TEST_DIR = Path(__file__).parent / "test_data"
 BASE_PCSE_URL = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data"
@@ -40,3 +38,16 @@ def download_test_files():
     """Download all required test files before running tests."""
     for file_name in FILE_NAMES:
         download_file(file_name)
+
+
+@pytest.fixture(params=["cpu", "cuda"])
+def device(request):
+    """Parametrize tests over CPU and GPU devices.
+
+    Skips CUDA runs when CUDA isn't available.
+    """
+
+    device_name = request.param
+    if device_name == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
+    return device_name
