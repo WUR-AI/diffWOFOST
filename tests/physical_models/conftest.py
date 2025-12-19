@@ -2,7 +2,8 @@ from pathlib import Path
 import pytest
 import requests
 
-# Shared fixtures (e.g. cpu/cuda parametrization)
+# Load shared fixtures (e.g. cpu/cuda parametrization)
+pytest_plugins = ["tests.physical_models.fixtures"]
 
 LOCAL_TEST_DIR = Path(__file__).parent / "test_data"
 BASE_PCSE_URL = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data"
