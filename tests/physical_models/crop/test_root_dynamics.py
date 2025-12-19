@@ -13,22 +13,10 @@ from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
 
-# Ignore deprecation warnings from pcse.base.simulationobject
-pytestmark = pytest.mark.filterwarnings("ignore::DeprecationWarning:pcse.base.simulationobject")
-
 root_dynamics_config = Configuration(
     CROP=WOFOST_Root_Dynamics,
     OUTPUT_VARS=["RD", "TWRT"],
 )
-
-
-@pytest.fixture(params=["cpu", "cuda"])
-def device(request):
-    """Fixture to parametrize tests over CPU and GPU devices."""
-    device_name = request.param
-    if device_name == "cuda" and not torch.cuda.is_available():
-        pytest.skip("CUDA not available")
-    return device_name
 
 
 def get_test_diff_root_model(device: str = "cpu"):
@@ -435,6 +423,7 @@ class TestDiffRootDynamicsGradients:
         "RRI": ["RD"],
         "RDMCR": ["RD"],
         "RDMSOL": ["RD"],
+        "RDRRTB": ["TWRT"],
     }
 
     # Generate all combinations

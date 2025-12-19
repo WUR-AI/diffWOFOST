@@ -2,6 +2,8 @@ from pathlib import Path
 import pytest
 import requests
 
+# Shared fixtures (e.g. cpu/cuda parametrization)
+
 LOCAL_TEST_DIR = Path(__file__).parent / "test_data"
 BASE_PCSE_URL = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data"
 

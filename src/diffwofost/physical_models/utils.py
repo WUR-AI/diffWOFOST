@@ -415,7 +415,9 @@ class Afgen:
                 x_vals = flat_x[0].expand(num_tables)
 
             # Find interval index per table
-            i = torch.searchsorted(self._x_flat, x_vals.unsqueeze(1), right=False) - 1
+            # Ensure contiguous query tensor to avoid internal copies in searchsorted
+            x_query = x_vals.unsqueeze(1).contiguous()
+            i = torch.searchsorted(self._x_flat, x_query, right=False) - 1
             i = i.squeeze(1)
             upper = torch.clamp(self._valid_counts_flat - 2, min=0)
             i = torch.clamp(i, min=0)

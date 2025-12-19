@@ -527,11 +527,43 @@ class DVS_Phenology(SimulationObject):
         self.params = self.Parameters(parvalues)
         self.params_shape = _get_params_shape(self.params)
 
+        # Ensure the Vernalisation submodule (if created) uses the same dtype/device
+        # as this phenology instance. Vernalisation defaults to CUDA when available,
+        # which can otherwise cause device mismatches in CPU runs.
+        Vernalisation.device = self.device
+        Vernalisation.dtype = self.dtype
+
+        def _cast_and_broadcast_params():
+            p = self.params
+            # Broadcast numeric parameters to the final params_shape and ensure dtype/device.
+            for name in (
+                "TSUMEM",
+                "TBASEM",
+                "TEFFMX",
+                "TSUM1",
+                "TSUM2",
+                "IDSL",
+                "DLO",
+                "DLC",
+                "DVSI",
+                "DVSEND",
+            ):
+                setattr(
+                    p,
+                    name,
+                    _broadcast_to(getattr(p, name), self.params_shape, self.dtype, self.device),
+                )
+
+            # Move AFGEN table buffers, if present.
+            if hasattr(p, "DTSMTB") and hasattr(p.DTSMTB, "to"):
+                p.DTSMTB.to(device=self.device, dtype=self.dtype)
+
         # Initialize vernalisation for IDSL>=2
         # It has to be done in advance to get the correct params_shape
         IDSL = _broadcast_to(
             self.params.IDSL, self.params_shape, dtype=self.dtype, device=self.device
         )
+        self.params.IDSL = IDSL
         if torch.any(IDSL >= 2):
             if self.params_shape != ():
                 self.vernalisation = Vernalisation(
@@ -543,6 +575,9 @@ class DVS_Phenology(SimulationObject):
                 self.params_shape = self.vernalisation.params_shape
         else:
             self.vernalisation = None
+
+        # After Vernalisation initialization the final params_shape may have changed.
+        _cast_and_broadcast_params()
 
         # Initialize rates and kiosk
         self.rates = self.RateVariables(kiosk)
