@@ -86,7 +86,7 @@ class TestLeafDynamics:
         for i in range(1, 45)  # there are 44 test files
     ]
 
-    @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls[:3])  # Test subset for GPU
+    @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)
     def test_leaf_dynamics_with_testengine(self, test_data_url, device):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
         # prepare model input
