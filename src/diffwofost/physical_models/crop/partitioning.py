@@ -26,7 +26,7 @@ class PartioningFactors(namedtuple("partitioning_factors", "FR FL FS FO")):
     pass
 
 
-class WOFOST_Partitioning(SimulationObject):
+class DVS_Partitioning(SimulationObject):
     """Class for assimilate partitioning based on development stage (DVS).
 
     `DVS_Partitioning` calculates the partitioning of the assimilates to roots,
@@ -90,9 +90,9 @@ class WOFOST_Partitioning(SimulationObject):
         def __init__(self, parvalues, dtype=None, device=None):
             # Get dtype and device from parent class if not provided
             if dtype is None:
-                dtype = WOFOST_Partitioning.dtype
+                dtype = DVS_Partitioning.dtype
             if device is None:
-                device = WOFOST_Partitioning.device
+                device = DVS_Partitioning.device
 
             # Call parent init
             super().__init__(parvalues)
@@ -107,9 +107,9 @@ class WOFOST_Partitioning(SimulationObject):
         def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
             # Get dtype and device from parent class if not provided
             if dtype is None:
-                dtype = WOFOST_Partitioning.dtype
+                dtype = DVS_Partitioning.dtype
             if device is None:
-                device = WOFOST_Partitioning.device
+                device = DVS_Partitioning.device
 
             # Set default values using the provided dtype and device if not in kwargs
             if "FR" not in kwargs:
@@ -139,10 +139,10 @@ class WOFOST_Partitioning(SimulationObject):
 
         # initial partitioning factors (pf)
         DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)
-        FR = self.params.FRTB(DVS).to(dtype=self.dtype, device=self.device)
-        FL = self.params.FLTB(DVS).to(dtype=self.dtype, device=self.device)
-        FS = self.params.FSTB(DVS).to(dtype=self.dtype, device=self.device)
-        FO = self.params.FOTB(DVS).to(dtype=self.dtype, device=self.device)
+        FR = self.params.FRTB(DVS)
+        FL = self.params.FLTB(DVS)
+        FS = self.params.FSTB(DVS)
+        FO = self.params.FOTB(DVS)
 
         # Broadcast to params_shape
         FR = _broadcast_to(FR, self.params_shape, dtype=self.dtype, device=self.device)
@@ -195,25 +195,25 @@ class WOFOST_Partitioning(SimulationObject):
 
         DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)
         self.states.FR = _broadcast_to(
-            params.FRTB(DVS).to(dtype=self.dtype, device=self.device),
+            params.FRTB(DVS),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,
         )
         self.states.FL = _broadcast_to(
-            params.FLTB(DVS).to(dtype=self.dtype, device=self.device),
+            params.FLTB(DVS),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,
         )
         self.states.FS = _broadcast_to(
-            params.FSTB(DVS).to(dtype=self.dtype, device=self.device),
+            params.FSTB(DVS),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,
         )
         self.states.FO = _broadcast_to(
-            params.FOTB(DVS).to(dtype=self.dtype, device=self.device),
+            params.FOTB(DVS),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,
@@ -234,7 +234,7 @@ class WOFOST_Partitioning(SimulationObject):
         return self.states.PF
 
 
-class WOFOST_Partitioning_N(SimulationObject):
+class DVS_Partitioning_N(SimulationObject):
     """Class for assimilate partitioning based on development stage (DVS) with N stress.
 
     `DVS_Partitioning_N` calculates the partitioning of the assimilates to roots,
@@ -301,9 +301,9 @@ class WOFOST_Partitioning_N(SimulationObject):
         def __init__(self, parvalues, dtype=None, device=None):
             # Get dtype and device from parent class if not provided
             if dtype is None:
-                dtype = WOFOST_Partitioning_N.dtype
+                dtype = DVS_Partitioning_N.dtype
             if device is None:
-                device = WOFOST_Partitioning_N.device
+                device = DVS_Partitioning_N.device
 
             # Call parent init
             super().__init__(parvalues)
@@ -318,9 +318,9 @@ class WOFOST_Partitioning_N(SimulationObject):
         def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
             # Get dtype and device from parent class if not provided
             if dtype is None:
-                dtype = WOFOST_Partitioning_N.dtype
+                dtype = DVS_Partitioning_N.dtype
             if device is None:
-                device = WOFOST_Partitioning_N.device
+                device = DVS_Partitioning_N.device
 
             # Set default values using the provided dtype and device if not in kwargs
             if "FR" not in kwargs:
@@ -350,10 +350,10 @@ class WOFOST_Partitioning_N(SimulationObject):
 
         # initial partitioning factors (pf)
         DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)
-        FR = self.params.FRTB(DVS).to(dtype=self.dtype, device=self.device)
-        FL = self.params.FLTB(DVS).to(dtype=self.dtype, device=self.device)
-        FS = self.params.FSTB(DVS).to(dtype=self.dtype, device=self.device)
-        FO = self.params.FOTB(DVS).to(dtype=self.dtype, device=self.device)
+        FR = self.params.FRTB(DVS)
+        FL = self.params.FLTB(DVS)
+        FS = self.params.FSTB(DVS)
+        FO = self.params.FOTB(DVS)
 
         # Broadcast to params_shape
         FR = _broadcast_to(FR, self.params_shape, dtype=self.dtype, device=self.device)
@@ -414,26 +414,26 @@ class WOFOST_Partitioning_N(SimulationObject):
         s.FR = _broadcast_to(
             torch.min(
                 torch.full_like(FRTMOD, 0.6),
-                (p.FRTB(DVS).to(dtype=self.dtype, device=self.device) * FRTMOD),
+                (p.FRTB(DVS) * FRTMOD),
             ),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,
         )
         s.FL = _broadcast_to(
-            p.FLTB(DVS).to(dtype=self.dtype, device=self.device),
+            p.FLTB(DVS),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,
         )
         s.FS = _broadcast_to(
-            p.FSTB(DVS).to(dtype=self.dtype, device=self.device),
+            p.FSTB(DVS),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,
         )
         s.FO = _broadcast_to(
-            p.FOTB(DVS).to(dtype=self.dtype, device=self.device),
+            p.FOTB(DVS),
             self.params_shape,
             dtype=self.dtype,
             device=self.device,

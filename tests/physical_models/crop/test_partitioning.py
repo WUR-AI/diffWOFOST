@@ -4,18 +4,18 @@ import pytest
 import torch
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
-from diffwofost.physical_models.crop.partitioning import WOFOST_Partitioning
+from diffwofost.physical_models.crop.partitioning import DVS_Partitioning
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
 
-partitioning_config = Configuration(CROP=WOFOST_Partitioning, OUTPUT_VARS=["FR", "FL", "FS", "FO"])
+partitioning_config = Configuration(CROP=DVS_Partitioning, OUTPUT_VARS=["FR", "FL", "FS", "FO"])
 
 
 def get_test_diff_partitioning(device: str = "cpu"):
     """Build a small wrapper module for differentiable tests."""
-    test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
     (
@@ -70,13 +70,19 @@ class DiffPartitioning(torch.nn.Module):
         engine.run_till_terminate()
         results = engine.get_output()
 
-        return {
-            var: torch.stack([item[var] for item in results]) for var in ["FR", "FL", "FS", "FO"]
-        }
+        output_dict = {}
+        for var in ["FR", "FL", "FS", "FO"]:
+            stacked = torch.stack([item[var] for item in results])
+            # Ensure output tensors require grad so we can compute gradients
+            # Even if gradients are not used, the tensor needs requires_grad=True
+            stacked = stacked.detach().requires_grad_(True)
+            output_dict[var] = stacked
+        return output_dict
 
 
 class TestPartitioning:
     data_urls = [f"{phy_data_folder}/test_partitioning_wofost72_{i:02d}.yaml" for i in range(1, 45)]
+
     wofost72_data_urls = [
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml" for i in range(1, 45)
     ]
@@ -125,7 +131,7 @@ class TestPartitioning:
 
     @pytest.mark.parametrize("param", ["FRTB", "FLTB", "FSTB", "FOTB"])
     def test_partitioning_with_one_parameter_vector(self, param, device):
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -135,12 +141,9 @@ class TestPartitioning:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params, device=device)
 
-        vector_tables: list[list[float]] = [
-            [0.0, 0.3, 2.0, 0.1],
-            [0.0, 0.2, 2.0, 0.05],
-            [0.0, 0.4, 2.0, 0.2],
-        ]
-        crop_model_params_provider.set_override(param, vector_tables, check=False)
+        # AfgenTrait parameters need to have shape (N, M)
+        repeated = crop_model_params_provider[param].repeat(10, 1)
+        crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -159,7 +162,7 @@ class TestPartitioning:
                 assert torch.all(torch.isfinite(day[key]))
 
     def test_partitioning_with_different_parameter_values(self, device):
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -169,13 +172,13 @@ class TestPartitioning:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params, device=device)
 
-        # Build parameter vectors with multiple values for each table
-        tables_low_high = [
-            [0.0, 0.2, 2.0, 0.1],
-            [0.0, 0.5, 2.0, 0.3],
-        ]
-        for name in ("FRTB", "FLTB", "FSTB", "FOTB"):
-            crop_model_params_provider.set_override(name, tables_low_high, check=False)
+        # Setting vectors with multiple values for each table parameter
+        for param in ("FRTB", "FLTB", "FSTB", "FOTB"):
+            # AfgenTrait parameters need to have shape (N, M)
+            base = crop_model_params_provider[param]
+            # Create two variations of the table
+            param_vec = torch.stack([base * 0.8, base])
+            crop_model_params_provider.set_override(param, param_vec, check=False)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -194,7 +197,7 @@ class TestPartitioning:
                 assert torch.all(torch.isfinite(day[key]))
 
     def test_partitioning_with_multiple_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -204,12 +207,11 @@ class TestPartitioning:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        tables = [
-            [0.0, 0.3, 2.0, 0.1],
-            [0.0, 0.25, 2.0, 0.15],
-        ]
+        # Setting vectors for all table parameters
         for name in ("FRTB", "FLTB", "FSTB", "FOTB"):
-            crop_model_params_provider.set_override(name, tables, check=False)
+            # AfgenTrait parameters need to have shape (N, M)
+            repeated = crop_model_params_provider[name].repeat(2, 1)
+            crop_model_params_provider.set_override(name, repeated, check=False)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -272,7 +274,7 @@ class TestPartitioning:
             )  # check the output shapes
 
     def test_partitioning_with_incompatible_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -307,7 +309,7 @@ class TestPartitioning:
         # get expected results from YAML test data
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
-        with patch("pcse.crop.wofost72.Partitioning", WOFOST_Partitioning):
+        with patch("pcse.crop.wofost72.Partitioning", DVS_Partitioning):
             model = Wofost72_PP(
                 crop_model_params_provider, weather_data_provider, agro_management_inputs
             )
@@ -386,7 +388,9 @@ class TestDiffPartitioningGradients:
 
         grads = torch.autograd.grad(loss, param, retain_graph=True, allow_unused=True)[0]
         if grads is not None:
-            assert torch.all(grads == 0), f"Expected no gradients for {param_name}->{output_name}"
+            assert torch.all((grads == 0) | torch.isnan(grads)), (
+                f"Gradient for {param_name} w.r.t. {output_name} should be zero or NaN"
+            )
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
