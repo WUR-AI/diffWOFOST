@@ -57,8 +57,6 @@ class DiffRootDynamics(torch.nn.Module):
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
-            if isinstance(value, torch.Tensor) and value.device.type != self.device:
-                value = value.to(self.device)
             self.crop_model_params_provider.set_override(name, value, check=False)
 
         engine = EngineTestHelper(
@@ -86,7 +84,7 @@ class TestRootDynamics:
         for i in range(1, 45)  # there are 44 test files
     ]
 
-    @pytest.mark.parametrize("test_data_url", rootdynamics_data_urls[:3])  # Test subset for GPU
+    @pytest.mark.parametrize("test_data_url", rootdynamics_data_urls)
     def test_root_dynamics_with_testengine(self, test_data_url, device):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
         # prepare model input
@@ -235,7 +233,7 @@ class TestRootDynamics:
                 for var, precision in expected_precision.items()
             )
 
-    def test_root_dynamics_with_multiple_parameter_vectors(self):
+    def test_root_dynamics_with_multiple_parameter_vectors(self, device):
         # prepare model input
         test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -263,7 +261,7 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -280,7 +278,7 @@ class TestRootDynamics:
                 for var, precision in expected_precision.items()
             )
 
-    def test_root_dynamics_with_multiple_parameter_arrays(self):
+    def test_root_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
         test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -306,7 +304,7 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -326,7 +324,7 @@ class TestRootDynamics:
                 model[var].shape == (30, 5) for var in expected_precision.keys()
             )  # check the output shapes
 
-    def test_root_dynamics_with_incompatible_parameter_vectors(self):
+    def test_root_dynamics_with_incompatible_parameter_vectors(self, device):
         # prepare model input
         test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -354,7 +352,7 @@ class TestRootDynamics:
                 agro_management_inputs,
                 root_dynamics_config,
                 external_states,
-                device="cpu",
+                device=device,
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
@@ -426,15 +424,20 @@ class TestDiffRootDynamicsGradients:
         "RDRRTB": ["TWRT"],
     }
 
-    # Generate all combinations
+    # Generate all combinations and no_graph_mapping
     gradient_params = []
     no_gradient_params = []
+    no_graph_mapping = {}
     for param_name in param_names:
+        no_graph_outputs = []
         for output_name in output_names:
             if output_name in gradient_mapping.get(param_name, []):
                 gradient_params.append((param_name, output_name))
             else:
                 no_gradient_params.append((param_name, output_name))
+                no_graph_outputs.append(output_name)
+        if no_graph_outputs:
+            no_graph_mapping[param_name] = no_graph_outputs
 
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
@@ -446,9 +449,22 @@ class TestDiffRootDynamicsGradients:
         output = model({param_name: param})
         loss = output[output_name].sum()
 
-        # If there is no graph at all, then there is no gradient by definition.
+        # Check if this parameter-output pair should have no graph at all
+        should_have_no_graph = output_name in self.no_graph_mapping.get(param_name, [])
+
         if not loss.requires_grad:
+            # If there is no graph, assert that this is expected
+            assert should_have_no_graph, (
+                f"Expected graph for {param_name} w.r.t. {output_name}, "
+                f"but loss.requires_grad is False"
+            )
             return
+
+        # If we get here, there should be a graph
+        assert not should_have_no_graph, (
+            f"Expected no graph for {param_name} w.r.t. {output_name}, "
+            f"but loss.requires_grad is True"
+        )
 
         grads = torch.autograd.grad(loss, param, retain_graph=True, allow_unused=True)[0]
         if grads is not None:

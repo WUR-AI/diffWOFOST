@@ -90,8 +90,6 @@ class DiffPhenologyDynamics(torch.nn.Module):
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
-            if isinstance(value, torch.Tensor) and value.device.type != self.device:
-                value = value.to(self.device)
             self.crop_model_params_provider.set_override(name, value, check=False)
 
         engine = EngineTestHelper(
@@ -117,7 +115,7 @@ class TestPhenologyDynamics:
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml" for i in range(1, 45)
     ]
 
-    @pytest.mark.parametrize("test_data_url", phenology_data_urls[:3])  # Test subset for GPU
+    @pytest.mark.parametrize("test_data_url", phenology_data_urls)
     def test_phenology_with_testengine(self, test_data_url, device):
         test_data = get_test_data(test_data_url)
         crop_model_params = [
@@ -159,13 +157,7 @@ class TestPhenologyDynamics:
         assert len(actual_results) == len(expected_results)
         for reference, model in zip(expected_results, actual_results, strict=False):
             for var in expected_precision.keys():
-                if var in ["VERNFAC", "VERNR"]:
-                    continue
-                # Some outputs (e.g. VERN) can be None for test cases without vernalisation.
-                # Only check device placement for actual tensors.
                 value = model.get(var)
-                if value is None:
-                    continue
                 if isinstance(value, torch.Tensor):
                     assert value.device.type == device, f"{var} should be on {device}"
             model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
@@ -342,7 +334,7 @@ class TestPhenologyDynamics:
                     continue
                 assert torch.all(torch.abs(reference[var] - model[var][-1]) < precision)
 
-    def test_phenology_with_multiple_parameter_vectors(self):
+    def test_phenology_with_multiple_parameter_vectors(self, device):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
@@ -380,7 +372,7 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -390,7 +382,7 @@ class TestPhenologyDynamics:
         for reference, model in zip(expected_results, actual_results, strict=False):
             assert_reference_match(reference, model, expected_precision)
 
-    def test_phenology_with_multiple_parameter_arrays(self):
+    def test_phenology_with_multiple_parameter_arrays(self, device):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
@@ -446,7 +438,7 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()

@@ -258,9 +258,6 @@ class WOFOST_Root_Dynamics(SimulationObject):
         s = self.states
         k = self.kiosk
 
-        if self.params_shape is None:
-            self.params_shape = _get_params_shape(p)
-
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
         DVS = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
