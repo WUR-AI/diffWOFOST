@@ -510,7 +510,7 @@ class AfgenTrait(TraitType):
         into_text: Description of the trait type.
     """
 
-    default_value = Afgen(torch.tensor([0, 0, 1, 1], dtype=torch.float32))
+    default_value = Afgen([0, 0, 1, 1])
     into_text = "An AFGEN table of XY pairs"
 
     def validate(self, obj, value):
