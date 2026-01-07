@@ -10,6 +10,7 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_params_shape
@@ -115,11 +116,17 @@ class WOFOST_Root_Dynamics(SimulationObject):
     better and more biophysical approach to root development in WOFOST.
     """  # noqa: E501
 
-    # Default values that can be overridden before instantiation
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float64
-
     params_shape = None  # Shape of the parameters tensors
+
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return ComputeConfig.get_dtype()
 
     class Parameters(ParamTemplate):
         RDI = Any()
@@ -130,14 +137,12 @@ class WOFOST_Root_Dynamics(SimulationObject):
         IAIRDU = Any()
         RDRRTB = AfgenTrait()
 
-        def __init__(self, parvalues, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = WOFOST_Root_Dynamics.dtype
-            if device is None:
-                device = WOFOST_Root_Dynamics.device
+        def __init__(self, parvalues):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values
             self.RDI = [torch.tensor(-99.0, dtype=dtype, device=device)]
             self.RRI = [torch.tensor(-99.0, dtype=dtype, device=device)]
             self.RDMCR = [torch.tensor(-99.0, dtype=dtype, device=device)]
@@ -154,14 +159,12 @@ class WOFOST_Root_Dynamics(SimulationObject):
         DRRT = Any()
         GWRT = Any()
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = WOFOST_Root_Dynamics.dtype
-            if device is None:
-                device = WOFOST_Root_Dynamics.device
+        def __init__(self, kiosk, publish=None):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values
             self.RR = torch.tensor(0.0, dtype=dtype, device=device)
             self.GRRT = torch.tensor(0.0, dtype=dtype, device=device)
             self.DRRT = torch.tensor(0.0, dtype=dtype, device=device)
@@ -177,14 +180,12 @@ class WOFOST_Root_Dynamics(SimulationObject):
         DWRT = Any()
         TWRT = Any()
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = WOFOST_Root_Dynamics.dtype
-            if device is None:
-                device = WOFOST_Root_Dynamics.device
+        def __init__(self, kiosk, publish=None, **kwargs):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device if not in kwargs
+            # Set default values
             if "RD" not in kwargs:
                 self.RD = [torch.tensor(-99.0, dtype=dtype, device=device)]
             if "RDM" not in kwargs:

@@ -20,6 +20,7 @@ from pcse.traitlets import Any
 from pcse.traitlets import Enum
 from pcse.traitlets import Instance
 from pcse.util import daylength
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
@@ -91,9 +92,15 @@ class Vernalisation(SimulationObject):
 
     params_shape = None  # Shape of the parameters tensors
 
-    # Default values that can be overridden before instantiation
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float64
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return ComputeConfig.get_dtype()
 
     class Parameters(ParamTemplate):
         VERNSAT = Any()
@@ -101,14 +108,12 @@ class Vernalisation(SimulationObject):
         VERNRTB = AfgenTrait()
         VERNDVS = Any()
 
-        def __init__(self, parvalues, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = Vernalisation.dtype
-            if device is None:
-                device = Vernalisation.device
+        def __init__(self, parvalues):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values using the ComputeConfig dtype and device
             self.VERNSAT = torch.tensor(-99.0, dtype=dtype, device=device)
             self.VERNBASE = torch.tensor(-99.0, dtype=dtype, device=device)
             self.VERNDVS = torch.tensor(-99.0, dtype=dtype, device=device)
@@ -120,14 +125,12 @@ class Vernalisation(SimulationObject):
         VERNR = Any()
         VERNFAC = Any()
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = Vernalisation.dtype
-            if device is None:
-                device = Vernalisation.device
+        def __init__(self, kiosk, publish=None):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values using the ComputeConfig dtype and device
             self.VERNR = torch.tensor(0.0, dtype=dtype, device=device)
             self.VERNFAC = torch.tensor(0.0, dtype=dtype, device=device)
 
@@ -139,14 +142,12 @@ class Vernalisation(SimulationObject):
         DOV = Any()
         ISVERNALISED = Any()
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = Vernalisation.dtype
-            if device is None:
-                device = Vernalisation.device
+        def __init__(self, kiosk, publish=None, **kwargs):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device if not in kwargs
+            # Set default values using the ComputeConfig dtype and device if not in kwargs
             if "VERN" not in kwargs:
                 self.VERN = torch.tensor(-99.0, dtype=dtype, device=device)
             if "DOV" not in kwargs:
@@ -421,9 +422,15 @@ class DVS_Phenology(SimulationObject):
 
     params_shape = None  # Shape of the parameters tensors
 
-    # Default values that can be overridden before instantiation
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float64
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return ComputeConfig.get_dtype()
 
     class Parameters(ParamTemplate):
         TSUMEM = Any()
@@ -440,14 +447,12 @@ class DVS_Phenology(SimulationObject):
         CROP_START_TYPE = Enum(["sowing", "emergence"])
         CROP_END_TYPE = Enum(["maturity", "harvest", "earliest"])
 
-        def __init__(self, parvalues, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = DVS_Phenology.dtype
-            if device is None:
-                device = DVS_Phenology.device
+        def __init__(self, parvalues):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values using the ComputeConfig dtype and device
             self.TSUMEM = torch.tensor(-99.0, dtype=dtype, device=device)
             self.TBASEM = torch.tensor(-99.0, dtype=dtype, device=device)
             self.TEFFMX = torch.tensor(-99.0, dtype=dtype, device=device)
@@ -467,14 +472,12 @@ class DVS_Phenology(SimulationObject):
         DTSUM = Any()
         DVR = Any()
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = DVS_Phenology.dtype
-            if device is None:
-                device = DVS_Phenology.device
+        def __init__(self, kiosk, publish=None):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values
             self.DTSUME = torch.tensor(0.0, dtype=dtype, device=device)
             self.DTSUM = torch.tensor(0.0, dtype=dtype, device=device)
             self.DVR = torch.tensor(0.0, dtype=dtype, device=device)
@@ -493,14 +496,12 @@ class DVS_Phenology(SimulationObject):
         DOH = Any()
         STAGE = Any()
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = DVS_Phenology.dtype
-            if device is None:
-                device = DVS_Phenology.device
+        def __init__(self, kiosk, publish=None, **kwargs):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device if not in kwargs
+            # Set default values
             if "DVS" not in kwargs:
                 self.DVS = torch.tensor(-99.0, dtype=dtype, device=device)
             if "TSUM" not in kwargs:

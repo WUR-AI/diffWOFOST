@@ -1,6 +1,8 @@
+import torch
 from pcse.agromanager import AgroManager
 from pcse.crop.phenology import DVS_Phenology
 from pcse.soil.classic_waterbalance import WaterbalancePP
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from . import phy_data_folder
@@ -54,3 +56,41 @@ class TestConfiguration:
         assert config.OUTPUT_VARS == ["DVS", "LAI"]
         assert config.SUMMARY_OUTPUT_VARS == ["LAI"]
         assert config.TERMINAL_OUTPUT_VARS == ["DVS"]
+
+
+class TestComputeConfig:
+    def test_default_device_is_cuda_or_cpu(self):
+        ComputeConfig.reset_to_defaults()
+        device = ComputeConfig.get_device()
+        assert device.type in ["cpu", "cuda"]
+
+    def test_default_dtype_is_float64(self):
+        ComputeConfig.reset_to_defaults()
+        dtype = ComputeConfig.get_dtype()
+        assert dtype == torch.float64
+
+    def test_set_device_with_string(self):
+        ComputeConfig.set_device("cpu")
+        device = ComputeConfig.get_device()
+        assert device.type == "cpu"
+
+    def test_set_device_with_torch_device(self):
+        ComputeConfig.set_device(torch.device("cpu"))
+        device = ComputeConfig.get_device()
+        assert device.type == "cpu"
+
+    def test_set_dtype(self):
+        ComputeConfig.set_dtype(torch.float32)
+        dtype = ComputeConfig.get_dtype()
+        assert dtype == torch.float32
+
+    def test_reset_to_defaults(self):
+        ComputeConfig.set_device("cpu")
+        ComputeConfig.set_dtype(torch.float32)
+        ComputeConfig.reset_to_defaults()
+
+        device = ComputeConfig.get_device()
+        dtype = ComputeConfig.get_dtype()
+
+        assert device.type in ["cpu", "cuda"]
+        assert dtype == torch.float64

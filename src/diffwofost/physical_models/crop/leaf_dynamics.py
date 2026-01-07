@@ -12,6 +12,7 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
@@ -120,9 +121,15 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     MAX_DAYS = 365  # Maximum number of days that can be simulated in one run (i.e. array lenghts)
     params_shape = None  # Shape of the parameters tensors
 
-    # Default values that can be overridden before instantiation
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float64
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return ComputeConfig.get_dtype()
 
     class Parameters(ParamTemplate):
         RGRLAI = Any()
@@ -133,14 +140,12 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         SLATB = AfgenTrait()
         KDIFTB = AfgenTrait()
 
-        def __init__(self, parvalues, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = WOFOST_Leaf_Dynamics.dtype
-            if device is None:
-                device = WOFOST_Leaf_Dynamics.device
+        def __init__(self, parvalues):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values
             self.RGRLAI = [torch.tensor(-99.0, dtype=dtype, device=device)]
             self.SPAN = [torch.tensor(-99.0, dtype=dtype, device=device)]
             self.TBASE = [torch.tensor(-99.0, dtype=dtype, device=device)]
@@ -163,14 +168,12 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         DWLV = Any()
         TWLV = Any()
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = WOFOST_Leaf_Dynamics.dtype
-            if device is None:
-                device = WOFOST_Leaf_Dynamics.device
+        def __init__(self, kiosk, publish=None, **kwargs):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device if not in kwargs
+            # Set default values
             if "LV" not in kwargs:
                 self.LV = [torch.tensor(-99.0, dtype=dtype, device=device)]
             if "SLA" not in kwargs:
@@ -210,14 +213,12 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         GLAIEX = Any()
         GLASOL = Any()
 
-        def __init__(self, kiosk, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = WOFOST_Leaf_Dynamics.dtype
-            if device is None:
-                device = WOFOST_Leaf_Dynamics.device
+        def __init__(self, kiosk):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
-            # Set default values using the provided dtype and device
+            # Set default values
             self.GRLV = torch.tensor(0.0, dtype=dtype, device=device)
             self.DSLV1 = torch.tensor(0.0, dtype=dtype, device=device)
             self.DSLV2 = torch.tensor(0.0, dtype=dtype, device=device)

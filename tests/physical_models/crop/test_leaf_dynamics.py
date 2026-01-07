@@ -57,8 +57,6 @@ class DiffLeafDynamics(torch.nn.Module):
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
-            if isinstance(value, torch.Tensor) and value.device.type != self.device:
-                value = value.to(self.device)
             self.crop_model_params_provider.set_override(name, value, check=False)
 
         engine = EngineTestHelper(
@@ -86,7 +84,7 @@ class TestLeafDynamics:
         for i in range(1, 45)  # there are 44 test files
     ]
 
-    @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls[:3])  # Test subset for GPU
+    @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)  # Test subset for GPU
     def test_leaf_dynamics_with_testengine(self, test_data_url, device):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
         # prepare model input
@@ -310,7 +308,7 @@ class TestLeafDynamics:
                 for var, precision in expected_precision.items()
             )
 
-    def test_leaf_dynamics_with_multiple_parameter_arrays(self):
+    def test_leaf_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -340,7 +338,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
