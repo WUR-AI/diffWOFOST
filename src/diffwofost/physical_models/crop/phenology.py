@@ -566,40 +566,6 @@ class DVS_Phenology(SimulationObject):
         self.params = self.Parameters(parvalues)
         self.params_shape = _get_params_shape(self.params)
 
-        # Small epsilon tensor reused in multiple safe divisions.
-        self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
-
-        # Ensure the Vernalisation submodule uses the same dtype/device as this phenology instance
-        Vernalisation.device = self.device
-        Vernalisation.dtype = self.dtype
-
-        # Helpler function to cast and broadcast all parameters to params_shape.
-        # Necessary if Vernalisation changes the params_shape during initialization.
-        def _cast_and_broadcast_params():
-            p = self.params
-            # Broadcast numeric parameters to the final params_shape and ensure dtype/device.
-            for name in (
-                "TSUMEM",
-                "TBASEM",
-                "TEFFMX",
-                "TSUM1",
-                "TSUM2",
-                "IDSL",
-                "DLO",
-                "DLC",
-                "DVSI",
-                "DVSEND",
-            ):
-                setattr(
-                    p,
-                    name,
-                    _broadcast_to(getattr(p, name), self.params_shape, self.dtype, self.device),
-                )
-
-            # Move AFGEN table buffers, if present.
-            if hasattr(p, "DTSMTB") and hasattr(p.DTSMTB, "to"):
-                p.DTSMTB.to(device=self.device, dtype=self.dtype)
-
         # Initialize vernalisation for IDSL>=2
         # It has to be done in advance to get the correct params_shape
         IDSL = _broadcast_to(

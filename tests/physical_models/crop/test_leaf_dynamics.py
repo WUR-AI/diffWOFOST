@@ -57,8 +57,6 @@ class DiffLeafDynamics(torch.nn.Module):
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
-            if isinstance(value, torch.Tensor) and value.device.type != self.device:
-                value = value.to(self.device)
             self.crop_model_params_provider.set_override(name, value, check=False)
 
         engine = EngineTestHelper(
