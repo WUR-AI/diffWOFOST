@@ -28,8 +28,6 @@ from pcse.traitlets import TraitType
 from .config import Configuration
 from .engine import Engine
 
-DTYPE = torch.float64  # Default data type for tensors in this module
-
 logging.disable(logging.CRITICAL)
 
 
@@ -98,6 +96,8 @@ class EngineTestHelper(Engine):
         agromanagement,
         config,
         external_states=None,
+        device=None,
+        dtype=None,
     ):
         BaseEngine.__init__(self)
 
@@ -108,6 +108,12 @@ class EngineTestHelper(Engine):
             self.mconf = config
 
         self.parameterprovider = parameterprovider
+
+        # Configure device and dtype on crop module class if it supports them
+        if hasattr(self.mconf.CROP, "device") and device is not None:
+            self.mconf.CROP.device = device
+        if hasattr(self.mconf.CROP, "dtype") and dtype is not None:
+            self.mconf.CROP.dtype = dtype
 
         # Variable kiosk for registering and publishing variables
         self.kiosk = VariableKioskTestHelper(external_states)
@@ -196,7 +202,7 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
 
 
 def prepare_engine_input(
-    test_data, crop_model_params, meteo_range_checks=True, dtype=torch.float64
+    test_data, crop_model_params, meteo_range_checks=True, dtype=torch.float64, device="cpu"
 ):
     """Prepare the inputs for the engine from the YAML file."""
     agro_management_inputs = test_data["AgroManagement"]
@@ -213,7 +219,7 @@ def prepare_engine_input(
     for name in crop_model_params:
         # if name is missing in the YAML, skip it
         if name in crop_model_params_provider:
-            value = torch.tensor(crop_model_params_provider[name], dtype=dtype)
+            value = torch.tensor(crop_model_params_provider[name], dtype=dtype, device=device)
             crop_model_params_provider.set_override(name, value, check=False)
 
     # convert external states to tensors
@@ -274,6 +280,20 @@ class Afgen:
     Now supports batched tables (tensor of lists) for vectorized operations.
     """
 
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        from diffwofost.physical_models.config import ComputeConfig
+
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        from diffwofost.physical_models.config import ComputeConfig
+
+        return ComputeConfig.get_dtype()
+
     def _check_x_ascending(self, tbl_xy):
         """Checks that the x values are strictly ascending.
 
@@ -290,71 +310,37 @@ class Afgen:
         Raises:
             ValueError: If x values are not strictly ascending.
         """
-        # Handle batched tables (>1D tensors)
+
+        def _valid_n_and_check(x_list: torch.Tensor, y_list: torch.Tensor) -> int:
+            # Truncate trailing (0,0) pairs. If all pairs are (0,0), keep first pair.
+            nonzero = ~(x_list.eq(0) & y_list.eq(0))
+            last_valid = int(nonzero.nonzero()[-1].item()) if bool(nonzero.any()) else 0
+            valid_n = last_valid + 1
+
+            x_valid = x_list[:valid_n]
+            if x_valid.numel() > 1 and not bool(torch.all(torch.diff(x_valid) > 0)):
+                raise ValueError(
+                    f"X values for AFGEN input list not strictly ascending: {x_list.tolist()}"
+                )
+            return valid_n
+
         if tbl_xy.dim() > 1:
             batch_shape = tbl_xy.shape[:-1]
             table_len = tbl_xy.shape[-1]
+            flat = tbl_xy.reshape(-1, table_len)
+            counts = [_valid_n_and_check(t[0::2], t[1::2]) for t in flat]
+            return torch.tensor(counts, device=tbl_xy.device).reshape(batch_shape)
 
-            # Flatten batch dimensions for processing
-            flat_tables = tbl_xy.reshape(-1, table_len)
-            num_tables = flat_tables.shape[0]
-
-            valid_counts = []
-            for idx in range(num_tables):
-                table = flat_tables[idx]
-                x_list = table[0::2]
-                y_list = table[1::2]
-                n = len(x_list)
-
-                # Find trailing (0, 0) pairs to truncate
-                valid_n = n
-                for i in range(n - 1, 0, -1):
-                    if x_list[i] == 0 and y_list[i] == 0:
-                        valid_n = i
-                    else:
-                        break
-
-                # Check if x range is strictly ascending
-                valid_x_list = x_list[:valid_n]
-                for i in range(1, len(valid_x_list)):
-                    if valid_x_list[i] <= valid_x_list[i - 1]:
-                        msg = (
-                            "X values for AFGEN input list"
-                            + " not strictly ascending: {x_list.tolist()}"
-                        )
-                        raise ValueError(msg)
-
-                valid_counts.append(valid_n)
-
-            return torch.tensor(valid_counts).reshape(batch_shape)
-
-        # Original 1D logic from pcse
-        x_list = tbl_xy[0::2]
-        y_list = tbl_xy[1::2]
-        n = len(x_list)
-
-        # Find trailing (0, 0) pairs to truncate
-        valid_n = n
-        for i in range(n - 1, 0, -1):
-            if x_list[i] == 0 and y_list[i] == 0:
-                valid_n = i
-            else:
-                break
-
-        # Check only the valid (non-trailing-zero) portion
-        valid_x_list = x_list[:valid_n]
-
-        # Check if x range is strictly ascending
-        for i in range(1, len(valid_x_list)):
-            if valid_x_list[i] <= valid_x_list[i - 1]:
-                msg = f"X values for AFGEN input list not strictly ascending: {x_list.tolist()}"
-                raise ValueError(msg)
-
+        valid_n = _valid_n_and_check(tbl_xy[0::2], tbl_xy[1::2])
         return list(range(valid_n))
 
     def __init__(self, tbl_xy):
         # Convert to tensor if needed
-        tbl_xy = torch.as_tensor(tbl_xy, dtype=DTYPE)
+        tbl_xy = torch.as_tensor(tbl_xy, dtype=self.dtype, device=self.device)
+        # If the table was provided as ints, promote to float so interpolation
+        # doesn't truncate query points (e.g. 2.5 -> 2) and autograd works.
+        if not tbl_xy.is_floating_point():
+            tbl_xy = tbl_xy.to(dtype=self.dtype)
 
         # Detect if we have batched tables (>1D)
         self.is_batched = tbl_xy.dim() > 1
@@ -363,63 +349,60 @@ class Afgen:
             self.batch_shape = tbl_xy.shape[:-1]
             table_len = tbl_xy.shape[-1]
 
-            # Store the full batched tables
+            # Keep the full batched tables for debugging/inspection
             self.tbl_xy = tbl_xy
 
-            # Get valid counts for each table
+            # Validate and compute how many (x,y) pairs are valid per table
             valid_counts = self._check_x_ascending(tbl_xy)
             self.valid_counts = valid_counts
 
-            # Extract x and y for all tables
             flat_tables = tbl_xy.reshape(-1, table_len)
+            flat_valid = valid_counts.reshape(-1).to(device=self.device)
             num_tables = flat_tables.shape[0]
+            max_n = int(flat_valid.max().item()) if num_tables > 0 else 0
 
-            x_list_batch = []
-            y_list_batch = []
-            slopes_batch = []
+            # Store padded tensors so we can vectorize __call__.
+            pad_x = torch.finfo(tbl_xy.dtype).max
+            x_flat = torch.full((num_tables, max_n), pad_x, dtype=self.dtype, device=self.device)
+            y_flat = torch.zeros((num_tables, max_n), dtype=self.dtype, device=self.device)
+            slopes_flat = torch.zeros(
+                (num_tables, max(0, max_n - 1)), dtype=self.dtype, device=self.device
+            )
 
             for idx in range(num_tables):
+                n = int(flat_valid[idx].item())
                 table = flat_tables[idx]
-                valid_n = valid_counts.flatten()[idx].item()
+                x_vals = table[0::2][:n]
+                y_vals = table[1::2][:n]
 
-                x_indices = torch.tensor([2 * i for i in range(valid_n)])
-                y_indices = torch.tensor([2 * i + 1 for i in range(valid_n)])
+                x_flat[idx, :n] = x_vals
+                y_flat[idx, :n] = y_vals
+                if n < max_n:
+                    y_flat[idx, n:] = y_vals[-1]
+                if n > 1:
+                    slopes_flat[idx, : n - 1] = (y_vals[1:] - y_vals[:-1]) / (
+                        x_vals[1:] - x_vals[:-1]
+                    )
 
-                x_vals = table[x_indices]
-                y_vals = table[y_indices]
-
-                # Calculate slopes
-                if len(x_vals) > 1:
-                    slopes = (y_vals[1:] - y_vals[:-1]) / (x_vals[1:] - x_vals[:-1])
-                else:
-                    slopes = torch.tensor([], dtype=DTYPE)
-
-                x_list_batch.append(x_vals)
-                y_list_batch.append(y_vals)
-                slopes_batch.append(slopes)
-
-            # Store as lists - don't reshape, just keep the flat structure
-            self.x_list_batch = x_list_batch
-            self.y_list_batch = y_list_batch
-            self.slopes_batch = slopes_batch
+            self._x_flat = x_flat
+            self._y_flat = y_flat
+            self._slopes_flat = slopes_flat
+            self._valid_counts_flat = flat_valid
 
         else:
             # Original 1D logic from pcse
             self.batch_shape = None
             indices = self._check_x_ascending(tbl_xy)
+            valid_n = len(indices)
 
-            # Extract x and y values using indices
-            x_indices = torch.tensor([2 * i for i in indices])
-            y_indices = torch.tensor([2 * i + 1 for i in indices])
-            self.x_list = tbl_xy[x_indices]
-            self.y_list = tbl_xy[y_indices]
-
-            # Calculate slopes
-            x1 = self.x_list[:-1]
-            x2 = self.x_list[1:]
-            y1 = self.y_list[:-1]
-            y2 = self.y_list[1:]
-            self.slopes = (y2 - y1) / (x2 - x1)
+            self.x_list = tbl_xy[0::2][:valid_n]
+            self.y_list = tbl_xy[1::2][:valid_n]
+            if valid_n > 1:
+                self.slopes = (self.y_list[1:] - self.y_list[:-1]) / (
+                    self.x_list[1:] - self.x_list[:-1]
+                )
+            else:
+                self.slopes = torch.tensor([], dtype=self.dtype, device=self.device)
 
     def __call__(self, x):
         """Returns the interpolated value at abscissa x.
@@ -431,59 +414,47 @@ class Afgen:
         Returns:
             torch.Tensor: The interpolated value, preserving batch dimensions.
         """
-        x = torch.as_tensor(x, dtype=DTYPE)
-
         if self.is_batched:
-            # Ensure x has compatible shape for broadcasting
-            # x can be scalar or have batch dimensions
-
-            # Flatten batch dimensions for processing
+            x = torch.as_tensor(x, dtype=self._x_flat.dtype, device=self._x_flat.device)
             flat_x = x.reshape(-1) if x.dim() > 0 else x.unsqueeze(0)
-            num_queries = flat_x.shape[0] if flat_x.dim() > 0 else 1
+            num_tables = self._x_flat.shape[0]
 
-            results = []
+            if flat_x.numel() == 1:
+                x_vals = flat_x.expand(num_tables)
+            elif flat_x.numel() == num_tables:
+                x_vals = flat_x
+            else:
+                x_vals = flat_x[0].expand(num_tables)
 
-            # Process each table
-            for idx in range(len(self.x_list_batch)):
-                x_list = self.x_list_batch[idx]
-                y_list = self.y_list_batch[idx]
-                slopes = self.slopes_batch[idx]
+            # Find interval index per table
+            # Ensure contiguous query tensor to avoid internal copies in searchsorted
+            x_query = x_vals.unsqueeze(1).contiguous()
+            i = torch.searchsorted(self._x_flat, x_query, right=False) - 1
+            i = i.squeeze(1)
+            upper = torch.clamp(self._valid_counts_flat - 2, min=0)
+            i = torch.clamp(i, min=0)
+            i = torch.minimum(i, upper)
 
-                # Get the query value (broadcast if needed)
-                if num_queries == 1:
-                    x_val = flat_x[0] if flat_x.dim() > 0 else flat_x
-                elif idx < num_queries:
-                    x_val = flat_x[idx]
-                else:
-                    x_val = flat_x[0]  # Broadcast first value
+            idx = i.unsqueeze(1)
+            x_i = self._x_flat.gather(1, idx).squeeze(1)
+            y_i = self._y_flat.gather(1, idx).squeeze(1)
+            slope_i = self._slopes_flat.gather(1, idx).squeeze(1)
+            interp = y_i + slope_i * (x_vals - x_i)
 
-                # Ensure contiguous memory layout for searchsorted
-                x_list_contig = x_list.contiguous()
-                x_val_contig = (
-                    x_val.contiguous()
-                    if isinstance(x_val, torch.Tensor) and x_val.dim() > 0
-                    else x_val
-                )
+            x0 = self._x_flat[:, 0]
+            y0 = self._y_flat[:, 0]
+            last_idx = (self._valid_counts_flat - 1).to(dtype=torch.long).unsqueeze(1)
+            x_last = self._x_flat.gather(1, last_idx).squeeze(1)
+            y_last = self._y_flat.gather(1, last_idx).squeeze(1)
 
-                # Find interval and interpolate using torch.where for differentiability
-                i = torch.searchsorted(x_list_contig, x_val_contig, right=False) - 1
-                i = torch.clamp(i, 0, len(x_list) - 2)
+            out = torch.where(
+                x_vals <= x0,
+                y0,
+                torch.where(x_vals >= x_last, y_last, interp),
+            )
+            return out.reshape(self.batch_shape)
 
-                # Calculate interpolated value
-                interp_result = y_list[i] + slopes[i] * (x_val - x_list[i])
-
-                # Apply boundary conditions using torch.where
-                result = torch.where(
-                    x_val <= x_list[0],
-                    y_list[0],
-                    torch.where(x_val >= x_list[-1], y_list[-1], interp_result),
-                )
-
-                results.append(result)
-
-            # Reshape to original batch shape
-            output = torch.stack(results).reshape(self.batch_shape)
-            return output
+        x = torch.as_tensor(x, dtype=self.x_list.dtype, device=self.x_list.device)
 
         # Ensure contiguous memory layout for searchsorted
         x_list_contig = self.x_list.contiguous()
@@ -504,6 +475,38 @@ class Afgen:
         )
 
         return result
+
+    def to(self, device=None, dtype=None):
+        """Move internal tensors to a different device/dtype (PyTorch-style).
+
+        This is an in-place operation and returns ``self`` for chaining.
+        """
+        if device is None and dtype is None:
+            return self
+
+        for name in (
+            "tbl_xy",
+            "x_list",
+            "y_list",
+            "slopes",
+            "_x_flat",
+            "_y_flat",
+            "_slopes_flat",
+            "valid_counts",
+            "_valid_counts_flat",
+        ):
+            if not hasattr(self, name):
+                continue
+            t = getattr(self, name)
+            if not isinstance(t, torch.Tensor):
+                continue
+            # Keep integer tensors as integers; only move device for them.
+            if t.is_floating_point():
+                setattr(self, name, t.to(device=device, dtype=dtype))
+            else:
+                setattr(self, name, t.to(device=device))
+
+        return self
 
     @property
     def shape(self):
@@ -569,7 +572,7 @@ def _get_params_shape(params):
     return shape
 
 
-def _get_drv(drv_var, expected_shape):
+def _get_drv(drv_var, expected_shape, dtype, device=None):
     """Check that the driving variables have the expected shape and fetch them.
 
     Driving variables can be scalars (0-dimensional) or match the expected shape.
@@ -580,6 +583,8 @@ def _get_drv(drv_var, expected_shape):
     Args:
         drv_var: driving variable in WeatherDataContainer
         expected_shape: Expected shape tuple for non-scalar variables
+        dtype: dtype for the tensor
+        device: Optional device for the tensor
 
     Raises:
         ValueError: If any variable has incompatible shape
@@ -590,9 +595,13 @@ def _get_drv(drv_var, expected_shape):
     # Check shape: must be scalar (0-d) or match expected_shape
     if not isinstance(drv_var, torch.Tensor) or drv_var.dim() == 0:
         # Scalar is valid, will be broadcast
-        return _broadcast_to(drv_var, expected_shape)
+        return _broadcast_to(drv_var, expected_shape, dtype, device)
     elif drv_var.shape == expected_shape:
         # Matches expected shape
+        if dtype is not None:
+            drv_var = drv_var.to(dtype=dtype)
+        if device is not None:
+            drv_var = drv_var.to(device=device)
         return drv_var
     else:
         raise ValueError(
@@ -601,11 +610,23 @@ def _get_drv(drv_var, expected_shape):
         )
 
 
-def _broadcast_to(x, shape):
-    """Create a view of tensor X with the given shape."""
+def _broadcast_to(x, shape, dtype, device=None):
+    """Create a view of tensor X with the given shape.
+
+    Args:
+        x: The tensor or value to broadcast
+        shape: The target shape
+        dtype: dtype for the tensor
+        device: Optional device for the tensor
+    """
     # If x is not a tensor, convert it
     if not isinstance(x, torch.Tensor):
-        x = torch.tensor(x, dtype=DTYPE)
+        x = torch.tensor(x, dtype=dtype)
+    # Ensure correct dtype and device
+    if dtype is not None:
+        x = x.to(dtype=dtype)
+    if device is not None:
+        x = x.to(device=device)
     # If already the correct shape, return as-is
     if x.shape == shape:
         return x

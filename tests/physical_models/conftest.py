@@ -1,6 +1,8 @@
 from pathlib import Path
 import pytest
 import requests
+import torch
+from diffwofost.physical_models.config import ComputeConfig
 
 LOCAL_TEST_DIR = Path(__file__).parent / "test_data"
 BASE_PCSE_URL = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data"
@@ -37,3 +39,24 @@ def download_test_files():
     """Download all required test files before running tests."""
     for file_name in FILE_NAMES:
         download_file(file_name)
+
+
+@pytest.fixture(params=["cpu", "cuda"])
+def device(request):
+    """Parametrize tests over CPU and GPU devices.
+
+    Sets the global ComputeConfig to use the specified device.
+    Skips CUDA runs when CUDA isn't available.
+    """
+
+    device_name = request.param
+    if device_name == "cuda" and not torch.cuda.is_available():
+        pytest.skip("CUDA not available")
+
+    # Set the global ComputeConfig to use the specified device
+    ComputeConfig.set_device(device_name)
+
+    yield device_name
+
+    # Reset to defaults after the test
+    ComputeConfig.reset_to_defaults()
