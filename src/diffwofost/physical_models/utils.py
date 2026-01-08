@@ -280,6 +280,20 @@ class Afgen:
     Now supports batched tables (tensor of lists) for vectorized operations.
     """
 
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        from diffwofost.physical_models.config import ComputeConfig
+
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        from diffwofost.physical_models.config import ComputeConfig
+
+        return ComputeConfig.get_dtype()
+
     def _check_x_ascending(self, tbl_xy):
         """Checks that the x values are strictly ascending.
 
@@ -322,11 +336,11 @@ class Afgen:
 
     def __init__(self, tbl_xy):
         # Convert to tensor if needed
-        tbl_xy = torch.as_tensor(tbl_xy)
+        tbl_xy = torch.as_tensor(tbl_xy, dtype=self.dtype, device=self.device)
         # If the table was provided as ints, promote to float so interpolation
         # doesn't truncate query points (e.g. 2.5 -> 2) and autograd works.
         if not tbl_xy.is_floating_point():
-            tbl_xy = tbl_xy.to(dtype=torch.get_default_dtype())
+            tbl_xy = tbl_xy.to(dtype=self.dtype)
 
         # Detect if we have batched tables (>1D)
         self.is_batched = tbl_xy.dim() > 1
@@ -343,18 +357,16 @@ class Afgen:
             self.valid_counts = valid_counts
 
             flat_tables = tbl_xy.reshape(-1, table_len)
-            flat_valid = valid_counts.reshape(-1).to(device=tbl_xy.device)
+            flat_valid = valid_counts.reshape(-1).to(device=self.device)
             num_tables = flat_tables.shape[0]
             max_n = int(flat_valid.max().item()) if num_tables > 0 else 0
 
             # Store padded tensors so we can vectorize __call__.
             pad_x = torch.finfo(tbl_xy.dtype).max
-            x_flat = torch.full(
-                (num_tables, max_n), pad_x, dtype=tbl_xy.dtype, device=tbl_xy.device
-            )
-            y_flat = torch.zeros((num_tables, max_n), dtype=tbl_xy.dtype, device=tbl_xy.device)
+            x_flat = torch.full((num_tables, max_n), pad_x, dtype=self.dtype, device=self.device)
+            y_flat = torch.zeros((num_tables, max_n), dtype=self.dtype, device=self.device)
             slopes_flat = torch.zeros(
-                (num_tables, max(0, max_n - 1)), dtype=tbl_xy.dtype, device=tbl_xy.device
+                (num_tables, max(0, max_n - 1)), dtype=self.dtype, device=self.device
             )
 
             for idx in range(num_tables):
@@ -390,7 +402,7 @@ class Afgen:
                     self.x_list[1:] - self.x_list[:-1]
                 )
             else:
-                self.slopes = torch.tensor([], dtype=tbl_xy.dtype, device=tbl_xy.device)
+                self.slopes = torch.tensor([], dtype=self.dtype, device=self.device)
 
     def __call__(self, x):
         """Returns the interpolated value at abscissa x.
