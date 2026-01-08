@@ -16,6 +16,7 @@ from pcse.base import StatesTemplate
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from pcse.traitlets import Instance
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_params_shape
@@ -77,9 +78,15 @@ class DVS_Partitioning(SimulationObject):
 
     params_shape = None  # Shape of the parameters tensors
 
-    # Default values that can be overridden before instantiation
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float64
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return ComputeConfig.get_dtype()
 
     class Parameters(ParamTemplate):
         FRTB = AfgenTrait()
@@ -87,13 +94,7 @@ class DVS_Partitioning(SimulationObject):
         FSTB = AfgenTrait()
         FOTB = AfgenTrait()
 
-        def __init__(self, parvalues, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = DVS_Partitioning.dtype
-            if device is None:
-                device = DVS_Partitioning.device
-
+        def __init__(self, parvalues):
             # Call parent init
             super().__init__(parvalues)
 
@@ -104,12 +105,10 @@ class DVS_Partitioning(SimulationObject):
         FO = Any()
         PF = Instance(PartioningFactors)
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = DVS_Partitioning.dtype
-            if device is None:
-                device = DVS_Partitioning.device
+        def __init__(self, kiosk, publish=None, **kwargs):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
             # Set default values using the provided dtype and device if not in kwargs
             if "FR" not in kwargs:
@@ -133,7 +132,7 @@ class DVS_Partitioning(SimulationObject):
             parvalues (ParameterProvider): Object providing parameters as
                 key/value pairs.
         """
-        self.params = self.Parameters(parvalues, dtype=self.dtype, device=self.device)
+        self.params = self.Parameters(parvalues)
         self.kiosk = kiosk
         self.params_shape = _get_params_shape(self.params)
 
@@ -162,8 +161,6 @@ class DVS_Partitioning(SimulationObject):
             FS=FS,
             FO=FO,
             PF=PF,
-            dtype=self.dtype,
-            device=self.device,
         )
         self._check_partitioning()
 
@@ -288,9 +285,15 @@ class DVS_Partitioning_N(SimulationObject):
 
     params_shape = None  # Shape of the parameters tensors
 
-    # Default values that can be overridden before instantiation
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    dtype = torch.float64
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return ComputeConfig.get_dtype()
 
     class Parameters(ParamTemplate):
         FRTB = AfgenTrait()
@@ -298,13 +301,7 @@ class DVS_Partitioning_N(SimulationObject):
         FSTB = AfgenTrait()
         FOTB = AfgenTrait()
 
-        def __init__(self, parvalues, dtype=None, device=None):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = DVS_Partitioning_N.dtype
-            if device is None:
-                device = DVS_Partitioning_N.device
-
+        def __init__(self, parvalues):
             # Call parent init
             super().__init__(parvalues)
 
@@ -315,12 +312,10 @@ class DVS_Partitioning_N(SimulationObject):
         FO = Any()
         PF = Instance(PartioningFactors)
 
-        def __init__(self, kiosk, publish=None, dtype=None, device=None, **kwargs):
-            # Get dtype and device from parent class if not provided
-            if dtype is None:
-                dtype = DVS_Partitioning_N.dtype
-            if device is None:
-                device = DVS_Partitioning_N.device
+        def __init__(self, kiosk, publish=None, **kwargs):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
 
             # Set default values using the provided dtype and device if not in kwargs
             if "FR" not in kwargs:
@@ -344,7 +339,7 @@ class DVS_Partitioning_N(SimulationObject):
             parameters (ParameterProvider): Dictionary with WOFOST cropdata
                 key/value pairs.
         """
-        self.params = self.Parameters(parameters, dtype=self.dtype, device=self.device)
+        self.params = self.Parameters(parameters)
         self.kiosk = kiosk
         self.params_shape = _get_params_shape(self.params)
 
@@ -373,8 +368,6 @@ class DVS_Partitioning_N(SimulationObject):
             FS=FS,
             FO=FO,
             PF=PF,
-            dtype=self.dtype,
-            device=self.device,
         )
         self._check_partitioning()
 
