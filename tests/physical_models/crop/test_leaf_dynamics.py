@@ -142,7 +142,6 @@ class TestLeafDynamics:
         ) = prepare_engine_input(
             test_data, crop_model_params, meteo_range_checks=False, device=device
         )
-        # config_path = str(phy_data_folder / "WOFOST_Leaf_Dynamics.conf")
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
@@ -266,7 +265,7 @@ class TestLeafDynamics:
                 for var, precision in expected_precision.items()
             )
 
-    def test_leaf_dynamics_with_multiple_parameter_vectors(self):
+    def test_leaf_dynamics_with_multiple_parameter_vectors(self, device):
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -293,7 +292,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -310,7 +309,7 @@ class TestLeafDynamics:
                 for var, precision in expected_precision.items()
             )
 
-    def test_leaf_dynamics_with_multiple_parameter_arrays(self):
+    def test_leaf_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
@@ -340,7 +339,7 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device="cpu",
+            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()

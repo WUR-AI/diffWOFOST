@@ -2,6 +2,7 @@
 
 import pytest
 import torch
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.utils import Afgen
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import WeatherDataProviderTestHelper
@@ -9,7 +10,7 @@ from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import get_test_data
 from . import phy_data_folder
 
-DTYPE = torch.float32  # Default dtype for tests
+DTYPE = ComputeConfig.get_dtype()
 
 
 class TestAfgen:
