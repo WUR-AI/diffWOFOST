@@ -1,11 +1,3 @@
-# Copyright (c) 2004-2024 Wageningen Environmental Research, Wageningen-UR
-# Allard de Wit (allard.dewit@wur.nl), March 2024
-"""Assimilate partitioning models for WOFOST crop growth.
-
-This module implements assimilate partitioning based on development stage (DVS)
-and environmental stress factors.
-"""
-
 from collections import namedtuple
 from warnings import warn
 import torch
