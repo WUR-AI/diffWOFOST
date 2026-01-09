@@ -1,11 +1,14 @@
 import copy
+import warnings
 from unittest.mock import patch
 import pytest
 import torch
+from numpy.testing import assert_array_almost_equal
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import DVS_Partitioning
 from diffwofost.physical_models.utils import EngineTestHelper
+from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from .. import phy_data_folder
@@ -73,9 +76,8 @@ class DiffPartitioning(torch.nn.Module):
         output_dict = {}
         for var in ["FR", "FL", "FS", "FO"]:
             stacked = torch.stack([item[var] for item in results])
-            # Ensure output tensors require grad so we can compute gradients
-            # Even if gradients are not used, the tensor needs requires_grad=True
-            stacked = stacked.detach().requires_grad_(True)
+            # Keep outputs that have grad_fn in the computation graph
+            # For outputs without grad_fn, keep them as-is (they don't require gradients)
             output_dict[var] = stacked
         return output_dict
 
@@ -386,7 +388,16 @@ class TestDiffPartitioningGradients:
         output = model({param_name: param})
         loss = output[output_name].sum()
 
-        grads = torch.autograd.grad(loss, param, retain_graph=True, allow_unused=True)[0]
+        # For outputs that don't depend on the parameter, gradient will be None
+        # This is the expected behavior for parameters that shouldn't affect this output
+        try:
+            grads = torch.autograd.grad(loss, param, retain_graph=True, allow_unused=True)[0]
+        except RuntimeError as e:
+            if "does not require grad and does not have a grad_fn" in str(e):
+                # Output is independent of parameter - this is expected
+                return
+            raise
+
         if grads is not None:
             assert torch.all((grads == 0) | torch.isnan(grads)), (
                 f"Gradient for {param_name} w.r.t. {output_name} should be zero or NaN"
@@ -401,6 +412,7 @@ class TestDiffPartitioningGradients:
         output = model({param_name: param})
         loss = output[output_name].sum()
 
+        # For these gradient_params, the output should depend on the parameter
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
         assert grads is not None, f"Gradients for {param_name} should not be None"
 
@@ -412,3 +424,51 @@ class TestDiffPartitioningGradients:
         assert torch.all(grad_backward == grads), (
             f"Forward and backward gradients for {param_name} should match"
         )
+
+    @pytest.mark.parametrize("param_name,output_name", gradient_params)
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_gradients_numerical(self, param_name, output_name, config_type, device):
+        """Test that analytical gradients match numerical gradients."""
+        value, _ = self.param_configs[config_type][param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
+        numerical_grad = calculate_numerical_grad(
+            lambda: get_test_diff_partitioning(device=device), param_name, param.data, output_name
+        )
+
+        model = get_test_diff_partitioning(device=device)
+        output = model({param_name: param})
+        loss = output[output_name].sum()
+
+        # this is ∂loss/∂param, for comparison with numerical gradient
+        grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
+        print("--- Gradient Comparison ---")
+        print(f"Testing parameter: {param_name}, output: {output_name}")
+        print(f"Parameter value: {param.data.detach().cpu().numpy()}")
+        print(f"Numerical grad for {param_name} w.r.t. {output_name}: {numerical_grad}")
+        print(
+            f"Analytical grad for {param_name} w.r.t. {output_name}: {grads.detach().cpu().numpy()}"
+        )
+
+        # [!] AFGEN uses interval selection (searchsorted) + branching (where) which makes
+        # the function non-differentiable w.r.t. the x-coordinates of the table.
+        # This non-differentiable behavior is handled non-consistently by:
+        #   - Autograd will ignore the effect of moving breakpoints
+        #   - finite differences do capture the effect of moving breakpoints
+        # Therefore, we ignore the x-coordinates and only compare gradients for the y-values.
+        # Check test_utils.py::TestAfgenEdgeCases::test_x_breakpoint_at_clamp for more details.
+
+        # AFGEN tables are encoded as [x0, y0, x1, y1, ...], so y-values are at odd indices.
+        numerical_np = numerical_grad.detach().cpu().numpy()
+        grads_np = grads.detach().cpu().numpy()
+        assert numerical_np.shape == grads_np.shape
+
+        y_slice = (..., slice(1, None, 2))
+        assert_array_almost_equal(numerical_np[y_slice], grads_np[y_slice], decimal=3)
+
+        # Warn if gradient is zero
+        if torch.all(grads == 0):
+            warnings.warn(
+                f"Gradient for parameter '{param_name}' with respect to output"
+                + f"'{output_name}' is zero: {grads.detach().cpu().numpy()}",
+                UserWarning,
+            )
