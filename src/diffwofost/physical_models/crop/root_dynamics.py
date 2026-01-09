@@ -1,4 +1,4 @@
-from datetime import datetime
+import datetime
 import torch
 from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
@@ -10,11 +10,10 @@ from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Any
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_params_shape
-
-DTYPE = torch.float64  # Default data type for tensors in this module
 
 
 class WOFOST_Root_Dynamics(SimulationObject):
@@ -117,27 +116,89 @@ class WOFOST_Root_Dynamics(SimulationObject):
     better and more biophysical approach to root development in WOFOST.
     """  # noqa: E501
 
+    params_shape = None  # Shape of the parameters tensors
+
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return ComputeConfig.get_device()
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return ComputeConfig.get_dtype()
+
     class Parameters(ParamTemplate):
-        RDI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        RRI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        RDMCR = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        RDMSOL = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        TDWI = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        IAIRDU = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RDI = Any()
+        RRI = Any()
+        RDMCR = Any()
+        RDMSOL = Any()
+        TDWI = Any()
+        IAIRDU = Any()
         RDRRTB = AfgenTrait()
 
+        def __init__(self, parvalues):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
+
+            # Set default values
+            self.RDI = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.RRI = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.RDMCR = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.RDMSOL = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.TDWI = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            self.IAIRDU = [torch.tensor(-99.0, dtype=dtype, device=device)]
+
+            # Call parent init
+            super().__init__(parvalues)
+
     class RateVariables(RatesTemplate):
-        RR = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        GRRT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        DRRT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
-        GWRT = Any(default_value=torch.tensor(0.0, dtype=DTYPE))
+        RR = Any()
+        GRRT = Any()
+        DRRT = Any()
+        GWRT = Any()
+
+        def __init__(self, kiosk, publish=None):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
+
+            # Set default values
+            self.RR = torch.tensor(0.0, dtype=dtype, device=device)
+            self.GRRT = torch.tensor(0.0, dtype=dtype, device=device)
+            self.DRRT = torch.tensor(0.0, dtype=dtype, device=device)
+            self.GWRT = torch.tensor(0.0, dtype=dtype, device=device)
+
+            # Call parent init
+            super().__init__(kiosk, publish=publish)
 
     class StateVariables(StatesTemplate):
-        RD = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        RDM = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        WRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        DWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
-        TWRT = Any(default_value=[torch.tensor(-99.0, dtype=DTYPE)])
+        RD = Any()
+        RDM = Any()
+        WRT = Any()
+        DWRT = Any()
+        TWRT = Any()
+
+        def __init__(self, kiosk, publish=None, **kwargs):
+            # Get dtype and device from ComputeConfig
+            dtype = ComputeConfig.get_dtype()
+            device = ComputeConfig.get_device()
+
+            # Set default values
+            if "RD" not in kwargs:
+                self.RD = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            if "RDM" not in kwargs:
+                self.RDM = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            if "WRT" not in kwargs:
+                self.WRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            if "DWRT" not in kwargs:
+                self.DWRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
+            if "TWRT" not in kwargs:
+                self.TWRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
+
+            # Call parent init
+            super().__init__(kiosk, publish=publish, **kwargs)
 
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
@@ -153,22 +214,29 @@ class WOFOST_Root_Dynamics(SimulationObject):
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
         """
+        self.kiosk = kiosk
         self.params = self.Parameters(parvalues)
         self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
-        self.kiosk = kiosk
 
         # INITIAL STATES
         params = self.params
-        shape = _get_params_shape(params)
+        self.params_shape = _get_params_shape(params)
+        shape = self.params_shape
 
         # Initial root depth states
-        rdmax = torch.max(params.RDI, torch.min(params.RDMCR, params.RDMSOL))
-        RDM = _broadcast_to(rdmax, shape)
-        RD = _broadcast_to(params.RDI, shape)
+        RDI = _broadcast_to(params.RDI, shape, dtype=self.dtype, device=self.device)
+        RDMCR = _broadcast_to(params.RDMCR, shape, dtype=self.dtype, device=self.device)
+        RDMSOL = _broadcast_to(params.RDMSOL, shape, dtype=self.dtype, device=self.device)
+
+        rdmax = torch.maximum(RDI, torch.minimum(RDMCR, RDMSOL))
+        RDM = rdmax
+        RD = RDI
 
         # Initial root biomass states
-        WRT = _broadcast_to(params.TDWI * self.kiosk.FR, shape)
-        DWRT = torch.zeros_like(WRT) if shape else torch.zeros((), dtype=DTYPE)
+        TDWI = _broadcast_to(params.TDWI, shape, dtype=self.dtype, device=self.device)
+        FR = _broadcast_to(self.kiosk["FR"], shape, dtype=self.dtype, device=self.device)
+        WRT = TDWI * FR
+        DWRT = torch.zeros(shape, dtype=self.dtype, device=self.device)
         TWRT = WRT + DWRT
 
         self.states = self.StateVariables(
@@ -190,23 +258,27 @@ class WOFOST_Root_Dynamics(SimulationObject):
         s = self.states
         k = self.kiosk
 
-        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask
+        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
-        DVS = torch.as_tensor(k["DVS"], dtype=DTYPE)
-        dvs_mask = (DVS >= 0).to(dtype=DTYPE)
+        DVS = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
+        dvs_mask = (DVS >= 0).to(dtype=self.dtype)
 
         # Increase in root biomass
-        r.GRRT = dvs_mask * k.FR * k.DMI
-        r.DRRT = dvs_mask * s.WRT * p.RDRRTB(k.DVS)
+        FR = _broadcast_to(k["FR"], self.params_shape, dtype=self.dtype, device=self.device)
+        DMI = _broadcast_to(k["DMI"], self.params_shape, dtype=self.dtype, device=self.device)
+        RDRRTB = p.RDRRTB.to(device=self.device, dtype=self.dtype)
+
+        r.GRRT = dvs_mask * FR * DMI
+        r.DRRT = dvs_mask * s.WRT * RDRRTB(DVS)
         r.GWRT = r.GRRT - r.DRRT
 
         # Increase in root depth
-        r.RR = dvs_mask * torch.min((s.RDM - s.RD), p.RRI)
+        RRI = _broadcast_to(p.RRI, self.params_shape, dtype=self.dtype, device=self.device)
+        r.RR = dvs_mask * torch.minimum((s.RDM - s.RD), RRI)
 
         # Do not let the roots growth if partioning to the roots
         # (variable FR) is zero.
-        FR = torch.as_tensor(k["FR"], dtype=DTYPE)
-        mask = (FR > 0.0).to(dtype=DTYPE)
+        mask = (FR > 0.0).to(dtype=self.dtype)
         r.RR = r.RR * mask * dvs_mask
 
     @prepare_states
