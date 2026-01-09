@@ -259,6 +259,61 @@ class TestAfgenEdgeCases:
         assert afgen(torch.tensor(10.0)) == 20.0
         assert torch.isclose(afgen(torch.tensor(5.0)), torch.tensor(15.0, dtype=DTYPE))
 
+    def test_x_breakpoint_at_clamp(self):
+        """Illustrate why AFGEN x-breakpoint grads can disagree with finite differences.
+
+        AFGEN is piecewise-linear in the query x, but evaluation includes discrete interval
+        selection (via searchsorted) and boundary clamping (via where).
+
+        At the *exact* upper breakpoint (x_query == x_last), the output is clamped to y_last.
+        Autograd therefore reports ~0 gradient w.r.t. x_last (the breakpoint), because within
+        that branch the output does not depend on x_last.
+
+        However, a finite-difference perturbation of x_last changes which branch is taken
+        for x_query fixed at the boundary, producing a non-zero numerical derivative.
+        This is the same phenomenon that caused the partitioning numerical-grad test to fail
+        when comparing all AFGEN table entries.
+        """
+
+        # Keep this example deterministic across environments.
+        old_device = ComputeConfig.get_device()
+        old_dtype = ComputeConfig.get_dtype()
+        ComputeConfig.set_device("cpu")
+        ComputeConfig.set_dtype(torch.float64)
+        try:
+            # Table is encoded as [x0, y0, x1, y1]. Use a non-flat y so x-breakpoints matter.
+            tbl = torch.tensor([0.0, 0.3, 2.0, 0.1], dtype=torch.float64, requires_grad=True)
+            afgen = Afgen(tbl)
+
+            # Query exactly at the last breakpoint, which triggers the clamp branch.
+            x_query = torch.tensor(2.0, dtype=torch.float64)
+            out = afgen(x_query)
+
+            (grad_auto,) = torch.autograd.grad(out, tbl, retain_graph=False)
+
+            # Central finite difference w.r.t. each table entry
+            delta = 1e-6
+            grad_num = torch.zeros_like(tbl)
+            for i in range(tbl.numel()):
+                tbl_plus = tbl.detach().clone()
+                tbl_minus = tbl.detach().clone()
+                tbl_plus[i] += delta
+                tbl_minus[i] -= delta
+                out_plus = Afgen(tbl_plus)(x_query)
+                out_minus = Afgen(tbl_minus)(x_query)
+                grad_num[i] = (out_plus - out_minus) / (2 * delta)
+
+            # Gradients w.r.t. y-entries (odd indices) should match closely.
+            assert torch.allclose(grad_auto[1::2], grad_num[1::2], atol=1e-5, rtol=1e-4)
+
+            # Gradient w.r.t. the last x-breakpoint (index 2) is the illustrative mismatch.
+            # Autograd sees the clamp branch => ~0; finite differences see branch switching.
+            assert abs(float(grad_auto[2])) < 1e-8
+            assert abs(float(grad_num[2])) > 1e-3
+        finally:
+            ComputeConfig.set_device(old_device)
+            ComputeConfig.set_dtype(old_dtype)
+
     def test_negative_values(self):
         """Test with negative x and y values."""
         afgen = Afgen([-10, -20, 0, 0, 10, 20])
