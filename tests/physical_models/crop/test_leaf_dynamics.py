@@ -3,7 +3,6 @@ import warnings
 from unittest.mock import patch
 import pytest
 import torch
-from numpy.testing import assert_array_almost_equal
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
@@ -447,7 +446,11 @@ class TestLeafDynamics:
 
     @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)
     def test_leaf_dynamics_with_sigmoid_approx(self, test_data_url):
-        """Test if sigmoid approximation gives same results as leaf dynamics."""
+        """Test if sigmoid approximation gives same results as leaf dynamics.
+
+        This should be the case since WOFOST_Leaf_Dynamics uses STE method.
+        In practice, no approximation is done when not insterested in gradients.
+        """
         # prepare model input
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
@@ -593,9 +596,12 @@ class TestDiffLeafDynamicsGradients:
     def test_gradients_numerical(self, param_name, output_name, config_type, device):
         """Test that analytical gradients match numerical gradients."""
         value, _ = self.param_configs[config_type][param_name]
+
+        # we pass `param` and not `param.data` because we want `requires_grad=True`
+        # for parameter `SPAN`
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_leaf_model(device=device), param_name, param.data, output_name
+            lambda: get_test_diff_leaf_model(device=device), param_name, param, output_name
         )
 
         model = get_test_diff_leaf_model(device=device)
@@ -605,9 +611,15 @@ class TestDiffLeafDynamicsGradients:
         # this is ∂loss/∂param, for comparison with numerical gradient
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
 
-        assert_array_almost_equal(
-            numerical_grad.detach().cpu().numpy(), grads.detach().cpu().numpy(), decimal=3
-        )
+        # for span, the numerical gradient can't be equal to the pytorch one
+        # because we are using STE method
+        if (param_name, output_name) not in {("SPAN", "LAI")}:
+            torch.testing.assert_close(
+                numerical_grad.detach().cpu(),
+                grads.detach().cpu(),
+                rtol=1e-3,
+                atol=1e-3,
+            )
 
         # Warn if gradient is zero (but this shouldn't happen for gradient_params)
         if torch.all(grads == 0):
