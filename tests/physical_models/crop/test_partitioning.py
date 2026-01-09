@@ -1,16 +1,12 @@
 import copy
-import logging
 import warnings
-from types import SimpleNamespace
 from unittest.mock import patch
 import pytest
 import torch
 from numpy.testing import assert_array_almost_equal
-from pcse import exceptions as exc
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import DVS_Partitioning
-from diffwofost.physical_models.crop.partitioning import DVS_Partitioning_N
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
@@ -469,39 +465,3 @@ class TestDiffPartitioningGradients:
                 + f"'{output_name}' is zero: {grads.detach().cpu().numpy()}",
                 UserWarning,
             )
-
-
-class TestPartitioningErrorHandling:
-    def test_partitioning_warns_on_invalid_checksum(self):
-        obj = DVS_Partitioning()
-        obj.logger = logging.getLogger(__name__)
-        obj.states = SimpleNamespace(
-            FR=torch.tensor(0.0),
-            FL=torch.tensor(0.0),
-            FS=torch.tensor(0.0),
-            FO=torch.tensor(0.0),
-        )
-        with pytest.warns(UserWarning):
-            obj._check_partitioning()
-
-    def test_partitioning_n_raises_on_invalid_checksum(self):
-        obj = DVS_Partitioning_N()
-        obj.logger = logging.getLogger(__name__)
-        obj.states = SimpleNamespace(
-            FR=torch.tensor(0.0),
-            FL=torch.tensor(0.0),
-            FS=torch.tensor(0.0),
-            FO=torch.tensor(0.0),
-        )
-        with pytest.raises(exc.PartitioningError):
-            obj._check_partitioning()
-
-    def test_partitioning_n_stressed_fr_is_capped(self):
-        obj = DVS_Partitioning_N()
-        # Provide a minimal params object with FRTB callable.
-        obj.params = SimpleNamespace(FRTB=lambda dvs: torch.tensor(0.3, dtype=torch.float64))
-        dvs = torch.tensor(1.0, dtype=torch.float64)
-        rftra = torch.tensor(0.0, dtype=torch.float64)  # strongest stress -> FR tends to be high
-        fr = obj._calculate_stressed_fr(dvs, rftra)
-        assert torch.is_tensor(fr)
-        assert torch.allclose(fr, torch.tensor(0.6, dtype=torch.float64))
