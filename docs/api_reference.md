@@ -12,6 +12,8 @@ hide:
 
 ::: diffwofost.physical_models.crop.phenology.DVS_Phenology
 
+::: diffwofost.physical_models.crop.assimilation.WOFOST72_Assimilation
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration
