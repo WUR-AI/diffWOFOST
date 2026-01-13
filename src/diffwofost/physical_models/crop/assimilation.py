@@ -269,7 +269,6 @@ class WOFOST72_Assimilation(SimulationObject):
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
 
-
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
         """Compute the potential gross assimilation rate (PGASS)."""
@@ -345,7 +344,6 @@ class WOFOST72_Assimilation(SimulationObject):
     def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> torch.Tensor:
         """Calculate and return the potential gross assimilation rate (PGASS)."""
         return self.calc_rates(day, drv)
-
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
