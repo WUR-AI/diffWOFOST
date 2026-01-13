@@ -339,7 +339,6 @@ class WOFOST72_Assimilation(SimulationObject):
         pgass = dtga * (30.0 / 44.0)
 
         # Assimilation is zero before crop emergence (DVS < 0)
-        dvs_mask = (dvs >= 0).to(dtype=self.dtype)
         r.PGASS = pgass * dvs_mask
 
     @prepare_states
