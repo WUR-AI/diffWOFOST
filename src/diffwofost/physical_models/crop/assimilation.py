@@ -340,6 +340,12 @@ class WOFOST72_Assimilation(SimulationObject):
 
         # Assimilation is zero before crop emergence (DVS < 0)
         r.PGASS = pgass * dvs_mask
+        return r.PGASS
+
+    def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> torch.Tensor:
+        """Calculate and return the potential gross assimilation rate (PGASS)."""
+        return self.calc_rates(day, drv)
+
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
