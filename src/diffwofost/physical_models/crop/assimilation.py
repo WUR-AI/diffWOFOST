@@ -251,7 +251,7 @@ class WOFOST72_Assimilation(SimulationObject):
         def __init__(self, kiosk, publish=None):
             dtype = ComputeConfig.get_dtype()
             device = ComputeConfig.get_device()
-            self.PGASS = torch.tensor(-99.0, dtype=dtype, device=device)
+            self.PGASS = torch.tensor(0.0, dtype=dtype, device=device)
             super().__init__(kiosk, publish=publish)
 
     def initialize(
