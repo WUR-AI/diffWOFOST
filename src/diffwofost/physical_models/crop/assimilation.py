@@ -289,8 +289,11 @@ class WOFOST72_Assimilation(SimulationObject):
         tmin = _get_drv(drv.TMIN, self.params_shape, dtype=self.dtype, device=self.device)
 
         # 7-day running average of TMIN
-        self._tmn_window.appendleft(tmin)
-        tminra = torch.stack(list(self._tmn_window), dim=0).mean(dim=0)
+        self._tmn_window.appendleft(tmin * dvs_mask)
+        self._tmn_window_mask.appendleft(dvs_mask)
+        tmin_stack = torch.stack(list(self._tmn_window), dim=0)
+        mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
+        tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
 
         # Astronomical variables (computed with PCSE util; then broadcast to tensors)
         lat = _as_python_float(drv.LAT)
