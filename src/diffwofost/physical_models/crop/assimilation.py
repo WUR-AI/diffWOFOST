@@ -265,7 +265,7 @@ class WOFOST72_Assimilation(SimulationObject):
 
         # 7-day running average buffer for TMIN (stored as tensors).
         self._tmn_window = deque(maxlen=7)
-
+        self._tmn_window_mask = deque(maxlen=7)
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
 
