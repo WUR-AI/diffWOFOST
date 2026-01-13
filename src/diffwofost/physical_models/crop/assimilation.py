@@ -288,6 +288,8 @@ class WOFOST72_Assimilation(SimulationObject):
         dtemp = _get_drv(drv.DTEMP, self.params_shape, dtype=self.dtype, device=self.device)
         tmin = _get_drv(drv.TMIN, self.params_shape, dtype=self.dtype, device=self.device)
 
+        # Assimilation is zero before crop emergence (DVS < 0)
+        dvs_mask = (dvs >= 0).to(dtype=self.dtype)
         # 7-day running average of TMIN
         self._tmn_window.appendleft(tmin * dvs_mask)
         self._tmn_window_mask.appendleft(dvs_mask)
