@@ -269,7 +269,6 @@ class WOFOST72_Assimilation(SimulationObject):
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
 
-        _exist_required_external_variables(self.kiosk)
 
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
