@@ -15,15 +15,15 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.0">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
     
     
       
-        <title>Optimization - diffWOFOST documentation</title>
+        <title>install diffwofost - diffWOFOST documentation</title>
       
     
     
-      <link rel="stylesheet" href="../../assets/stylesheets/main.618322db.min.css">
+      <link rel="stylesheet" href="../../assets/stylesheets/main.484c7ddc.min.css">
       
         
         <link rel="stylesheet" href="../../assets/stylesheets/palette.ab4e12ef.min.css">
@@ -72,7 +72,7 @@
     <div data-md-component="skip">
       
         
-        <a href="#1-leaf-dynamics" class="md-skip">
+        <a href="#1-root-dynamics" class="md-skip">
           Skip to content
         </a>
       
@@ -107,7 +107,7 @@
         <div class="md-header__topic" data-md-component="header-topic">
           <span class="md-ellipsis">
             
-              Optimization
+              install diffwofost
             
           </span>
         </div>
@@ -838,15 +838,15 @@
     <ul class="md-nav__list" data-md-component="toc" data-md-scrollfix>
       
         <li class="md-nav__item">
-  <a href="#1-leaf-dynamics" class="md-nav__link">
+  <a href="#1-root-dynamics" class="md-nav__link">
     <span class="md-ellipsis">
       
-        1. Leaf dynamics
+        1. Root dynamics
       
     </span>
   </a>
   
-    <nav class="md-nav" aria-label="1. Leaf dynamics">
+    <nav class="md-nav" aria-label="1. Root dynamics">
       <ul class="md-nav__list">
         
           <li class="md-nav__item">
@@ -859,6 +859,23 @@
   </a>
   
 </li>
+        
+      </ul>
+    </nav>
+  
+</li>
+      
+        <li class="md-nav__item">
+  <a href="#install-diffwofost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        install diffwofost
+      
+    </span>
+  </a>
+  
+    <nav class="md-nav" aria-label="install diffwofost">
+      <ul class="md-nav__list">
         
           <li class="md-nav__item">
   <a href="#12-data" class="md-nav__link">
@@ -887,56 +904,6 @@
   
 </li>
       
-        <li class="md-nav__item">
-  <a href="#2-root-dynamics" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2. Root dynamics
-      
-    </span>
-  </a>
-  
-    <nav class="md-nav" aria-label="2. Root dynamics">
-      <ul class="md-nav__list">
-        
-          <li class="md-nav__item">
-  <a href="#21-software-requirements" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.1 software requirements
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#22-data" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.2. Data
-      
-    </span>
-  </a>
-  
-</li>
-        
-          <li class="md-nav__item">
-  <a href="#23-helper-classesfunctions" class="md-nav__link">
-    <span class="md-ellipsis">
-      
-        2.3. Helper classes/functions
-      
-    </span>
-  </a>
-  
-</li>
-        
-      </ul>
-    </nav>
-  
-</li>
-      
     </ul>
   
 </nav>
@@ -951,7 +918,7 @@
               <article class="md-content__inner md-typeset">
                 
 
-    <a href="optimization.ipynb" title="Download Notebook" class="md-content__button md-icon">
+    <a href="optimization_root_dynamics.ipynb" title="Download Notebook" class="md-content__button md-icon">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24"><path d="M5 20h14v-2H5m14-9h-4V3H9v6H5l7 7z"/></svg>
     </a>
 
@@ -1414,35 +1381,29 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
 differentiable model using the <code>diffwofost</code> package. The package provides
 differentiable implementations of the WOFOST model and its associated
 sub-models. As <code>diffwofost</code> is under active development, this notebook focuses on
-two sub-models: <code>leaf_dynamics</code> and <code>root_dynamics</code>.</p>
+<code>root_dynamics</code>.</p>
 <p>To enable these models to operate independently, certain state variables
 required by the model are supplied as "external states" derived from the test
 data. Also, at this stage, only a limited subset of model parameters has been made
 differentiable.</p>
-<p>The notebook is organized into two standalone sections that can
-be executed independently:</p>
-<ol>
-<li>Leaf Dynamics</li>
-<li>Root Dynamics</li>
-</ol>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=41262fbd-270b-4616-91ad-09ee82451604">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=fedda7e9-02a6-40e5-8c61-08d7886c9519">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="1-leaf-dynamics">1. Leaf dynamics<a class="anchor-link" href="#1-leaf-dynamics">¶</a></h2><p>In this section, we will demonstrate how to optimize two parameters <code>TWDI</code> and <code>SPAN</code> in
-leaf_dynamics model using a differentiable version of leaf_dynamics.
+<h2 id="1-root-dynamics">1. Root dynamics<a class="anchor-link" href="#1-root-dynamics">¶</a></h2><p>In this section, we will demonstrate how to optimize two parameters <code>TWDI</code> in
+root_dynamics model using a differentiable version of root_dynamics.
 The optimization will be done using the Adam optimizer from <code>torch.optim</code>.</p>
 </div>
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=1b6c3f53-6fab-4537-9177-7b16e0a1ccec">
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=ab4c452e-7bf2-46ec-b52f-5ba642960c33">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1456,7 +1417,7 @@ python environment. You can install it using pip:</p>
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e4049fea-1d05-41f1-bf9d-f030ae83a324">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=9732ef36-f46f-4c5d-b789-ba0ff0eab0d8">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
@@ -1484,13 +1445,24 @@ python environment. You can install it using pip:</p>
 </div>
 </div>
 </div>
+</div>
+<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=152ec514-baf1-4213-b98b-76f453d49538">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
+</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
+<h1 id="install-diffwofost">install diffwofost<a class="anchor-link" href="#install-diffwofost">¶</a></h1><p>!pip install diffwofost</p>
+</div>
+</div>
+</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=21731653-3976-4bb9-b83b-b11d78211700">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=eaa4c172-9719-4a79-b2f2-d37ea5b6f11d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
 <clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-2">
@@ -1509,8 +1481,11 @@ python environment. You can install it using pip:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Configuration</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.crop.root_dynamics</span><span class="w"> </span><span class="kn">import</span> <span class="n">WOFOST_Root_Dynamics</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineTestHelper</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">prepare_engine_input</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">get_test_data</span>
 </pre></div>
 <div class="clipboard-copy-txt" id="cell-2"># ---- import libraries ----
 import copy
@@ -1518,20 +1493,23 @@ import torch
 import numpy
 import yaml
 from pathlib import Path
+from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics
 from diffwofost.physical_models.utils import EngineTestHelper
-from diffwofost.physical_models.utils import prepare_engine_input</div>
+from diffwofost.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.utils import get_test_data</div>
 </div>
 </div>
 </div>
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=82a1ef6b-336e-4902-8bd1-2a1ed2020f9d">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=26437aed-755d-4ee3-b7b6-82caf8c30ec5">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
 <clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
@@ -1557,661 +1535,13 @@ warnings.filterwarnings("ignore", message="To copy construct from a tensor.*")</
 </div>
 </div>
 </div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=47def7fc-f2dd-4aaf-a572-41cc9d1e4679">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="12-data">1.2. Data<a class="anchor-link" href="#12-data">¶</a></h3><p>A test dataset of <code>LAI</code> (Leaf area index, including stem and pod area) and
-<code>TWLV</code> (Dry weight of total leaves (living + dead)) will be used to optimize
-parametesr <code>TWDI</code> (total initial dry weight) and <code>SPAN</code> (life span of leaves).
-Note that in leaf_dynamic, changes in <code>SPAN</code> dont affect <code>TWLV</code>.</p>
-<p>The data is stored in PCSE tests folder, and can be doewnloded from PCSE repsository.
-You can select any of the files related to <code>leaf_dynamics</code> model with a file name that follwos the pattern
-<code>test_leafdynamics_wofost72_*.yaml</code>. Each file contains different data depending on the locatin and crop type.
-For example, you can download the file "test_leafdynamics_wofost72_01.yaml" as:</p>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0233a048-e5a2-4249-887d-35a37284769c">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="kn">import</span><span class="w"> </span><span class="nn">urllib.request</span>
-
-<span class="n">url</span> <span class="o">=</span> <span class="s2">"https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data/test_leafdynamics_wofost72_01.yaml"</span>
-<span class="n">filename</span> <span class="o">=</span> <span class="s2">"test_leafdynamics_wofost72_01.yaml"</span>
-
-<span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloaded: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-4">import urllib.request
-
-url = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data/test_leafdynamics_wofost72_01.yaml"
-filename = "test_leafdynamics_wofost72_01.yaml"
-
-urllib.request.urlretrieve(url, filename)
-print(f"Downloaded: {filename}")</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Downloaded: test_leafdynamics_wofost72_01.yaml
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e4565b6b-523c-49c4-934e-500248317461">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p>We also need to download a config file to be able to run each crop module. This will change in the future versions. To donwload the config file, you can use the following command:</p>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=b4a24f1c-77e4-4b05-bde9-229dd497f09e">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">url</span> <span class="o">=</span> <span class="s2">"https://raw.githubusercontent.com/WUR-AI/diffWOFOST/refs/heads/main/tests/physical_models/test_data/WOFOST_Leaf_Dynamics.conf"</span>
-<span class="n">filename</span> <span class="o">=</span> <span class="s2">"WOFOST_Leaf_Dynamics.conf"</span>
-
-<span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloaded: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-5">url = "https://raw.githubusercontent.com/WUR-AI/diffWOFOST/refs/heads/main/tests/physical_models/test_data/WOFOST_Leaf_Dynamics.conf"
-filename = "WOFOST_Leaf_Dynamics.conf"
-
-urllib.request.urlretrieve(url, filename)
-print(f"Downloaded: {filename}")</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Downloaded: WOFOST_Leaf_Dynamics.conf
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=5a459489-bfcb-4ad6-9102-1b6be5edeb52">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Check the path to the files that are downloaded as explained above ----</span>
-<span class="n">test_data_path</span> <span class="o">=</span> <span class="s2">"test_leafdynamics_wofost72_01.yaml"</span>
-<span class="n">config_path</span> <span class="o">=</span> <span class="s2">"WOFOST_Leaf_Dynamics.conf"</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-6"># ---- Check the path to the files that are downloaded as explained above ----
-test_data_path = "test_leafdynamics_wofost72_01.yaml"
-config_path = "WOFOST_Leaf_Dynamics.conf"</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=9f3105fb-4fbe-4405-9fd4-e8255b4b119e">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Here we read the test data and set some variables ----</span>
-<span class="p">(</span><span class="n">crop_model_params_provider</span><span class="p">,</span> <span class="n">weather_data_provider</span><span class="p">,</span> <span class="n">agro_management_inputs</span><span class="p">,</span> <span class="n">external_states</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">prepare_engine_input</span><span class="p">(</span><span class="n">test_data_path</span><span class="p">,</span> <span class="p">[</span><span class="s2">"SPAN"</span><span class="p">,</span> <span class="s2">"TDWI"</span><span class="p">,</span> <span class="s2">"TBASE"</span><span class="p">,</span> <span class="s2">"PERDL"</span><span class="p">,</span> <span class="s2">"RGRLAI"</span><span class="p">])</span>
-<span class="p">)</span>
-
-<span class="n">expected_results</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">test_data_path</span><span class="p">))[</span><span class="s2">"ModelResults"</span><span class="p">]</span>
-<span class="n">expected_lai_twlv</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-    <span class="p">[[</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"LAI"</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"TWLV"</span><span class="p">])]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">expected_results</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span>
-<span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># shape: [1, time_steps, 2]</span>
-
-<span class="c1"># ---- dont change this: in this config file we specified the diffrentiable version of leaf_dynamics ----</span>
-<span class="n">config_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span> 
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-7"># ---- Here we read the test data and set some variables ----
-(crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-    prepare_engine_input(test_data_path, ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"])
-)
-
-expected_results = yaml.safe_load(open(test_data_path))["ModelResults"]
-expected_lai_twlv = torch.tensor(
-    [[float(item["LAI"]), float(item["TWLV"])] for item in expected_results], dtype=torch.float32
-).unsqueeze(0) # shape: [1, time_steps, 2]
-
-# ---- dont change this: in this config file we specified the diffrentiable version of leaf_dynamics ----
-config_path = str(Path(config_path).resolve()) </div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=52b19ae2-3fe6-4b3f-95a7-aea07a2c0958">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="13-helper-classesfunctions">1.3. Helper classes/functions<a class="anchor-link" href="#13-helper-classesfunctions">¶</a></h3><p>The model parameters shoudl stay in a valid range. To ensure this, we will use
-<code>BoundedParameter</code> class with (min, max) and initial values for each
-parameter. You might change these values depending on the crop type and
-location. But dont use a very small range, otherwise gradiants will be very
-small and the optimization will be very slow.</p>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e4610238-de0d-42cf-9689-3c074eb2cc0e">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Adjust the values if needed  ----</span>
-<span class="n">TDWI_MIN</span><span class="p">,</span> <span class="n">TDWI_MAX</span><span class="p">,</span> <span class="n">TDWI_INIT</span> <span class="o">=</span> <span class="p">(</span><span class="mf">0.0</span><span class="p">,</span> <span class="mf">1.0</span><span class="p">,</span> <span class="mf">0.40</span><span class="p">)</span>
-<span class="n">SPAN_MIN</span><span class="p">,</span> <span class="n">SPAN_MAX</span><span class="p">,</span> <span class="n">SPAN_INIT</span> <span class="o">=</span> <span class="p">(</span><span class="mf">10.0</span><span class="p">,</span> <span class="mf">60.0</span><span class="p">,</span> <span class="mf">30.0</span><span class="p">)</span>
-
-<span class="c1"># ---- Helper for bounded parameters ----</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">BoundedParameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">low</span><span class="p">,</span> <span class="n">high</span><span class="p">,</span> <span class="n">init_value</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">=</span> <span class="n">low</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">=</span> <span class="n">high</span>
-
-        <span class="c1"># Normalize to [0, 1]</span>
-        <span class="n">init_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">init_value</span> <span class="o">-</span> <span class="n">low</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">high</span> <span class="o">-</span> <span class="n">low</span><span class="p">)</span>
-
-        <span class="c1"># Parameter in raw logit space</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">logit</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">init_norm</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">))</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-8"># ---- Adjust the values if needed  ----
-TDWI_MIN, TDWI_MAX, TDWI_INIT = (0.0, 1.0, 0.40)
-SPAN_MIN, SPAN_MAX, SPAN_INIT = (10.0, 60.0, 30.0)
-
-# ---- Helper for bounded parameters ----
-class BoundedParameter(torch.nn.Module):
-    def __init__(self, low, high, init_value):
-        super().__init__()
-        self.low = low
-        self.high = high
-
-        # Normalize to [0, 1]
-        init_norm = (init_value - low) / (high - low)
-
-        # Parameter in raw logit space
-        self.raw = torch.nn.Parameter(torch.logit(torch.tensor(init_norm, dtype=torch.float32), eps=1e-6))
-
-    def forward(self):
-        return self.low + (self.high - self.low) * torch.sigmoid(self.raw)
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=153e4306-77ed-4278-8797-a04e637e12c8">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p>Another helper class is <code>OptDiffLeafDynamics</code> which is a subclass of <code>torch.nn.Module</code>.
-We use this class to wrap the <code>EngineTestHelper</code> function and make it easier to run the model <code>leaf_dynamic</code>.</p>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=36dd6463-4812-41c0-b2bf-d4769df1136f">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Wrap the model with torch.nn.Module----</span>
-<span class="k">class</span><span class="w"> </span><span class="nc">OptDiffLeafDynamics</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_model_params_provider</span><span class="p">,</span> <span class="n">weather_data_provider</span><span class="p">,</span> <span class="n">agro_management_inputs</span><span class="p">,</span> <span class="n">config_path</span><span class="p">,</span> <span class="n">external_states</span><span class="p">):</span>
-        <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">crop_model_params_provider</span> <span class="o">=</span> <span class="n">crop_model_params_provider</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">weather_data_provider</span> <span class="o">=</span> <span class="n">weather_data_provider</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">agro_management_inputs</span> <span class="o">=</span> <span class="n">agro_management_inputs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span> <span class="o">=</span> <span class="n">config_path</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">external_states</span> <span class="o">=</span> <span class="n">external_states</span>
-
-        <span class="c1"># bounded parameters</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">tdwi</span> <span class="o">=</span> <span class="n">BoundedParameter</span><span class="p">(</span><span class="n">TDWI_MIN</span><span class="p">,</span> <span class="n">TDWI_MAX</span><span class="p">,</span> <span class="n">init_value</span><span class="o">=</span><span class="n">TDWI_INIT</span><span class="p">)</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">span</span> <span class="o">=</span> <span class="n">BoundedParameter</span><span class="p">(</span><span class="n">SPAN_MIN</span><span class="p">,</span> <span class="n">SPAN_MAX</span><span class="p">,</span> <span class="n">init_value</span><span class="o">=</span><span class="n">SPAN_INIT</span><span class="p">)</span>
-
-    <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
-        <span class="c1"># currently, copying is needed due to an internal issue in engine</span>
-        <span class="n">crop_model_params_provider_</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">crop_model_params_provider</span><span class="p">)</span>
-        <span class="n">external_states_</span> <span class="o">=</span> <span class="n">copy</span><span class="o">.</span><span class="n">deepcopy</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">external_states</span><span class="p">)</span>
-        
-        <span class="n">tdwi_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">tdwi</span><span class="p">()</span>
-        <span class="n">span_val</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">span</span><span class="p">()</span>
-        
-        <span class="c1"># pass new value of parameters to the model</span>
-        <span class="n">crop_model_params_provider_</span><span class="o">.</span><span class="n">set_override</span><span class="p">(</span><span class="s2">"TDWI"</span><span class="p">,</span> <span class="n">tdwi_val</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-        <span class="n">crop_model_params_provider_</span><span class="o">.</span><span class="n">set_override</span><span class="p">(</span><span class="s2">"SPAN"</span><span class="p">,</span> <span class="n">span_val</span><span class="p">,</span> <span class="n">check</span><span class="o">=</span><span class="kc">False</span><span class="p">)</span>
-
-        <span class="n">engine</span> <span class="o">=</span> <span class="n">EngineTestHelper</span><span class="p">(</span>
-            <span class="n">crop_model_params_provider_</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">weather_data_provider</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">agro_management_inputs</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">,</span>
-            <span class="n">external_states_</span><span class="p">,</span>
-        <span class="p">)</span>
-        <span class="n">engine</span><span class="o">.</span><span class="n">run_till_terminate</span><span class="p">()</span>
-        <span class="n">results</span> <span class="o">=</span> <span class="n">engine</span><span class="o">.</span><span class="n">get_output</span><span class="p">()</span>
-        
-        <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">(</span>
-            <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="s2">"LAI"</span><span class="p">],</span> <span class="n">item</span><span class="p">[</span><span class="s2">"TWLV"</span><span class="p">]])</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
-        <span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># shape: [1, time_steps, 2]</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-9"># ---- Wrap the model with torch.nn.Module----
-class OptDiffLeafDynamics(torch.nn.Module):
-    def __init__(self, crop_model_params_provider, weather_data_provider, agro_management_inputs, config_path, external_states):
-        super().__init__()
-        self.crop_model_params_provider = crop_model_params_provider
-        self.weather_data_provider = weather_data_provider
-        self.agro_management_inputs = agro_management_inputs
-        self.config_path = config_path
-        self.external_states = external_states
-
-        # bounded parameters
-        self.tdwi = BoundedParameter(TDWI_MIN, TDWI_MAX, init_value=TDWI_INIT)
-        self.span = BoundedParameter(SPAN_MIN, SPAN_MAX, init_value=SPAN_INIT)
-
-    def forward(self):
-        # currently, copying is needed due to an internal issue in engine
-        crop_model_params_provider_ = copy.deepcopy(self.crop_model_params_provider)
-        external_states_ = copy.deepcopy(self.external_states)
-        
-        tdwi_val = self.tdwi()
-        span_val = self.span()
-        
-        # pass new value of parameters to the model
-        crop_model_params_provider_.set_override("TDWI", tdwi_val, check=False)
-        crop_model_params_provider_.set_override("SPAN", span_val, check=False)
-
-        engine = EngineTestHelper(
-            crop_model_params_provider_,
-            self.weather_data_provider,
-            self.agro_management_inputs,
-            self.config_path,
-            external_states_,
-        )
-        engine.run_till_terminate()
-        results = engine.get_output()
-        
-        return torch.stack(
-            [torch.stack([item["LAI"], item["TWLV"]]) for item in results]
-        ).unsqueeze(0) # shape: [1, time_steps, 2]</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=0dcd85c8-624c-4b58-a7c9-893316110d98">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-10">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ----  Create model ---- </span>
-<span class="n">opt_model</span> <span class="o">=</span> <span class="n">OptDiffLeafDynamics</span><span class="p">(</span>
-    <span class="n">crop_model_params_provider</span><span class="p">,</span>
-    <span class="n">weather_data_provider</span><span class="p">,</span>
-    <span class="n">agro_management_inputs</span><span class="p">,</span>
-    <span class="n">config_path</span><span class="p">,</span>
-    <span class="n">external_states</span><span class="p">,</span>
-<span class="p">)</span>
-
-<span class="c1"># ----  Optimizer ---- </span>
-<span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">opt_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
-
-<span class="c1"># ----  We use relative MAE as loss because there are two outputs with different untis ----  </span>
-<span class="n">denom</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">expected_lai_twlv</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span> 
-
-<span class="c1"># Training loop (example)</span>
-<span class="k">for</span> <span class="n">step</span> <span class="ow">in</span> <span class="nb">range</span><span class="p">(</span><span class="mi">101</span><span class="p">):</span>
-    <span class="n">optimizer</span><span class="o">.</span><span class="n">zero_grad</span><span class="p">()</span>
-    <span class="n">results</span> <span class="o">=</span> <span class="n">opt_model</span><span class="p">()</span> 
-    <span class="n">mae</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">mean</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">abs</span><span class="p">(</span><span class="n">results</span> <span class="o">-</span> <span class="n">expected_lai_twlv</span><span class="p">),</span> <span class="n">dim</span><span class="o">=</span><span class="mi">1</span><span class="p">)</span>
-    <span class="n">rmae</span> <span class="o">=</span> <span class="n">mae</span> <span class="o">/</span> <span class="n">denom</span>
-    <span class="n">loss</span> <span class="o">=</span> <span class="n">rmae</span><span class="o">.</span><span class="n">sum</span><span class="p">()</span>  <span class="c1"># example: relative mean absolute error</span>
-    <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
-    <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
-
-    <span class="k">if</span> <span class="n">step</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">, Loss </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, TDWI </span><span class="si">{</span><span class="n">opt_model</span><span class="o">.</span><span class="n">tdwi</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, SPAN </span><span class="si">{</span><span class="n">opt_model</span><span class="o">.</span><span class="n">span</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-10"># ----  Create model ---- 
-opt_model = OptDiffLeafDynamics(
-    crop_model_params_provider,
-    weather_data_provider,
-    agro_management_inputs,
-    config_path,
-    external_states,
-)
-
-# ----  Optimizer ---- 
-optimizer = torch.optim.Adam(opt_model.parameters(), lr=0.1)
-
-# ----  We use relative MAE as loss because there are two outputs with different untis ----  
-denom = torch.mean(torch.abs(expected_lai_twlv), dim=1) 
-
-# Training loop (example)
-for step in range(101):
-    optimizer.zero_grad()
-    results = opt_model() 
-    mae = torch.mean(torch.abs(results - expected_lai_twlv), dim=1)
-    rmae = mae / denom
-    loss = rmae.sum()  # example: relative mean absolute error
-    loss.backward()
-    optimizer.step()
-
-    if step % 10 == 0:
-        print(f"Step {step}, Loss {loss.item():.4f}, TDWI {opt_model.tdwi().item():.4f}, SPAN {opt_model.span().item():.4f}")</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Step 0, Loss 0.1348, TDWI 0.4242, SPAN 31.2111
-Step 10, Loss 0.0589, TDWI 0.4890, SPAN 36.7883
-Step 20, Loss 0.0174, TDWI 0.5191, SPAN 34.8344
-Step 30, Loss 0.0113, TDWI 0.5056, SPAN 35.0567
-Step 40, Loss 0.0067, TDWI 0.5100, SPAN 35.4831
-Step 50, Loss 0.0121, TDWI 0.5019, SPAN 34.6534
-Step 60, Loss 0.0005, TDWI 0.5038, SPAN 34.6887
-Step 70, Loss 0.0079, TDWI 0.5015, SPAN 35.7478
-Step 80, Loss 0.0145, TDWI 0.5061, SPAN 34.5574
-Step 90, Loss 0.0110, TDWI 0.4985, SPAN 34.3927
-Step 100, Loss 0.0271, TDWI 0.5064, SPAN 36.3026
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=c2d3a463-43a4-4b29-a71f-696c019343d3">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-11">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- validate the results using test data ---- </span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Actual TDWI </span><span class="si">{</span><span class="n">crop_model_params_provider</span><span class="p">[</span><span class="s2">"TDWI"</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, SPAN </span><span class="si">{</span><span class="n">crop_model_params_provider</span><span class="p">[</span><span class="s2">"SPAN"</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-11"># ---- validate the results using test data ---- 
-print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}, SPAN {crop_model_params_provider["SPAN"].item():.4f}")</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Actual TDWI 0.5100, SPAN 35.0000
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=fedda7e9-02a6-40e5-8c61-08d7886c9519">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h2 id="2-root-dynamics">2. Root dynamics<a class="anchor-link" href="#2-root-dynamics">¶</a></h2><p>In this section, we will demonstrate how to optimize two parameters <code>TWDI</code> in
-root_dynamics model using a differentiable version of root_dynamics.
-The optimization will be done using the Adam optimizer from <code>torch.optim</code>.</p>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=152ec514-baf1-4213-b98b-76f453d49538">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
-</div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="21-software-requirements">2.1 software requirements<a class="anchor-link" href="#21-software-requirements">¶</a></h3><p>To run this notebook, we need to install the <code>diffwofost</code>; the differentiable
-version of WOFOST models. Since the package is constantly under development, make
-sure you have the latest version of <code>diffwofost</code> installed in your
-python environment. You can install it using pip:</p>
-<div class="highlight"><pre><span></span>pip<span class="w"> </span>install<span class="w"> </span>diffwofost
-</pre></div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=eaa4c172-9719-4a79-b2f2-d37ea5b6f11d">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-12">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- import libraries ----</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">copy</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">torch</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineTestHelper</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">prepare_engine_input</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-12"># ---- import libraries ----
-import copy
-import torch
-import numpy
-import yaml
-from pathlib import Path
-from diffwofost.physical_models.utils import EngineTestHelper
-from diffwofost.physical_models.utils import prepare_engine_input</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=26437aed-755d-4ee3-b7b6-82caf8c30ec5">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-13">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- disable a warning: this will be fixed in the future ----</span>
-<span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
-<span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">"To copy construct from a tensor.*"</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-13"># ---- disable a warning: this will be fixed in the future ----
-import warnings
-warnings.filterwarnings("ignore", message="To copy construct from a tensor.*")</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div>
 <div class="jp-Cell jp-MarkdownCell jp-Notebook-cell" id="cell-id=e245765e-f360-4693-b097-b595360471e3">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="22-data">2.2. Data<a class="anchor-link" href="#22-data">¶</a></h3><p>A test dataset of <code>TWRT</code> (Total weight of roots) will be used to optimize
+<h3 id="12-data">1.2. Data<a class="anchor-link" href="#12-data">¶</a></h3><p>A test dataset of <code>TWRT</code> (Total weight of roots) will be used to optimize
 parametesr <code>TWDI</code> (total initial dry weight). Note that in root_dynamic, changes in <code>TWDI</code> dont affect <code>RD</code> (Current rooting depth).</p>
 <p>The data is stored in PCSE tests folder, and can be doewnloded from PCSE repsository.
 You can select any of the files related to <code>root_dynamics</code> model with a file name that follwos the pattern
@@ -2226,10 +1556,10 @@ For example, you can download the file "test_rootdynamics_wofost72_01.yaml" as:<
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-14">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2247,7 +1577,7 @@ For example, you can download the file "test_rootdynamics_wofost72_01.yaml" as:<
 <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloaded: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-14">import urllib.request
+<div class="clipboard-copy-txt" id="cell-4">import urllib.request
 
 url = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data/test_rootdynamics_wofost72_01.yaml"
 filename = "test_rootdynamics_wofost72_01.yaml"
@@ -2283,64 +1613,16 @@ print(f"Downloaded: {filename}")</div>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=ae2de6dc-1294-4a5a-91d0-3e83f28dc892">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-15">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="n">url</span> <span class="o">=</span> <span class="s2">"https://raw.githubusercontent.com/WUR-AI/diffWOFOST/refs/heads/main/tests/physical_models/test_data/WOFOST_Root_Dynamics.conf"</span>
-<span class="n">filename</span> <span class="o">=</span> <span class="s2">"WOFOST_Root_Dynamics.conf"</span>
-
-<span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
-<span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloaded: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-15">url = "https://raw.githubusercontent.com/WUR-AI/diffWOFOST/refs/heads/main/tests/physical_models/test_data/WOFOST_Root_Dynamics.conf"
-filename = "WOFOST_Root_Dynamics.conf"
-
-urllib.request.urlretrieve(url, filename)
-print(f"Downloaded: {filename}")</div>
-</div>
-</div>
-</div>
-</div>
-<div class="jp-Cell-outputWrapper">
-<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
-</div>
-<div class="jp-OutputArea jp-Cell-outputArea">
-<div class="jp-OutputArea-child">
-<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
-<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Downloaded: WOFOST_Root_Dynamics.conf
-</pre>
-</div>
-</div>
-</div>
-</div>
-</div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
 <div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=a69e9279-49eb-4136-8f15-7cff8bb4af52">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-16">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2352,11 +1634,9 @@ print(f"Downloaded: {filename}")</div>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Check the path to the files that are downloaded as explained above ----</span>
 <span class="n">test_data_path</span> <span class="o">=</span> <span class="s2">"test_rootdynamics_wofost72_01.yaml"</span>
-<span class="n">config_path</span> <span class="o">=</span> <span class="s2">"WOFOST_Root_Dynamics.conf"</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-16"># ---- Check the path to the files that are downloaded as explained above ----
-test_data_path = "test_rootdynamics_wofost72_01.yaml"
-config_path = "WOFOST_Root_Dynamics.conf"</div>
+<div class="clipboard-copy-txt" id="cell-5"># ---- Check the path to the files that are downloaded as explained above ----
+test_data_path = "test_rootdynamics_wofost72_01.yaml"</div>
 </div>
 </div>
 </div>
@@ -2368,10 +1648,10 @@ config_path = "WOFOST_Root_Dynamics.conf"</div>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-17">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2382,30 +1662,38 @@ config_path = "WOFOST_Root_Dynamics.conf"</div>
 </clipboard-copy>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Here we read the test data and set some variables ----</span>
+<span class="n">test_data</span> <span class="o">=</span> <span class="n">get_test_data</span><span class="p">(</span><span class="n">test_data_path</span><span class="p">)</span>
 <span class="p">(</span><span class="n">crop_model_params_provider</span><span class="p">,</span> <span class="n">weather_data_provider</span><span class="p">,</span> <span class="n">agro_management_inputs</span><span class="p">,</span> <span class="n">external_states</span><span class="p">)</span> <span class="o">=</span> <span class="p">(</span>
-    <span class="n">prepare_engine_input</span><span class="p">(</span><span class="n">test_data_path</span><span class="p">,</span> <span class="p">[</span><span class="s2">"RDI"</span><span class="p">,</span> <span class="s2">"RRI"</span><span class="p">,</span> <span class="s2">"RDMCR"</span><span class="p">,</span> <span class="s2">"RDMSOL"</span><span class="p">,</span> <span class="s2">"TDWI"</span><span class="p">,</span> <span class="s2">"IAIRDU"</span><span class="p">])</span>
+    <span class="n">prepare_engine_input</span><span class="p">(</span><span class="n">test_data</span><span class="p">,</span> <span class="p">[</span><span class="s2">"RDI"</span><span class="p">,</span> <span class="s2">"RRI"</span><span class="p">,</span> <span class="s2">"RDMCR"</span><span class="p">,</span> <span class="s2">"RDMSOL"</span><span class="p">,</span> <span class="s2">"TDWI"</span><span class="p">,</span> <span class="s2">"IAIRDU"</span><span class="p">])</span>
 <span class="p">)</span>
 
-<span class="n">expected_results</span> <span class="o">=</span> <span class="n">yaml</span><span class="o">.</span><span class="n">safe_load</span><span class="p">(</span><span class="nb">open</span><span class="p">(</span><span class="n">test_data_path</span><span class="p">))[</span><span class="s2">"ModelResults"</span><span class="p">]</span>
+<span class="n">expected_results</span> <span class="o">=</span> <span class="n">test_data</span><span class="p">[</span><span class="s2">"ModelResults"</span><span class="p">]</span>
 <span class="n">expected_twrt</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
     <span class="p">[</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"TWRT"</span><span class="p">])</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">expected_results</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span>
 <span class="p">)</span> <span class="c1"># shape: [1, time_steps]</span>
 
 <span class="c1"># ---- dont change this: in this config file we specified the diffrentiable version of root_dynamics ----</span>
-<span class="n">config_path</span> <span class="o">=</span> <span class="nb">str</span><span class="p">(</span><span class="n">Path</span><span class="p">(</span><span class="n">config_path</span><span class="p">)</span><span class="o">.</span><span class="n">resolve</span><span class="p">())</span> 
+<span class="n">root_dynamics_config</span> <span class="o">=</span> <span class="n">Configuration</span><span class="p">(</span>
+    <span class="n">CROP</span><span class="o">=</span><span class="n">WOFOST_Root_Dynamics</span><span class="p">,</span>
+    <span class="n">OUTPUT_VARS</span><span class="o">=</span><span class="p">[</span><span class="s2">"RD"</span><span class="p">,</span> <span class="s2">"TWRT"</span><span class="p">],</span>
+<span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-17"># ---- Here we read the test data and set some variables ----
+<div class="clipboard-copy-txt" id="cell-6"># ---- Here we read the test data and set some variables ----
+test_data = get_test_data(test_data_path)
 (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-    prepare_engine_input(test_data_path, ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"])
+    prepare_engine_input(test_data, ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"])
 )
 
-expected_results = yaml.safe_load(open(test_data_path))["ModelResults"]
+expected_results = test_data["ModelResults"]
 expected_twrt = torch.tensor(
     [float(item["TWRT"]) for item in expected_results], dtype=torch.float32
 ) # shape: [1, time_steps]
 
 # ---- dont change this: in this config file we specified the diffrentiable version of root_dynamics ----
-config_path = str(Path(config_path).resolve()) </div>
+root_dynamics_config = Configuration(
+    CROP=WOFOST_Root_Dynamics,
+    OUTPUT_VARS=["RD", "TWRT"],
+)</div>
 </div>
 </div>
 </div>
@@ -2418,7 +1706,7 @@ config_path = str(Path(config_path).resolve()) </div>
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="23-helper-classesfunctions">2.3. Helper classes/functions<a class="anchor-link" href="#23-helper-classesfunctions">¶</a></h3><p>The model parameters shoudl stay in a valid range. To ensure this, we will use
+<h3 id="13-helper-classesfunctions">1.3. Helper classes/functions<a class="anchor-link" href="#13-helper-classesfunctions">¶</a></h3><p>The model parameters shoudl stay in a valid range. To ensure this, we will use
 <code>BoundedParameter</code> class with (min, max) and initial values for each
 parameter. You might change these values depending on the crop type and
 location. But dont use a very small range, otherwise gradiants will be very
@@ -2432,10 +1720,10 @@ small and the optimization will be very slow.</p>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-18">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2464,7 +1752,7 @@ small and the optimization will be very slow.</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-18"># ---- Adjust the values if needed  ----
+<div class="clipboard-copy-txt" id="cell-7"># ---- Adjust the values if needed  ----
 TDWI_MIN, TDWI_MAX, TDWI_INIT = (0.0, 1.0, 0.30)
 
 # ---- Helper for bounded parameters ----
@@ -2495,7 +1783,7 @@ class BoundedParameter(torch.nn.Module):
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<p>Another helper class is <code>OptRootLeafDynamics</code> which is a subclass of <code>torch.nn.Module</code>.
+<p>Another helper class is <code>OptRootDynamics</code> which is a subclass of <code>torch.nn.Module</code>.
 We use this class to wrap the <code>EngineTestHelper</code> function and make it easier to run the model <code>root_dynamic</code>.</p>
 </div>
 </div>
@@ -2506,10 +1794,10 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-19">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2521,12 +1809,12 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Wrap the model with torch.nn.Module----</span>
 <span class="k">class</span><span class="w"> </span><span class="nc">OptDiffRootDynamics</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Module</span><span class="p">):</span>
-    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_model_params_provider</span><span class="p">,</span> <span class="n">weather_data_provider</span><span class="p">,</span> <span class="n">agro_management_inputs</span><span class="p">,</span> <span class="n">config_path</span><span class="p">,</span> <span class="n">external_states</span><span class="p">):</span>
+    <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">crop_model_params_provider</span><span class="p">,</span> <span class="n">weather_data_provider</span><span class="p">,</span> <span class="n">agro_management_inputs</span><span class="p">,</span> <span class="n">root_dynamics_config</span><span class="p">,</span> <span class="n">external_states</span><span class="p">):</span>
         <span class="nb">super</span><span class="p">()</span><span class="o">.</span><span class="fm">__init__</span><span class="p">()</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">crop_model_params_provider</span> <span class="o">=</span> <span class="n">crop_model_params_provider</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">weather_data_provider</span> <span class="o">=</span> <span class="n">weather_data_provider</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">agro_management_inputs</span> <span class="o">=</span> <span class="n">agro_management_inputs</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span> <span class="o">=</span> <span class="n">config_path</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">config</span> <span class="o">=</span> <span class="n">root_dynamics_config</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">external_states</span> <span class="o">=</span> <span class="n">external_states</span>
 
         <span class="c1"># bounded parameters</span>
@@ -2546,7 +1834,7 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
             <span class="n">crop_model_params_provider_</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">weather_data_provider</span><span class="p">,</span>
             <span class="bp">self</span><span class="o">.</span><span class="n">agro_management_inputs</span><span class="p">,</span>
-            <span class="bp">self</span><span class="o">.</span><span class="n">config_path</span><span class="p">,</span>
+            <span class="bp">self</span><span class="o">.</span><span class="n">config</span><span class="p">,</span>
             <span class="n">external_states_</span><span class="p">,</span>
         <span class="p">)</span>
         <span class="n">engine</span><span class="o">.</span><span class="n">run_till_terminate</span><span class="p">()</span>
@@ -2554,14 +1842,14 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
         
         <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="s2">"TWRT"</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">])</span> <span class="c1"># shape: [1, time_steps]</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-19"># ---- Wrap the model with torch.nn.Module----
+<div class="clipboard-copy-txt" id="cell-8"># ---- Wrap the model with torch.nn.Module----
 class OptDiffRootDynamics(torch.nn.Module):
-    def __init__(self, crop_model_params_provider, weather_data_provider, agro_management_inputs, config_path, external_states):
+    def __init__(self, crop_model_params_provider, weather_data_provider, agro_management_inputs, root_dynamics_config, external_states):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
         self.weather_data_provider = weather_data_provider
         self.agro_management_inputs = agro_management_inputs
-        self.config_path = config_path
+        self.config = root_dynamics_config
         self.external_states = external_states
 
         # bounded parameters
@@ -2581,7 +1869,7 @@ class OptDiffRootDynamics(torch.nn.Module):
             crop_model_params_provider_,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config_path,
+            self.config,
             external_states_,
         )
         engine.run_till_terminate()
@@ -2599,10 +1887,10 @@ class OptDiffRootDynamics(torch.nn.Module):
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-20">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2617,16 +1905,16 @@ class OptDiffRootDynamics(torch.nn.Module):
     <span class="n">crop_model_params_provider</span><span class="p">,</span>
     <span class="n">weather_data_provider</span><span class="p">,</span>
     <span class="n">agro_management_inputs</span><span class="p">,</span>
-    <span class="n">config_path</span><span class="p">,</span>
+    <span class="n">root_dynamics_config</span><span class="p">,</span>
     <span class="n">external_states</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-20"># ----  Create model ---- 
+<div class="clipboard-copy-txt" id="cell-9"># ----  Create model ---- 
 opt_model = OptDiffRootDynamics(
     crop_model_params_provider,
     weather_data_provider,
     agro_management_inputs,
-    config_path,
+    root_dynamics_config,
     external_states,
 )</div>
 </div>
@@ -2640,10 +1928,10 @@ opt_model = OptDiffRootDynamics(
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-21">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-10">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2653,7 +1941,13 @@ opt_model = OptDiffRootDynamics(
 </div>
 </clipboard-copy>
 </div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ----  Optimizer ---- </span>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ----  Early stopping ---- </span>
+<span class="n">best_loss</span> <span class="o">=</span> <span class="nb">float</span><span class="p">(</span><span class="s2">"inf"</span><span class="p">)</span>
+<span class="n">patience</span> <span class="o">=</span> <span class="mi">10</span>  <span class="c1"># Number of steps to wait for improvement</span>
+<span class="n">patience_counter</span> <span class="o">=</span> <span class="mi">0</span>
+<span class="n">min_delta</span> <span class="o">=</span> <span class="mf">1e-4</span> 
+
+<span class="c1"># ----  Optimizer ---- </span>
 <span class="n">optimizer</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">optim</span><span class="o">.</span><span class="n">Adam</span><span class="p">(</span><span class="n">opt_model</span><span class="o">.</span><span class="n">parameters</span><span class="p">(),</span> <span class="n">lr</span><span class="o">=</span><span class="mf">0.1</span><span class="p">)</span>
 
 <span class="c1"># ----  We use relative MAE as loss because there are two outputs with different untis ----  </span>
@@ -2668,10 +1962,24 @@ opt_model = OptDiffRootDynamics(
     <span class="n">loss</span><span class="o">.</span><span class="n">backward</span><span class="p">()</span>
     <span class="n">optimizer</span><span class="o">.</span><span class="n">step</span><span class="p">()</span>
 
-    <span class="k">if</span> <span class="n">step</span> <span class="o">%</span> <span class="mi">10</span> <span class="o">==</span> <span class="mi">0</span><span class="p">:</span>
-        <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">, Loss </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.8f</span><span class="si">}</span><span class="s2">, TDWI </span><span class="si">{</span><span class="n">opt_model</span><span class="o">.</span><span class="n">tdwi</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">, Loss </span><span class="si">{</span><span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.8f</span><span class="si">}</span><span class="s2">, TDWI </span><span class="si">{</span><span class="n">opt_model</span><span class="o">.</span><span class="n">tdwi</span><span class="p">()</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+    <span class="c1"># Early stopping logic</span>
+    <span class="k">if</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span> <span class="o">&lt;</span> <span class="n">best_loss</span> <span class="o">-</span> <span class="n">min_delta</span><span class="p">:</span>
+        <span class="n">best_loss</span> <span class="o">=</span> <span class="n">loss</span><span class="o">.</span><span class="n">item</span><span class="p">()</span>
+        <span class="n">patience_counter</span> <span class="o">=</span> <span class="mi">0</span>
+    <span class="k">else</span><span class="p">:</span>
+        <span class="n">patience_counter</span> <span class="o">+=</span> <span class="mi">1</span>
+        <span class="k">if</span> <span class="n">patience_counter</span> <span class="o">&gt;=</span> <span class="n">patience</span><span class="p">:</span>
+            <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Early stopping at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
+            <span class="k">break</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-21"># ----  Optimizer ---- 
+<div class="clipboard-copy-txt" id="cell-10"># ----  Early stopping ---- 
+best_loss = float("inf")
+patience = 10  # Number of steps to wait for improvement
+patience_counter = 0
+min_delta = 1e-4 
+
+# ----  Optimizer ---- 
 optimizer = torch.optim.Adam(opt_model.parameters(), lr=0.1)
 
 # ----  We use relative MAE as loss because there are two outputs with different untis ----  
@@ -2686,8 +1994,16 @@ for step in range(101):
     loss.backward()
     optimizer.step()
 
-    if step % 10 == 0:
-        print(f"Step {step}, Loss {loss.item():.8f}, TDWI {opt_model.tdwi().item():.4f}")</div>
+    print(f"Step {step}, Loss {loss.item():.8f}, TDWI {opt_model.tdwi().item():.4f}")
+    # Early stopping logic
+    if loss.item() &lt; best_loss - min_delta:
+        best_loss = loss.item()
+        patience_counter = 0
+    else:
+        patience_counter += 1
+        if patience_counter &gt;= patience:
+            print(f"Early stopping at step {step}")
+            break</div>
 </div>
 </div>
 </div>
@@ -2699,17 +2015,18 @@ for step in range(101):
 <div class="jp-OutputArea-child">
 <div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
 <div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
-<pre>Step 0, Loss 0.00000021, TDWI 0.5340
-Step 10, Loss 0.00000015, TDWI 0.5137
-Step 20, Loss 0.00000164, TDWI 0.5144
-Step 30, Loss 0.00000068, TDWI 0.5107
-Step 40, Loss 0.00000019, TDWI 0.5072
-Step 50, Loss 0.00000080, TDWI 0.5084
-Step 60, Loss 0.00000007, TDWI 0.5071
-Step 70, Loss 0.00000100, TDWI 0.5091
-Step 80, Loss 0.00000131, TDWI 0.5089
-Step 90, Loss 0.00000068, TDWI 0.5115
-Step 100, Loss 0.00000071, TDWI 0.5053
+<pre>Step 0, Loss 0.00004644, TDWI 0.3214
+Step 1, Loss 0.00004170, TDWI 0.3436
+Step 2, Loss 0.00003679, TDWI 0.3665
+Step 3, Loss 0.00003172, TDWI 0.3901
+Step 4, Loss 0.00002650, TDWI 0.4143
+Step 5, Loss 0.00002116, TDWI 0.4389
+Step 6, Loss 0.00001571, TDWI 0.4639
+Step 7, Loss 0.00001019, TDWI 0.4891
+Step 8, Loss 0.00000461, TDWI 0.5144
+Step 9, Loss 0.00000099, TDWI 0.5316
+Step 10, Loss 0.00000479, TDWI 0.5424
+Early stopping at step 10
 </pre>
 </div>
 </div>
@@ -2725,7 +2042,7 @@ Step 100, Loss 0.00000071, TDWI 0.5053
 <div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-22">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-11">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2738,7 +2055,7 @@ Step 100, Loss 0.00000071, TDWI 0.5053
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- validate the results using test data ---- </span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Actual TDWI </span><span class="si">{</span><span class="n">crop_model_params_provider</span><span class="p">[</span><span class="s2">"TDWI"</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-22"># ---- validate the results using test data ---- 
+<div class="clipboard-copy-txt" id="cell-11"># ---- validate the results using test data ---- 
 print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}")</div>
 </div>
 </div>
@@ -2767,7 +2084,7 @@ print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}")</div>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-23">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-12">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2779,7 +2096,7 @@ print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}")</div>
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-23"></div>
+<div class="clipboard-copy-txt" id="cell-12"></div>
 </div>
 </div>
 </div>
@@ -2838,10 +2155,10 @@ print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}")</div>
     
       
       
-      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "content.code.copy", "content.tabs"], "search": "../../assets/javascripts/workers/search.7a47a382.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
+      <script id="__config" type="application/json">{"annotate": null, "base": "../..", "features": ["navigation.instant", "navigation.tabs", "navigation.tabs.sticky", "content.code.copy", "content.tabs"], "search": "../../assets/javascripts/workers/search.2c215733.min.js", "tags": null, "translations": {"clipboard.copied": "Copied to clipboard", "clipboard.copy": "Copy to clipboard", "search.result.more.one": "1 more on this page", "search.result.more.other": "# more on this page", "search.result.none": "No matching documents", "search.result.one": "1 matching document", "search.result.other": "# matching documents", "search.result.placeholder": "Type to start searching", "search.result.term.missing": "Missing", "select.version": "Select version"}, "version": null}</script>
     
     
-      <script src="../../assets/javascripts/bundle.e71a0d61.min.js"></script>
+      <script src="../../assets/javascripts/bundle.79ae519e.min.js"></script>
       
         <script src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
       

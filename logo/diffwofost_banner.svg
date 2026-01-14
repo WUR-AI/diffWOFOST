@@ -1,0 +1,854 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   version="1.1"
+   id="svg397"
+   width="377.94666"
+   height="264.57333"
+   viewBox="0 0 377.94666 264.57333"
+   sodipodi:docname="diffwofost_banner_v2.svg"
+   inkscape:version="1.2.2 (b0a8486541, 2022-12-01)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs401">
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath413">
+      <path
+         d="M 0,198.43 H 283.46 V 0 H 0 Z"
+         id="path411" />
+    </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath408">
+      <rect
+         style="fill:#088082;stroke:#27edf2;stroke-width:0.427966"
+         id="rect410"
+         width="214.89024"
+         height="186.60655"
+         x="2.9432881"
+         y="-238.29562"
+         transform="scale(1,-1)" />
+    </clipPath>
+    <clipPath
+       id="presentation_clip_path"
+       clipPathUnits="userSpaceOnUse">
+   <rect
+   x="0"
+   y="0"
+   width="21590"
+   height="22403"
+   id="rect350" />
+
+  </clipPath>
+    <clipPath
+       clipPathUnits="userSpaceOnUse"
+       id="clipPath1527">
+      <rect
+         style="fill:#088082;stroke:#27edf2;stroke-width:15.875"
+         id="rect1529"
+         width="12375.317"
+         height="8936.2627"
+         x="4139.7466"
+         y="4862.437" />
+    </clipPath>
+  </defs>
+  <sodipodi:namedview
+     id="namedview399"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     showgrid="false"
+     inkscape:zoom="0.82018847"
+     inkscape:cx="-29.261567"
+     inkscape:cy="-112.77896"
+     inkscape:window-width="1854"
+     inkscape:window-height="1011"
+     inkscape:window-x="66"
+     inkscape:window-y="32"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="g405">
+    <inkscape:page
+       x="0"
+       y="0"
+       id="page403"
+       width="377.94666"
+       height="264.57333" />
+  </sodipodi:namedview>
+  <g
+     id="g405"
+     inkscape:groupmode="layer"
+     inkscape:label="Page 1"
+     transform="matrix(1.3333333,0,0,-1.3333333,0,264.57333)">
+    <rect
+       style="fill:#15232c;stroke:#ffffff;stroke-width:0.264301;fill-opacity:1"
+       id="rect846"
+       height="173.74742"
+       x="-164.38213"
+       y="-514.37335"
+       transform="scale(1,-1)"
+       width="615.13757"
+       inkscape:export-filename="rect846.png"
+       inkscape:export-xdpi="250"
+       inkscape:export-ydpi="250" />
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:65px;font-family:FontAwesome;-inkscape-font-specification:FontAwesome;letter-spacing:3.6px;word-spacing:0.0525px;fill:#088082;fill-opacity:1;stroke:#27edf2;stroke-width:0.45;stroke-dasharray:none;stroke-opacity:1"
+       x="34.90889"
+       y="-418.07697"
+       id="text2961"
+       transform="scale(1,-1)"><tspan
+         sodipodi:role="line"
+         id="tspan2959"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:65px;font-family:'Nimbus Mono PS';-inkscape-font-specification:'Nimbus Mono PS';fill:#088082;fill-opacity:1;stroke:#27edf2;stroke-width:0.45;stroke-dasharray:none;stroke-opacity:1"
+         x="34.90889"
+         y="-418.07697">diffWOFOST</tspan></text>
+    <text
+       xml:space="preserve"
+       style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18px;font-family:FontAwesome;-inkscape-font-specification:FontAwesome;letter-spacing:0px;word-spacing:0px;fill:#088082;fill-opacity:1;stroke:#27edf2;stroke-width:0.45;stroke-dasharray:none;stroke-opacity:1"
+       x="-4.016592"
+       y="-387.01163"
+       id="text2961-9"
+       transform="scale(1,-1)"><tspan
+         sodipodi:role="line"
+         id="tspan2959-2"
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-size:18px;font-family:'Nimbus Mono PS';-inkscape-font-specification:'Nimbus Mono PS';fill:#088082;fill-opacity:1;stroke:#27edf2;stroke-width:0.45;stroke-dasharray:none;stroke-opacity:1"
+         x="-4.016592"
+         y="-387.01163">Differentiable crop simulation environment</tspan></text>
+    <g
+       class="SlideGroup"
+       id="g623"
+       transform="matrix(0.01924922,0,0,-0.01924922,-274.54384,620.46094)"
+       clip-path="url(#clipPath1527)">
+  <g
+   id="g621">
+   <g
+   id="container-id1">
+    <g
+   id="id1"
+   class="Slide"
+   clip-path="url(#presentation_clip_path)">
+     <g
+   class="Page"
+   id="g617">
+      <g
+   class="com.sun.star.drawing.LineShape"
+   id="g427">
+       <g
+   id="id3">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="6691"
+   y="7443"
+   width="1637"
+   height="2979"
+   id="rect422" />
+
+        <path
+   fill="none"
+   stroke="#2a6b65"
+   stroke-width="247"
+   stroke-linejoin="round"
+   d="m 6815,7567 1388,2730"
+   id="path424" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.LineShape"
+   id="g434">
+       <g
+   id="id4">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="6056"
+   y="7488"
+   width="1553"
+   height="283"
+   id="rect429" />
+
+        <path
+   fill="none"
+   stroke="#2ea451"
+   stroke-width="282"
+   stroke-linejoin="round"
+   stroke-linecap="round"
+   d="M 6197,7629 H 7467"
+   id="path431" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="TextShape"
+   id="g447">
+       <g
+   id="id5">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="7667"
+   y="13600"
+   width="6669"
+   height="1607"
+   id="rect436" />
+
+        <text
+   class="SVGTextShape"
+   id="text444"><tspan
+     class="TextParagraph"
+     id="tspan442"><tspan
+       class="TextPosition"
+       x="7917"
+       y="14661"
+       id="tspan440"><tspan
+         font-family="'LM Sans Quot 8', sans-serif"
+         font-size="847px"
+         font-weight="400"
+         fill="#3bb5a3"
+         stroke="none"
+         style="white-space:pre"
+         id="tspan438">diffWOFOST</tspan></tspan></tspan></text>
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.LineShape"
+   id="g454">
+       <g
+   id="id6">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="10588"
+   y="9131"
+   width="1967"
+   height="3424"
+   id="rect449" />
+
+        <path
+   fill="none"
+   stroke="#2a6b65"
+   stroke-width="247"
+   stroke-linejoin="round"
+   d="m 10712,9255 1718,3175"
+   id="path451" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g461">
+       <g
+   id="id7">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="11666"
+   y="6991"
+   width="993"
+   height="998"
+   id="rect456" />
+
+        <path
+   fill="#2ea451"
+   stroke="none"
+   d="m 12186,6991 -520,988 991,8 z"
+   id="path458" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g468">
+       <g
+   id="id8">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="11392"
+   y="5737"
+   width="796"
+   height="1257"
+   id="rect463" />
+
+        <path
+   fill="#79cb45"
+   stroke="none"
+   d="m 11392,6985 795,7 -592,-1254 z"
+   id="path465" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g475">
+       <g
+   id="id9">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="11392"
+   y="6983"
+   width="796"
+   height="998"
+   id="rect470" />
+
+        <path
+   fill="#46bc54"
+   stroke="none"
+   d="m 11668,7979 519,-988 -795,-8 z"
+   id="path472" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g482">
+       <g
+   id="id10">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="11666"
+   y="7979"
+   width="992"
+   height="733"
+   id="rect477" />
+
+        <path
+   fill="#297f39"
+   stroke="none"
+   d="m 11666,7979 991,8 -381,724 z"
+   id="path479" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g489">
+       <g
+   id="id11">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="12185"
+   y="6992"
+   width="994"
+   height="998"
+   id="rect484" />
+
+        <path
+   fill="#46bc54"
+   stroke="none"
+   d="m 12186,6992 991,8 -520,989 z"
+   id="path486" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g496">
+       <g
+   id="id12">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="11594"
+   y="5738"
+   width="976"
+   height="1256"
+   id="rect491" />
+
+        <path
+   fill="#c2e12e"
+   stroke="none"
+   d="m 11594,5739 974,530 -381,724 z"
+   id="path493" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g503">
+       <g
+   id="id13">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="12185"
+   y="6267"
+   width="993"
+   height="735"
+   id="rect498" />
+
+        <path
+   fill="#79cb45"
+   stroke="none"
+   d="m 12185,6992 382,-724 610,733 z"
+   id="path500" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g510">
+       <g
+   id="id14">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="12655"
+   y="7988"
+   width="729"
+   height="891"
+   id="rect505" />
+
+        <path
+   fill="#30926f"
+   stroke="none"
+   d="m 13076,8877 306,-882 -726,-7 z"
+   id="path507" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g517">
+       <g
+   id="id15">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="12655"
+   y="6999"
+   width="728"
+   height="997"
+   id="rect512" />
+
+        <path
+   fill="#2ea451"
+   stroke="none"
+   d="m 12656,7987 725,8 -205,-996 z"
+   id="path514" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g524">
+       <g
+   id="id16">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="14481"
+   y="7506"
+   width="683"
+   height="899"
+   id="rect519" />
+
+        <path
+   fill="#46bc54"
+   stroke="none"
+   d="m 15163,7961 -659,-454 -22,896 z"
+   id="path521" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g531">
+       <g
+   id="id17">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="13999"
+   y="7506"
+   width="506"
+   height="899"
+   id="rect526" />
+
+        <path
+   fill="#2ea451"
+   stroke="none"
+   d="m 14504,7507 -22,896 -483,-332 z"
+   id="path528" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g538">
+       <g
+   id="id18">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="14481"
+   y="7960"
+   width="683"
+   height="898"
+   id="rect533" />
+
+        <path
+   fill="#2ea451"
+   stroke="none"
+   d="m 15163,7960 -23,897 -659,-454 z"
+   id="path535" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g545">
+       <g
+   id="id19">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="13874"
+   y="8402"
+   width="609"
+   height="658"
+   id="rect540" />
+
+        <path
+   fill="#2a6b65"
+   stroke="none"
+   d="m 14482,8402 -16,656 -592,-261 z"
+   id="path542" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g552">
+       <g
+   id="id20">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="14465"
+   y="8401"
+   width="678"
+   height="658"
+   id="rect547" />
+
+        <path
+   fill="#297f39"
+   stroke="none"
+   d="m 14482,8402 -17,655 676,-202 z"
+   id="path549" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g559">
+       <g
+   id="id21">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="15641"
+   y="7237"
+   width="615"
+   height="552"
+   id="rect554" />
+
+        <path
+   fill="#c2e12e"
+   stroke="none"
+   d="m 16255,7404 -607,-167 -6,551 z"
+   id="path556" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g566">
+       <g
+   id="id22">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="14830"
+   y="7113"
+   width="552"
+   height="641"
+   id="rect561" />
+
+        <path
+   fill="#79cb45"
+   stroke="none"
+   d="m 15381,7753 -58,-639 -492,347 z"
+   id="path563" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g573">
+       <g
+   id="id23">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="15481"
+   y="7935"
+   width="409"
+   height="607"
+   id="rect568" />
+
+        <path
+   fill="#46bc54"
+   stroke="none"
+   d="m 15482,7936 30,604 377,-377 z"
+   id="path570" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.PolyPolygonShape"
+   id="g580">
+       <g
+   id="id24">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="15963"
+   y="7580"
+   width="529"
+   height="583"
+   id="rect575" />
+
+        <path
+   fill="#79cb45"
+   stroke="none"
+   d="m 16491,7581 -528,355 340,225 z"
+   id="path577" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.ClosedBezierShape"
+   id="g587">
+       <g
+   id="id25">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="12275"
+   y="7986"
+   width="881"
+   height="1607"
+   id="rect582" />
+
+        <path
+   fill="#2a6b65"
+   stroke="none"
+   d="m 13142,9515 13,-476 -250,-527 c -1,-2 -2,-2 -3,-4 l -246,-521 -381,723 631,130 112,240 -10,434 c -1,28 12,54 32,68 9,6 20,9 33,10 38,0 69,-34 69,-77 z"
+   id="path584" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.ClosedBezierShape"
+   id="g594">
+       <g
+   id="id26">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="12566"
+   y="8070"
+   width="1918"
+   height="2358"
+   id="rect589" />
+
+        <path
+   fill="#30926f"
+   stroke="none"
+   d="m 14000,8070 -90,520 -298,201 -341,374 82,-246 c 14,-40 -3,-85 -38,-100 -34,-14 -73,6 -87,47 l -185,557 c -2,3 -4,7 -5,11 l -461,875 c -20,37 -9,86 22,107 31,22 73,9 92,-28 l 459,-872 537,-592 272,-183 523,-339 z"
+   id="path591" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.CustomShape"
+   id="g601">
+       <g
+   id="id27">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="7510"
+   y="6875"
+   width="6670"
+   height="6670"
+   id="rect596" />
+
+        <path
+   fill="none"
+   stroke="#297f39"
+   stroke-width="318"
+   stroke-linejoin="round"
+   stroke-linecap="round"
+   d="m 10844,7034 3176,6351 H 7669 Z"
+   id="path598" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.CustomShape"
+   id="g608">
+       <g
+   id="id28">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="8909"
+   y="8897"
+   width="3883"
+   height="3748"
+   id="rect603" />
+
+        <path
+   fill="none"
+   stroke="#30926f"
+   stroke-width="318"
+   stroke-linejoin="round"
+   stroke-linecap="round"
+   d="m 10850,9056 1782,3429 H 9069 Z"
+   id="path605" />
+
+       </g>
+
+      </g>
+
+      <g
+   class="com.sun.star.drawing.CustomShape"
+   id="g615">
+       <g
+   id="id29">
+        <rect
+   class="BoundingBox"
+   stroke="none"
+   fill="none"
+   x="6538"
+   y="7488"
+   width="3179"
+   height="3179"
+   id="rect610" />
+
+        <path
+   fill="none"
+   stroke="#2ea451"
+   stroke-width="282"
+   stroke-linejoin="round"
+   stroke-linecap="round"
+   d="M 8102,10525 6679,7629 h 2896 z"
+   id="path612" />
+
+       </g>
+
+      </g>
+
+     </g>
+
+    </g>
+
+   </g>
+
+  </g>
+
+ </g>
+  </g>
+</svg>
