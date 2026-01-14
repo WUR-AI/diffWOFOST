@@ -7,7 +7,14 @@ from diffwofost.physical_models.config import ComputeConfig
 LOCAL_TEST_DIR = Path(__file__).parent / "test_data"
 BASE_PCSE_URL = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data"
 
-model_names = ["leafdynamics", "rootdynamics", "potentialproduction", "phenology", "assimilation"]
+model_names = [
+    "leafdynamics",
+    "rootdynamics",
+    "potentialproduction",
+    "phenology",
+    "partitioning",
+    "assimilation",
+]
 FILE_NAMES = [
     f"test_{model_name}_wofost72_{i:02d}.yaml" for model_name in model_names for i in range(1, 45)
 ]
