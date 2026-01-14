@@ -298,11 +298,7 @@ class WOFOST72_Assimilation(SimulationObject):
 
         # Astronomical variables (computed with PCSE util; then broadcast to tensors)
         lat = _as_python_float(drv.LAT)
-        irrad_for_astro = (
-            _as_python_float(drv.IRRAD)
-            if not isinstance(drv.IRRAD, torch.Tensor)
-            else _as_python_float(drv.IRRAD)
-        )
+        irrad_for_astro = _as_python_float(drv.IRRAD)
         dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(day, lat, irrad_for_astro)
 
         dayl_t = _broadcast_to(dayl, self.params_shape, dtype=self.dtype, device=self.device)
