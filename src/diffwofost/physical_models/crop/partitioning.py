@@ -196,6 +196,24 @@ class DVS_Partitioning(_BaseDVSPartitioning):
     |------|--------------------------|---------------|------|
     | DVS  | Crop development stage   | DVS_Phenology | -    |
 
+    **Outputs**
+
+    | Name | Description                            | Pbl | Unit |
+    |------|----------------------------------------|-----|------|
+    | FR   | Fraction partitioned to roots          | Y   | -    |
+    | FL   | Fraction partitioned to leaves         | Y   | -    |
+    | FS   | Fraction partitioned to stems          | Y   | -    |
+    | FO   | Fraction partitioned to storage organs | Y   | -    |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it |
+    |--------|---------------------------|
+    | FR     | FRTB, DVS                 |
+    | FL     | FLTB, DVS                 |
+    | FS     | FSTB, DVS                 |
+    | FO     | FOTB, DVS                 |
+
     *Exceptions raised*
 
     A PartitioningError is raised if the partitioning coefficients to leaves,
@@ -224,6 +242,7 @@ class DVS_Partitioning(_BaseDVSPartitioning):
         Rate calculation does nothing for partitioning as it is a derived state.
         """
         return self.states.PF
+
 
 # This class is used in `wofost81` and has NOT been tested, see #41
 class DVS_Partitioning_N(_BaseDVSPartitioning):
@@ -270,6 +289,24 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
     | DVS   | Crop development stage                         | DVS_Phenology            | -    |
     | RFTRA | Reduction factor for transpiration (water &    | Water & Oxygen dynamics  | -    |
     |       | oxygen stress)                                 |                          |      |
+
+    **Outputs**
+
+    | Name | Description                            | Pbl | Unit |
+    |------|----------------------------------------|-----|------|
+    | FR   | Fraction partitioned to roots          | Y   | -    |
+    | FL   | Fraction partitioned to leaves         | Y   | -    |
+    | FS   | Fraction partitioned to stems          | Y   | -    |
+    | FO   | Fraction partitioned to storage organs | Y   | -    |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it  |
+    |--------|----------------------------|
+    | FR     | FRTB, DVS, RFTRA           |
+    | FL     | FLTB, DVS                  |
+    | FS     | FSTB, DVS                  |
+    | FO     | FOTB, DVS                  |
 
     *Exceptions raised*
 
