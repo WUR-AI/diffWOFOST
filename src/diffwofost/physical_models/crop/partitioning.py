@@ -174,8 +174,7 @@ class DVS_Partitioning(_BaseDVSPartitioning):
     | FRTB | Partitioning to roots as a function of development stage        | TCr  | -    |
     | FSTB | Partitioning to stems as a function of development stage        | TCr  | -    |
     | FLTB | Partitioning to leaves as a function of development stage       | TCr  | -    |
-    | FOTB | Partitioning to storage organs as a function of development    | TCr  | -    |
-    |      | stage                                                            |      |      |
+    | FOTB | Partitioning to storage organs as a function of development  stage   | TCr  | -    |
 
     **State variables**
 
