@@ -6,6 +6,7 @@ from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.assimilation import WOFOST72_Assimilation
 from diffwofost.physical_models.utils import EngineTestHelper
+from diffwofost.physical_models.utils import _afgen_y_mask
 from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
@@ -68,28 +69,6 @@ class DiffAssimilation(torch.nn.Module):
         results = engine.get_output()
 
         return {"PGASS": torch.stack([item["PGASS"] for item in results])}
-
-
-def _afgen_y_mask(table_1d: torch.Tensor) -> torch.Tensor:
-    """Mask selecting the Y entries in a flattened AFGEN XY table.
-
-    AFGEN XY tables are commonly stored as a flat vector `[x0, y0, x1, y1, ...]`
-    with optional trailing `(0,0)` pairs as padding. This mask selects only the
-    Y entries of the *valid* (unpadded) part to avoid turning trailing `(0,0)`
-    into `(0, delta)` when perturbing parameters.
-    """
-    x_list = table_1d[0::2]
-    y_list = table_1d[1::2]
-
-    # Match the Afgen validation logic: truncate trailing (0,0) pairs, but if the
-    # entire table is (0,0), keep the first pair.
-    nonzero = ~(x_list.eq(0) & y_list.eq(0))
-    last_valid = int(nonzero.nonzero()[-1].item()) if bool(nonzero.any()) else 0
-    valid_n = last_valid + 1
-
-    mask = torch.zeros_like(table_1d)
-    mask[1 : 2 * valid_n : 2] = 1
-    return mask
 
 
 class TestAssimilation:
