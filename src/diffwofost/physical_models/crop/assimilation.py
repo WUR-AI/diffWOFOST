@@ -3,7 +3,6 @@
 import datetime
 from collections import deque
 import torch
-from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
@@ -11,9 +10,10 @@ from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
 from pcse.util import astro
+from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
@@ -241,24 +241,15 @@ class WOFOST72_Assimilation(SimulationObject):
         """Get dtype from ComputeConfig."""
         return ComputeConfig.get_dtype()
 
-    class Parameters(ParamTemplate):
+    class Parameters(TensorParamTemplate):
         AMAXTB = AfgenTrait()
         EFFTB = AfgenTrait()
         KDIFTB = AfgenTrait()
         TMPFTB = AfgenTrait()
         TMNFTB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            super().__init__(parvalues)
-
     class RateVariables(RatesTemplate):
-        PGASS = Any()
-
-        def __init__(self, kiosk, publish=None):
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            self.PGASS = torch.tensor(0.0, dtype=dtype, device=device)
-            super().__init__(kiosk, publish=publish)
+        PGASS = Tensor(0.0)
 
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider

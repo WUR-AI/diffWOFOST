@@ -2,13 +2,13 @@ from collections import namedtuple
 from warnings import warn
 import torch
 from pcse import exceptions as exc
-from pcse.base import ParamTemplate
 from pcse.base import SimulationObject
 from pcse.base import StatesTemplate
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
 from pcse.traitlets import Instance
+from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_params_shape
@@ -47,36 +47,18 @@ class _BaseDVSPartitioning(SimulationObject):
         """Get dtype from ComputeConfig."""
         return ComputeConfig.get_dtype()
 
-    class Parameters(ParamTemplate):
+    class Parameters(TensorParamTemplate):
         FRTB = AfgenTrait()
         FLTB = AfgenTrait()
         FSTB = AfgenTrait()
         FOTB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            super().__init__(parvalues)
-
     class StateVariables(StatesTemplate):
-        FR = Any()
-        FL = Any()
-        FS = Any()
-        FO = Any()
+        FR = Tensor(-99.0)
+        FL = Tensor(-99.0)
+        FS = Tensor(-99.0)
+        FO = Tensor(-99.0)
         PF = Instance(PartioningFactors)
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            if "FR" not in kwargs:
-                kwargs["FR"] = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "FL" not in kwargs:
-                kwargs["FL"] = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "FS" not in kwargs:
-                kwargs["FS"] = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "FO" not in kwargs:
-                kwargs["FO"] = torch.tensor(-99.0, dtype=dtype, device=device)
-
-            super().__init__(kiosk, publish=publish, **kwargs)
 
     def _handle_partitioning_error(self, msg: str) -> None:
         """Hook for error handling (warn vs raise)."""
