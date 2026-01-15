@@ -211,6 +211,19 @@ def prepare_engine_input(
     weather_data_provider = WeatherDataProviderTestHelper(
         test_data["WeatherVariables"], meteo_range_checks=meteo_range_checks
     )
+
+    # The PCSE WeatherDataContainer stores required variables as Python floats.
+    # Some of our tests rely on weather inputs being torch.Tensors (e.g. to
+    # broadcast/batch weather variables). We only do this conversion when
+    # METEO_RANGE_CHECKS is disabled because the PCSE range checks assume
+    # scalar floats.
+    if not meteo_range_checks:
+        for (_, _), wdc in weather_data_provider.store.items():
+            for varname in ("IRRAD", "TMIN", "TMAX", "VAP", "RAIN", "WIND", "E0", "ES0", "ET0"):
+                if hasattr(wdc, varname):
+                    value = getattr(wdc, varname)
+                    if not isinstance(value, torch.Tensor):
+                        setattr(wdc, varname, torch.tensor(value, dtype=dtype, device=device))
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data.get("ExternalStates") or []
 
