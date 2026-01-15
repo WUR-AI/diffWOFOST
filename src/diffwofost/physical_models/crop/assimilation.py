@@ -190,7 +190,7 @@ class WOFOST72_Assimilation(SimulationObject):
     | EFFTB  | Light use effic. single leaf as a function of daily mean temperature                  | TCr  | kg CO2 ha⁻¹ h⁻¹ /(J m⁻² s⁻¹)      |
     | KDIFTB | Extinction coefficient for diffuse visible light as function of DVS| TCr  | -                                  |
     | TMPFTB | Reduction factor on AMAX as function of daily mean temperature                      | TCr  | -                                  |
-    | TMNFTB | Reduction factor on AMAX as function of 7-day TMIN average         | TCr  | -                                  |
+    | TMNFTB | Reduction factor on AMAX as function of daily minimum temperature         | TCr  | -                                  |
 
     **Rate variables**
 
