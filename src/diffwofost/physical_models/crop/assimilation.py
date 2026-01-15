@@ -172,11 +172,15 @@ def assim7(
 
 
 class WOFOST72_Assimilation(SimulationObject):
-    """Gross assimilation for WOFOST (potential production).
+    """Class implementing a WOFOST/SUCROS style assimilation routine.
 
-    WOFOST calculates daily gross CO2 assimilation from absorbed radiation and
-    the leaf photosynthesis-light response curve. This response depends on
-    temperature and is parameterized using AFGEN tables.
+    WOFOST calculates the daily gross CO2 assimilation rate of a crop
+    from the absorbed radiation and the photosynthesis-light response curve
+    of individual leaves. This response is dependent on temperature and
+    leaf age. The absorbed radiation is calculated from the total incoming
+    radiation and the leaf area. Daily gross CO2 assimilation is obtained
+    by integrating the assimilation rates over the leaf layers and over the
+    day.
 
     **Simulation parameters** (provide in cropdata dictionary)
 
