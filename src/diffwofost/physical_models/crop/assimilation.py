@@ -187,7 +187,7 @@ class WOFOST72_Assimilation(SimulationObject):
     | Name   | Description                                                        | Type | Unit                               |
     |--------|--------------------------------------------------------------------|------|------------------------------------|
     | AMAXTB | Max. leaf CO2 assimilation rate as function of DVS                 | TCr  | kg CO2 ha⁻¹ leaf h⁻¹               |
-    | EFFTB  | Initial light use efficiency as function of DTEMP                  | TCr  | kg CO2 ha⁻¹ h⁻¹ /(J m⁻² s⁻¹)      |
+    | EFFTB  | Light use effic. single leaf as a function of daily mean temperature                  | TCr  | kg CO2 ha⁻¹ h⁻¹ /(J m⁻² s⁻¹)      |
     | KDIFTB | Extinction coefficient for diffuse visible light as function of DVS| TCr  | -                                  |
     | TMPFTB | Reduction factor on AMAX as function of DTEMP                      | TCr  | -                                  |
     | TMNFTB | Reduction factor on AMAX as function of 7-day TMIN average         | TCr  | -                                  |
