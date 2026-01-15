@@ -193,6 +193,8 @@ class WOFOST72_Assimilation(SimulationObject):
     | TMNFTB | Reduction factor on AMAX as function of daily minimum temperature         | TCr  | -                                  |
 
     **Rate variables**
+    This class returns the potential gross assimilation rate 'PGASS'
+    directly from the `__call__()` method, but also includes it as a rate variable.
 
     | Name  | Description                  | Pbl | Unit             |
     |-------|------------------------------|-----|------------------|
