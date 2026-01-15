@@ -2,7 +2,6 @@
 
 import datetime
 import torch
-from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base import StatesTemplate
@@ -11,8 +10,9 @@ from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
+from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
@@ -131,108 +131,40 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         """Get dtype from ComputeConfig."""
         return ComputeConfig.get_dtype()
 
-    class Parameters(ParamTemplate):
-        RGRLAI = Any()
-        SPAN = Any()
-        TBASE = Any()
-        PERDL = Any()
-        TDWI = Any()
+    class Parameters(TensorParamTemplate):
+        RGRLAI = Tensor(-99.0)
+        SPAN = Tensor(-99.0)
+        TBASE = Tensor(-99.0)
+        PERDL = Tensor(-99.0)
+        TDWI = Tensor(-99.0)
         SLATB = AfgenTrait()
         KDIFTB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.RGRLAI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.SPAN = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.TBASE = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.PERDL = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.TDWI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(parvalues)
-
     class StateVariables(StatesTemplate):
-        LV = Any()
-        SLA = Any()
-        LVAGE = Any()
-        LAIEM = Any()
-        LASUM = Any()
-        LAIEXP = Any()
-        LAIMAX = Any()
-        LAI = Any()
-        WLV = Any()
-        DWLV = Any()
-        TWLV = Any()
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            if "LV" not in kwargs:
-                self.LV = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "SLA" not in kwargs:
-                self.SLA = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "LVAGE" not in kwargs:
-                self.LVAGE = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "LAIEM" not in kwargs:
-                self.LAIEM = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "LASUM" not in kwargs:
-                self.LASUM = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "LAIEXP" not in kwargs:
-                self.LAIEXP = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "LAIMAX" not in kwargs:
-                self.LAIMAX = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "LAI" not in kwargs:
-                self.LAI = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "WLV" not in kwargs:
-                self.WLV = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "DWLV" not in kwargs:
-                self.DWLV = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "TWLV" not in kwargs:
-                self.TWLV = torch.tensor(-99.0, dtype=dtype, device=device)
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish, **kwargs)
+        LV = Tensor(-99.0)
+        SLA = Tensor(-99.0)
+        LVAGE = Tensor(-99.0)
+        LAIEM = Tensor(-99.0)
+        LASUM = Tensor(-99.0)
+        LAIEXP = Tensor(-99.0)
+        LAIMAX = Tensor(-99.0)
+        LAI = Tensor(-99.0)
+        WLV = Tensor(-99.0)
+        DWLV = Tensor(-99.0)
+        TWLV = Tensor(-99.0)
 
     class RateVariables(RatesTemplate):
-        GRLV = Any()
-        DSLV1 = Any()
-        DSLV2 = Any()
-        DSLV3 = Any()
-        DSLV = Any()
-        DALV = Any()
-        DRLV = Any()
-        SLAT = Any()
-        FYSAGE = Any()
-        GLAIEX = Any()
-        GLASOL = Any()
-
-        def __init__(self, kiosk):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.GRLV = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DSLV1 = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DSLV2 = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DSLV3 = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DSLV = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DALV = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DRLV = torch.tensor(0.0, dtype=dtype, device=device)
-            self.SLAT = torch.tensor(0.0, dtype=dtype, device=device)
-            self.FYSAGE = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GLAIEX = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GLASOL = torch.tensor(0.0, dtype=dtype, device=device)
-
-            # Call parent init
-            super().__init__(kiosk)
+        GRLV = Tensor(0.0)
+        DSLV1 = Tensor(0.0)
+        DSLV2 = Tensor(0.0)
+        DSLV3 = Tensor(0.0)
+        DSLV = Tensor(0.0)
+        DALV = Tensor(0.0)
+        DRLV = Tensor(0.0)
+        SLAT = Tensor(0.0)
+        FYSAGE = Tensor(0.0)
+        GLAIEX = Tensor(0.0)
+        GLASOL = Tensor(0.0)
 
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider

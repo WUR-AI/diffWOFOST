@@ -1,6 +1,5 @@
 import datetime
 import torch
-from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base import StatesTemplate
@@ -9,8 +8,9 @@ from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
+from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_params_shape
@@ -128,77 +128,27 @@ class WOFOST_Root_Dynamics(SimulationObject):
         """Get dtype from ComputeConfig."""
         return ComputeConfig.get_dtype()
 
-    class Parameters(ParamTemplate):
-        RDI = Any()
-        RRI = Any()
-        RDMCR = Any()
-        RDMSOL = Any()
-        TDWI = Any()
-        IAIRDU = Any()
+    class Parameters(TensorParamTemplate):
+        RDI = Tensor(-99.0)
+        RRI = Tensor(-99.0)
+        RDMCR = Tensor(-99.0)
+        RDMSOL = Tensor(-99.0)
+        TDWI = Tensor(-99.0)
+        IAIRDU = Tensor(-99.0)
         RDRRTB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.RDI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.RRI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.RDMCR = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.RDMSOL = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.TDWI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.IAIRDU = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(parvalues)
-
     class RateVariables(RatesTemplate):
-        RR = Any()
-        GRRT = Any()
-        DRRT = Any()
-        GWRT = Any()
-
-        def __init__(self, kiosk, publish=None):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.RR = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GRRT = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DRRT = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GWRT = torch.tensor(0.0, dtype=dtype, device=device)
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish)
+        RR = Tensor(0.0)
+        GRRT = Tensor(0.0)
+        DRRT = Tensor(0.0)
+        GWRT = Tensor(0.0)
 
     class StateVariables(StatesTemplate):
-        RD = Any()
-        RDM = Any()
-        WRT = Any()
-        DWRT = Any()
-        TWRT = Any()
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            if "RD" not in kwargs:
-                self.RD = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "RDM" not in kwargs:
-                self.RDM = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "WRT" not in kwargs:
-                self.WRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "DWRT" not in kwargs:
-                self.DWRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "TWRT" not in kwargs:
-                self.TWRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish, **kwargs)
+        RD = Tensor(-99.0)
+        RDM = Tensor(-99.0)
+        WRT = Tensor(-99.0)
+        DWRT = Tensor(-99.0)
+        TWRT = Tensor(-99.0)
 
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
