@@ -25,6 +25,44 @@ We provide an example notebook showing optimization of models' parameters with
     output w.r.t the parameter will be close to zero, which may not provide
     useful information for optimization.
 
+
+## Computing configuration
+
+The object `ComputeConfig` provides a central configuration for PyTorch device
+and dtype settings across all simulation objects in diffWOFOST. Instead of
+setting device and dtype individually for each class, use this central
+configuration to apply settings globally.
+
+**Default Behavior:**
+
+- **Device**: Automatically defaults to 'cuda' if available, otherwise 'cpu'
+- **Dtype**: Defaults to torch.float64
+
+**Basic Usage:**
+
+```python
+from diffwofost.physical_models.config import ComputeConfig
+import torch
+# Set device to CPU
+ComputeConfig.set_device('cpu')
+
+# Or use a torch.device object
+ComputeConfig.set_device(torch.device('cuda'))
+
+# Set dtype to float32
+ComputeConfig.set_dtype(torch.float32)
+
+# Get current settings
+device = ComputeConfig.get_device()  # Returns: torch.device('cpu')
+dtype = ComputeConfig.get_dtype()    # Returns: torch.float32
+```
+
+**More info:**
+
+See the [ComputeConfig API
+reference](./api_reference.md#diffwofost.physical_models.config.ComputeConfig)
+for more details.
+
 [leaf_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_leaf_dynamics.ipynb
 [leaf_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_leaf_dynamics.ipynb
 [root_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_root_dynamics.ipynb

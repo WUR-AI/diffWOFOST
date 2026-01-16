@@ -14,13 +14,21 @@ In a nutshell, we can run a model, for example, `leaf_dynamics` using diffWOFOST
 
 ```python
 from diffwofost.physical_models.utils import EngineTestHelper
+from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
+
+# create config
+leaf_dynamics_config = Configuration(
+    CROP=WOFOST_Leaf_Dynamics,
+    OUTPUT_VARS=["LAI", "TWLV"],
+)
 
 # create the model
 model = EngineTestHelper(
     crop_parameters_provider,  # this provides the crop parameters
     weather_data_provider,
     agromanagement_provider,
-    leaf_dynamics_config_file,  # this where the differentiable model is specified
+    leaf_dynamics_config,  # this where the differentiable model is specified
     external_states,  # any external states if needed
 )
 

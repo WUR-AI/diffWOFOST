@@ -106,6 +106,5 @@ The package is structured as follows:
 ```
 
 !!! note
-    At the moment only two modules of `leaf_dynamics` and `root_dynamics` are
-    differentiable w.r.t two parameters of `SPAN` and `TDWI`. But the package is under
-    continuous development. So make sure that you install the latest version.
+    At the moment the package is under continuous development. So make sure that
+    you install the latest version.
