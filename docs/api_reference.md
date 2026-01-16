@@ -12,9 +12,15 @@ hide:
 
 ::: diffwofost.physical_models.crop.phenology.DVS_Phenology
 
+::: diffwofost.physical_models.crop.assimilation.WOFOST72_Assimilation
+
+::: diffwofost.physical_models.crop.partitioning.DVS_Partitioning
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration
+
+::: diffwofost.physical_models.config.ComputeConfig
 
 ::: diffwofost.physical_models.engine.Engine
 
