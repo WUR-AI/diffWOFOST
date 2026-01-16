@@ -40,7 +40,7 @@ authors:
     affiliation: Wageningen University & Research
     orcid: 'https://orcid.org/0000-0002-5517-6404'
 date-released: 2025-10-29
-version: "0.2.0"
+version: "0.3.0"
 repository-code: "https://github.com/WUR-AI/diffwofost"
 keywords:
   - "wofost"
