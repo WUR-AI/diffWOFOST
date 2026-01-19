@@ -25,6 +25,55 @@ evapotranspiration_config = Configuration(
 )
 
 
+def _augment_params_for_variant(crop_model_params_provider, variant: str):
+    """Augment parameters to enable specific evapotranspiration variant.
+
+    Args:
+        crop_model_params_provider: Base parameter provider
+        variant: One of 'base', 'co2', or 'layered'
+    """
+    if variant == "base":
+        # No augmentation needed
+        return
+    elif variant == "co2":
+        # Add CO2 parameters to enable EvapotranspirationCO2
+        crop_model_params_provider.set_override(
+            "CO2", torch.tensor(360.0, dtype=torch.float64), check=False
+        )
+        crop_model_params_provider.set_override(
+            "CO2TRATB", torch.tensor([0.0, 1.0, 1000.0, 0.5], dtype=torch.float64), check=False
+        )
+    elif variant == "layered":
+        # Add CO2 and soil_profile to enable EvapotranspirationCO2Layered
+        crop_model_params_provider.set_override(
+            "CO2", torch.tensor(360.0, dtype=torch.float64), check=False
+        )
+        crop_model_params_provider.set_override(
+            "CO2TRATB", torch.tensor([0.0, 1.0, 1000.0, 0.5], dtype=torch.float64), check=False
+        )
+        # Create a simple two-layer soil profile using existing soil parameters
+        smw = crop_model_params_provider["SMW"]
+        smfcf = crop_model_params_provider["SMFCF"]
+        sm0 = crop_model_params_provider["SM0"]
+        crairc = crop_model_params_provider["CRAIRC"]
+
+        # Convert to Python scalars if they are tensors
+        smw_val = float(smw.item() if isinstance(smw, torch.Tensor) else smw)
+        smfcf_val = float(smfcf.item() if isinstance(smfcf, torch.Tensor) else smfcf)
+        sm0_val = float(sm0.item() if isinstance(sm0, torch.Tensor) else sm0)
+        crairc_val = float(crairc.item() if isinstance(crairc, torch.Tensor) else crairc)
+
+        soil_profile = [
+            SimpleNamespace(
+                SMW=smw_val, SMFCF=smfcf_val, SM0=sm0_val, CRAIRC=crairc_val, Thickness=10.0
+            ),
+            SimpleNamespace(
+                SMW=smw_val, SMFCF=smfcf_val, SM0=sm0_val, CRAIRC=crairc_val, Thickness=20.0
+            ),
+        ]
+        crop_model_params_provider.set_override("soil_profile", soil_profile, check=False)
+
+
 def get_test_diff_evapotranspiration_model(device: str = "cpu"):
     test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
@@ -102,7 +151,8 @@ class TestEvapotranspiration:
     ]
 
     @pytest.mark.parametrize("test_data_url", transpiration_data_urls)
-    def test_evapotranspiration_with_testengine(self, test_data_url, device):
+    @pytest.mark.parametrize("variant", ["base", "co2", "layered"])
+    def test_evapotranspiration_with_testengine(self, test_data_url, variant, device):
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "CFET",
@@ -124,6 +174,20 @@ class TestEvapotranspiration:
             test_data, crop_model_params, meteo_range_checks=False, device=device
         )
 
+        # Augment parameters based on variant to test different implementations
+        _augment_params_for_variant(crop_model_params_provider, variant)
+
+        # For layered variant, also need to augment external_states with SM as a list and RD
+        if variant == "layered":
+            # Convert SM to a 2-layer list structure for each state dict
+            for state_dict in external_states:
+                if "SM" in state_dict:
+                    sm_val = state_dict["SM"]
+                    state_dict["SM"] = [sm_val, sm_val]
+                # Add RD (rooting depth) if not present - use a simple default of 30 cm
+                if "RD" not in state_dict:
+                    state_dict["RD"] = torch.tensor(30.0, dtype=torch.float64, device=device)
+
         engine = EngineTestHelper(
             crop_model_params_provider,
             weather_data_provider,
@@ -137,15 +201,30 @@ class TestEvapotranspiration:
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
         assert len(actual_results) == len(expected_results)
-        for reference, model in zip(expected_results, actual_results, strict=False):
-            assert reference["DAY"] == model["day"]
-            for var in expected_precision.keys():
-                assert model[var].device.type == device, f"{var} should be on {device}"
-            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
-            assert all(
-                abs(reference[var] - model_cpu[var]) < precision
-                for var, precision in expected_precision.items()
-            )
+
+        # For layered and CO2 variants, we just verify they run without errors
+        # (to achieve coverage) but don't check exact values since they use different
+        # implementations that produce different results
+        if variant in ("co2", "layered"):
+            # Just verify we got results with the correct structure
+            for model in actual_results:
+                assert "day" in model
+                for var in expected_precision.keys():
+                    assert var in model
+                    assert model[var].device.type == device, f"{var} should be on {device}"
+        else:
+            # For base variant, check exact values against reference
+            for reference, model in zip(expected_results, actual_results, strict=False):
+                assert reference["DAY"] == model["day"]
+                for var in expected_precision.keys():
+                    assert model[var].device.type == device, f"{var} should be on {device}"
+                model_cpu = {
+                    k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()
+                }
+                assert all(
+                    abs(reference[var] - model_cpu[var]) < precision
+                    for var, precision in expected_precision.items()
+                )
 
     @pytest.mark.parametrize(
         "param",
