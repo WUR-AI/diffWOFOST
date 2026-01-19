@@ -20,10 +20,12 @@ from diffwofost.physical_models.utils import _get_params_shape
 
 
 def _clamp(x: torch.Tensor, lo: float, hi: float) -> torch.Tensor:
+    """Clamp tensor values to the range [lo, hi]."""
     return torch.clamp(x, min=lo, max=hi)
 
 
 def _as_tensor(x, *, dtype: torch.dtype, device: torch.device) -> torch.Tensor:
+    """Convert input to a tensor with specified dtype and device."""
     if isinstance(x, torch.Tensor):
         t = x
         if dtype is not None:
@@ -79,7 +81,11 @@ class EvapotranspirationWrapper(SimulationObject):
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
     ) -> None:
-        """Select and initialize the evapotranspiration implementation."""
+        """Select and initialize the evapotranspiration implementation.
+
+        Chooses between layered CO2-aware, non-layered CO2, or standard evapotranspiration
+        based on available parameters.
+        """
         if "soil_profile" in parvalues:
             self.etmodule = EvapotranspirationCO2Layered(day, kiosk, parvalues)
         elif "CO2TRATB" in parvalues:
@@ -89,13 +95,16 @@ class EvapotranspirationWrapper(SimulationObject):
 
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
+        """Delegate rate calculation to the selected evapotranspiration module."""
         return self.etmodule.calc_rates(day, drv)
 
     def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None):
+        """Callable interface for rate calculation."""
         return self.calc_rates(day, drv)
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
+        """Delegate state integration to the selected evapotranspiration module."""
         return self.etmodule.integrate(day, delt)
 
 
@@ -106,10 +115,12 @@ class _BaseEvapotranspiration(SimulationObject):
 
     @property
     def device(self):
+        """Get the compute device (CPU or CUDA) from global configuration."""
         return ComputeConfig.get_device()
 
     @property
     def dtype(self):
+        """Get the default data type (float32/float64) from global configuration."""
         return ComputeConfig.get_dtype()
 
     class RateVariables(RatesTemplate):
@@ -158,7 +169,11 @@ class _BaseEvapotranspiration(SimulationObject):
         *,
         publish_rates: list[str],
     ) -> None:
-        """Shared initialization for evapotranspiration modules."""
+        """Shared initialization for evapotranspiration modules.
+
+        Sets up parameters, rate and state variables, and numerical epsilon for all
+        evapotranspiration implementations.
+        """
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues)
         self.params_shape = _get_params_shape(self.params)
@@ -167,11 +182,12 @@ class _BaseEvapotranspiration(SimulationObject):
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
 
     def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None):
+        """Callable interface for rate calculation."""
         return self.calc_rates(day, drv)
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
-        """Accumulate stress-day counters."""
+        """Accumulate stress-day counters for water and oxygen stress."""
         rfws_stress = (self.rates.RFWS < 1.0).to(dtype=self.dtype)
         rfos_stress = (self.rates.RFOS < 1.0).to(dtype=self.dtype)
         self.states.IDWST = self.states.IDWST + rfws_stress
@@ -182,6 +198,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
     """Shared implementation for non-layered evapotranspiration."""
 
     def _rf_tramx_co2(self, drv: WeatherDataContainer, et0: torch.Tensor) -> torch.Tensor:
+        """Return CO2 reduction factor for TRAMX (no CO2 effect in base implementation)."""
         return torch.ones_like(et0)
 
     @prepare_rates
@@ -340,6 +357,7 @@ class Evapotranspiration(_BaseEvapotranspirationNonLayered):
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
     ) -> None:
+        """Initialize the standard evapotranspiration module (no CO2 effects)."""
         self._initialize_base(
             day,
             kiosk,
@@ -409,6 +427,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
         CO2TRATB = AfgenTrait()
 
         def __init__(self, parvalues):
+            """Initialize CO2-aware parameters with default placeholder values before loading."""
             dtype = ComputeConfig.get_dtype()
             device = ComputeConfig.get_device()
             self.CFET = torch.tensor(-99.0, dtype=dtype, device=device)
@@ -425,6 +444,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
     ) -> None:
+        """Initialize the CO2-aware evapotranspiration module."""
         self._initialize_base(
             day,
             kiosk,
@@ -433,6 +453,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
         )
 
     def _rf_tramx_co2(self, drv: WeatherDataContainer, et0: torch.Tensor) -> torch.Tensor:
+        """Calculate CO2 reduction factor for TRAMX based on atmospheric CO2 concentration."""
         p = self.params
 
         if hasattr(drv, "CO2") and drv.CO2 is not None:
@@ -504,6 +525,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         CO2TRATB = AfgenTrait()
 
         def __init__(self, parvalues):
+            """Initialize layered CO2-aware parameters with default placeholder values."""
             dtype = ComputeConfig.get_dtype()
             device = ComputeConfig.get_device()
             self.CFET = torch.tensor(-99.0, dtype=dtype, device=device)
@@ -527,6 +549,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         RFTRA = Any()
 
         def __init__(self, kiosk, publish=None):
+            """Initialize rate variables including per-layer transpiration and stress factors."""
             dtype = ComputeConfig.get_dtype()
             device = ComputeConfig.get_device()
             self.EVWMX = torch.tensor(0.0, dtype=dtype, device=device)
@@ -545,6 +568,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         IDWST = Any()
 
         def __init__(self, kiosk, publish=None, **kwargs):
+            """Initialize state variables for layered stress-day counters."""
             dtype = ComputeConfig.get_dtype()
             device = ComputeConfig.get_device()
             if "IDOST" not in kwargs:
@@ -556,6 +580,10 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
     def initialize(
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
     ) -> None:
+        """Initialize the layered-soil CO2-aware evapotranspiration module.
+
+        Sets up layer-specific soil parameters and internal oxygen stress tracking.
+        """
         self.soil_profile = parvalues["soil_profile"]
         self._initialize_base(
             day,
@@ -567,6 +595,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         self._dsos = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
 
     def _rf_tramx_co2(self, drv: WeatherDataContainer, et0: torch.Tensor) -> torch.Tensor:
+        """Calculate CO2 reduction factor for TRAMX using CO2 from driver or parameters."""
         p = self.params
         if hasattr(drv, "CO2") and drv.CO2 is not None:
             co2 = _get_drv(drv.CO2, self.params_shape, dtype=self.dtype, device=self.device)
@@ -576,6 +605,11 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
+        """Calculate daily evapotranspiration rates per soil layer with CO2 effects.
+
+        Computes transpiration and stress factors for each soil layer based on root
+        distribution and layer-specific soil moisture conditions.
+        """
         p = self.params
         r = self.rates
         k = self.kiosk
@@ -632,7 +666,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         elif isinstance(sm_layers, (list, tuple)):
             if len(sm_layers) != n_layers:
                 raise ValueError(
-                    f"Layered evapotranspiration expects SM with {n_layers} layers, got {len(sm_layers)}."
+                    "Layered evapotranspiration expects SM with "
+                    + f"{n_layers} layers, got {len(sm_layers)}."
                 )
             sm_layers_t = torch.stack(
                 [
@@ -647,7 +682,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
                 # Interpret as per-layer scalars
                 if sm_layers_t.shape[0] != n_layers:
                     raise ValueError(
-                        f"Layered evapotranspiration expects SM with {n_layers} layers, got {sm_layers_t.shape[0]}."
+                        "Layered evapotranspiration expects SM with "
+                        + f"{n_layers} layers, got {sm_layers_t.shape[0]}."
                     )
                 sm_layers_t = torch.stack(
                     [
@@ -661,7 +697,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
         if sm_layers_t.shape[0] != n_layers:
             raise ValueError(
-                f"Layered evapotranspiration expects SM first dim to be {n_layers}, got {sm_layers_t.shape[0]}."
+                "Layered evapotranspiration expects SM first dim to be "
+                + f"{n_layers}, got {sm_layers_t.shape[0]}."
             )
 
         rfws_list = []
@@ -744,10 +781,12 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         return r.TRA, r.TRAMX
 
     def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None):
+        """Callable interface for rate calculation."""
         return self.calc_rates(day, drv)
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
+        """Accumulate stress-day counters based on any layer experiencing stress."""
         rfws_stress = (self.rates.RFWS < 1.0).any(dim=0).to(dtype=self.dtype)
         rfos_stress = (self.rates.RFOS < 1.0).any(dim=0).to(dtype=self.dtype)
         self.states.IDWST = self.states.IDWST + rfws_stress
