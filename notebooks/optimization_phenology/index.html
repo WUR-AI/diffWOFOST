@@ -1470,6 +1470,37 @@ from diffwofost.physical_models.utils import get_test_data</div>
 </div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=8a06565c-139a-4039-92d5-bcfd7bcf8344">
+<div class="jp-Cell-inputWrapper" tabindex="0">
+<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
+</div>
+<div class="jp-InputArea jp-Cell-inputArea">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="CodeMirror cm-s-jupyter">
+<div class="zeroclipboard-container">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
+<div>
+<span class="notice" hidden="">Copied!</span>
+<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
+<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
+</svg>
+</div>
+</clipboard-copy>
+</div>
+<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># --- run on CPU ------</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ComputeConfig</span>
+<span class="n">ComputeConfig</span><span class="o">.</span><span class="n">set_device</span><span class="p">(</span><span class="s1">'cpu'</span><span class="p">)</span>
+</pre></div>
+<div class="clipboard-copy-txt" id="cell-3"># --- run on CPU ------
+from diffwofost.physical_models.config import ComputeConfig
+ComputeConfig.set_device('cpu')</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
 <div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=82a1ef6b-336e-4902-8bd1-2a1ed2020f9d">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
@@ -1478,7 +1509,7 @@ from diffwofost.physical_models.utils import get_test_data</div>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1492,7 +1523,7 @@ from diffwofost.physical_models.utils import get_test_data</div>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">"To copy construct from a tensor.*"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-3"># ---- disable a warning: this will be fixed in the future ----
+<div class="clipboard-copy-txt" id="cell-4"># ---- disable a warning: this will be fixed in the future ----
 import warnings
 warnings.filterwarnings("ignore", message="To copy construct from a tensor.*")</div>
 </div>
@@ -1530,7 +1561,7 @@ For example, you can download the file "test_phenology_wofost72_01.yaml" as:</p>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1548,7 +1579,7 @@ For example, you can download the file "test_phenology_wofost72_01.yaml" as:</p>
 <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloaded: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4">import urllib.request
+<div class="clipboard-copy-txt" id="cell-5">import urllib.request
 
 filename = "test_phenology_wofost72_17.yaml"
 url = f"https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data/{filename}"
@@ -1582,7 +1613,7 @@ print(f"Downloaded: {filename}")</div>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1595,7 +1626,7 @@ print(f"Downloaded: {filename}")</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Check the path to the files that are downloaded as explained above ----</span>
 <span class="n">test_data_path</span> <span class="o">=</span> <span class="s2">"test_phenology_wofost72_17.yaml"</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5"># ---- Check the path to the files that are downloaded as explained above ----
+<div class="clipboard-copy-txt" id="cell-6"># ---- Check the path to the files that are downloaded as explained above ----
 test_data_path = "test_phenology_wofost72_17.yaml"</div>
 </div>
 </div>
@@ -1611,7 +1642,7 @@ test_data_path = "test_phenology_wofost72_17.yaml"</div>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1654,7 +1685,7 @@ test_data_path = "test_phenology_wofost72_17.yaml"</div>
     <span class="n">OUTPUT_VARS</span><span class="o">=</span><span class="p">[</span><span class="s2">"DVR"</span><span class="p">,</span> <span class="s2">"DVS"</span><span class="p">,</span> <span class="s2">"TSUM"</span><span class="p">,</span> <span class="s2">"TSUME"</span><span class="p">,</span> <span class="s2">"VERN"</span><span class="p">],</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6"># ---- Here we read the test data and set some variables ----
+<div class="clipboard-copy-txt" id="cell-7"># ---- Here we read the test data and set some variables ----
 test_data = get_test_data(test_data_path)
 
 crop_model_params = [
@@ -1715,7 +1746,7 @@ small and the optimization will be very slow.</p>
 <div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1747,7 +1778,7 @@ small and the optimization will be very slow.</p>
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-7"># ---- Adjust the values if needed  ----
+<div class="clipboard-copy-txt" id="cell-8"># ---- Adjust the values if needed  ----
 TSUMEM_MIN, TSUMEM_MAX, TSUMEM_INIT = (0.0, 200, 90)
 TBASEM_MIN, TBASEM_MAX, TBASEM_INIT = (0.0, 10.0, 2.0)
 TSUM1_MIN, TSUM1_MAX, TSUM1_INIT = (0.0, 1000, 800)
@@ -1795,7 +1826,7 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
 <div class="jp-InputPrompt jp-InputArea-prompt">In [12]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1846,7 +1877,7 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
         
         <span class="k">return</span> <span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="s2">"DVS"</span><span class="p">]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">])</span> <span class="c1"># shape: [1, time_steps]</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8"># ---- Wrap the model with torch.nn.Module----
+<div class="clipboard-copy-txt" id="cell-9"># ---- Wrap the model with torch.nn.Module----
 class OptDiffPhenology(torch.nn.Module):
     def __init__(self, crop_model_params_provider, weather_data_provider, agro_management_inputs, phenology_config):
         super().__init__()
@@ -1900,7 +1931,7 @@ class OptDiffPhenology(torch.nn.Module):
 <div class="jp-InputPrompt jp-InputArea-prompt">In [13]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-10">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1918,7 +1949,7 @@ class OptDiffPhenology(torch.nn.Module):
     <span class="n">phenology_config</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-9"># ----  Create model ---- 
+<div class="clipboard-copy-txt" id="cell-10"># ----  Create model ---- 
 opt_model = OptDiffPhenology(
     crop_model_params_provider,
     weather_data_provider,
@@ -1939,7 +1970,7 @@ opt_model = OptDiffPhenology(
 <div class="jp-InputPrompt jp-InputArea-prompt">In [14]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-10">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-11">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1995,7 +2026,7 @@ opt_model = OptDiffPhenology(
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"duration (model </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">results</span><span class="p">)</span><span class="si">}</span><span class="s2"> vs test </span><span class="si">{</span><span class="nb">len</span><span class="p">(</span><span class="n">expected_dvs</span><span class="p">)</span><span class="si">}</span><span class="s2">)."</span><span class="p">)</span>
             <span class="k">break</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-10"># ----  Early stopping ---- 
+<div class="clipboard-copy-txt" id="cell-11"># ----  Early stopping ---- 
 best_loss = float("inf")
 patience = 10  # Number of steps to wait for improvement
 patience_counter = 0
@@ -2127,7 +2158,7 @@ duration (model 279 vs test 279).
 <div class="jp-InputPrompt jp-InputArea-prompt">In [15]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-11">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-12">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2145,7 +2176,7 @@ duration (model 279 vs test 279).
     <span class="sa">f</span><span class="s2">"TSUM2 </span><span class="si">{</span><span class="n">crop_model_params_provider</span><span class="p">[</span><span class="s2">"TSUM2"</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-11"># ---- validate the results using test data ---- 
+<div class="clipboard-copy-txt" id="cell-12"># ---- validate the results using test data ---- 
 print(
     f"Actual TSUMEM {crop_model_params_provider["TSUMEM"].item():.4f}",
     f"TBASEM {crop_model_params_provider["TBASEM"].item():.4f}",
@@ -2179,7 +2210,7 @@ print(
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-12">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-13">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2191,7 +2222,7 @@ print(
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-12"></div>
+<div class="clipboard-copy-txt" id="cell-13"></div>
 </div>
 </div>
 </div>
