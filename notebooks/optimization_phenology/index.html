@@ -1545,9 +1545,9 @@ warnings.filterwarnings("ignore", message="To copy construct from a tensor.*")</
 <li><code>TSUM1</code>: Temperature sum from emergence to anthesis,</li>
 <li><code>TSUM2</code>: Temperature sum from anthesis to maturity.</li>
 </ul>
-<p>The data is stored in PCSE tests folder, and can be doewnloded from PCSE repsository.
-You can select any of the files related to <code>phenology</code> model with a file name that follwos the pattern
-<code>test_phenology_wofost72_*.yaml</code>. Each file contains different data depending on the locatin and crop type.
+<p>The data is stored in the PCSE tests folder, and can be downloaded from the PCSE repository.
+You can select any of the files related to <code>phenology</code> model with a file name that follows the pattern
+<code>test_phenology_wofost72_*.yaml</code>. Each file contains different data depending on the location and crop type.
 For example, you can download the file "test_phenology_wofost72_01.yaml" as:</p>
 </div>
 </div>
@@ -1679,7 +1679,7 @@ test_data_path = "test_phenology_wofost72_17.yaml"</div>
 <span class="n">expected_dvs</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">([</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"DVS"</span><span class="p">])</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">expected_results</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span>
 <span class="p">)</span> <span class="c1"># shape: [time_steps]</span>
 
-<span class="c1"># ---- dont change this: in this config file we specified the diffrentiable version of leaf_dynamics ----</span>
+<span class="c1"># ---- don't change this: in this config file we specify the differentiable version of DVS_Phenology ----</span>
 <span class="n">phenology_config</span> <span class="o">=</span> <span class="n">Configuration</span><span class="p">(</span>
     <span class="n">CROP</span><span class="o">=</span><span class="n">DVS_Phenology</span><span class="p">,</span>
     <span class="n">OUTPUT_VARS</span><span class="o">=</span><span class="p">[</span><span class="s2">"DVR"</span><span class="p">,</span> <span class="s2">"DVS"</span><span class="p">,</span> <span class="s2">"TSUM"</span><span class="p">,</span> <span class="s2">"TSUME"</span><span class="p">,</span> <span class="s2">"VERN"</span><span class="p">],</span>
@@ -1712,7 +1712,7 @@ expected_results = test_data["ModelResults"]
 expected_dvs = torch.tensor([float(item["DVS"]) for item in expected_results], dtype=torch.float32
 ) # shape: [time_steps]
 
-# ---- dont change this: in this config file we specified the diffrentiable version of leaf_dynamics ----
+# ---- don't change this: in this config file we specify the differentiable version of DVS_Phenology ----
 phenology_config = Configuration(
     CROP=DVS_Phenology,
     OUTPUT_VARS=["DVR", "DVS", "TSUM", "TSUME", "VERN"],
@@ -1729,10 +1729,10 @@ phenology_config = Configuration(
 </div>
 <div class="jp-InputArea jp-Cell-inputArea"><div class="jp-InputPrompt jp-InputArea-prompt">
 </div><div class="jp-RenderedHTMLCommon jp-RenderedMarkdown jp-MarkdownOutput" data-mime-type="text/markdown">
-<h3 id="13-helper-classesfunctions">1.3. Helper classes/functions<a class="anchor-link" href="#13-helper-classesfunctions">¶</a></h3><p>The model parameters shoudl stay in a valid range. To ensure this, we will use
+<h3 id="13-helper-classesfunctions">1.3. Helper classes/functions<a class="anchor-link" href="#13-helper-classesfunctions">¶</a></h3><p>The model parameters should stay in a valid range. To ensure this, we will use
 <code>BoundedParameter</code> class with (min, max) and initial values for each
-parameter. You might change these values depending on the crop type and
-location. But dont use a very small range, otherwise gradiants will be very
+parameter. You may change these values depending on the crop type and
+location. But don't use a very small range, otherwise gradients will be very
 small and the optimization will be very slow.</p>
 </div>
 </div>
