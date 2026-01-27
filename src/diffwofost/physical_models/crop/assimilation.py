@@ -3,7 +3,6 @@
 import datetime
 from collections import deque
 import torch
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
@@ -12,6 +11,7 @@ from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.util import astro
 from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
@@ -248,17 +248,21 @@ class WOFOST72_Assimilation(SimulationObject):
         TMPFTB = AfgenTrait()
         TMNFTB = AfgenTrait()
 
-    class RateVariables(RatesTemplate):
+    class RateVariables(TensorRatesTemplate):
         PGASS = Tensor(0.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | torch.Size | None = None,
     ) -> None:
         """Initialize the assimilation module."""
         self.kiosk = kiosk
-        self.params = self.Parameters(parvalues)
+        self.params = self.Parameters(parvalues, shape=shape)
         self.params_shape = _get_params_shape(self.params)
-        self.rates = self.RateVariables(kiosk, publish=["PGASS"])
+        self.rates = self.RateVariables(kiosk, publish=["PGASS"], shape=shape)
 
         # 7-day running average buffer for TMIN (stored as tensors).
         self._tmn_window = deque(maxlen=7)

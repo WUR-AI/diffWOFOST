@@ -2,15 +2,15 @@
 
 import datetime
 import torch
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
@@ -140,7 +140,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         SLATB = AfgenTrait()
         KDIFTB = AfgenTrait()
 
-    class StateVariables(StatesTemplate):
+    class StateVariables(TensorStatesTemplate):
         LV = Tensor(-99.0)
         SLA = Tensor(-99.0)
         LVAGE = Tensor(-99.0)
@@ -153,7 +153,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         DWLV = Tensor(-99.0)
         TWLV = Tensor(-99.0)
 
-    class RateVariables(RatesTemplate):
+    class RateVariables(TensorRatesTemplate):
         GRLV = Tensor(0.0)
         DSLV1 = Tensor(0.0)
         DSLV2 = Tensor(0.0)
@@ -167,7 +167,11 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         GLASOL = Tensor(0.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | torch.Size | None = None,
     ) -> None:
         """Initialize the WOFOST_Leaf_Dynamics simulation object.
 
@@ -179,12 +183,13 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             parvalues (ParameterProvider): A dictionary-like container holding
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
         self.START_DATE = day
         self.kiosk = kiosk
         # TODO check if parvalues are already torch.nn.Parameters
-        self.params = self.Parameters(parvalues)
-        self.rates = self.RateVariables(kiosk)
+        self.params = self.Parameters(parvalues, shape=shape)
+        self.rates = self.RateVariables(kiosk, shape=shape)
 
         # Create scalar constants once at the beginning to avoid recreating them
         self._zero = torch.tensor(0.0, dtype=self.dtype, device=self.device)
@@ -233,6 +238,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.states = self.StateVariables(
             kiosk,
             publish=["LAI", "TWLV", "WLV"],
+            do_not_broadcast=["SLA", "LVAGE", "LV"],
             LV=LV,
             SLA=SLA,
             LVAGE=LVAGE,
@@ -244,6 +250,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             WLV=WLV,
             DWLV=DWLV,
             TWLV=TWLV,
+            shape=shape,
         )
 
     def _calc_LAI(self):

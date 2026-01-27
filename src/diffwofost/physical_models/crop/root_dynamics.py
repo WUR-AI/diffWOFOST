@@ -1,14 +1,14 @@
 import datetime
 import torch
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
@@ -137,13 +137,13 @@ class WOFOST_Root_Dynamics(SimulationObject):
         IAIRDU = Tensor(-99.0)
         RDRRTB = AfgenTrait()
 
-    class RateVariables(RatesTemplate):
+    class RateVariables(TensorRatesTemplate):
         RR = Tensor(0.0)
         GRRT = Tensor(0.0)
         DRRT = Tensor(0.0)
         GWRT = Tensor(0.0)
 
-    class StateVariables(StatesTemplate):
+    class StateVariables(TensorStatesTemplate):
         RD = Tensor(-99.0)
         RDM = Tensor(-99.0)
         WRT = Tensor(-99.0)
@@ -151,7 +151,11 @@ class WOFOST_Root_Dynamics(SimulationObject):
         TWRT = Tensor(-99.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | torch.Size | None = None,
     ) -> None:
         """Initialize the model.
 
@@ -163,10 +167,11 @@ class WOFOST_Root_Dynamics(SimulationObject):
             parvalues (ParameterProvider): A dictionary-like container holding
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
         self.kiosk = kiosk
-        self.params = self.Parameters(parvalues)
-        self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
+        self.params = self.Parameters(parvalues, shape=shape)
+        self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"], shape=shape)
 
         # INITIAL STATES
         params = self.params
@@ -190,7 +195,14 @@ class WOFOST_Root_Dynamics(SimulationObject):
         TWRT = WRT + DWRT
 
         self.states = self.StateVariables(
-            kiosk, publish=["RD", "WRT", "TWRT"], RD=RD, RDM=RDM, WRT=WRT, DWRT=DWRT, TWRT=TWRT
+            kiosk,
+            publish=["RD", "WRT", "TWRT"],
+            RD=RD,
+            RDM=RDM,
+            WRT=WRT,
+            DWRT=DWRT,
+            TWRT=TWRT,
+            shape=shape,
         )
 
     @prepare_rates

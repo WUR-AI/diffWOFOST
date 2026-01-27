@@ -3,10 +3,10 @@ from warnings import warn
 import torch
 from pcse import exceptions as exc
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.decorators import prepare_states
 from pcse.traitlets import Instance
 from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
@@ -53,7 +53,7 @@ class _BaseDVSPartitioning(SimulationObject):
         FSTB = AfgenTrait()
         FOTB = AfgenTrait()
 
-    class StateVariables(StatesTemplate):
+    class StateVariables(TensorStatesTemplate):
         FR = Tensor(-99.0)
         FL = Tensor(-99.0)
         FS = Tensor(-99.0)
@@ -108,8 +108,8 @@ class _BaseDVSPartitioning(SimulationObject):
         FO = p.FOTB(DVS)
         return FR, FL, FS, FO
 
-    def _initialize_from_tables(self, kiosk, parvalues):
-        self.params = self.Parameters(parvalues)
+    def _initialize_from_tables(self, kiosk, parvalues, shape=None):
+        self.params = self.Parameters(parvalues, shape=shape)
         self.kiosk = kiosk
         self.params_shape = _get_params_shape(self.params)
 
@@ -125,6 +125,7 @@ class _BaseDVSPartitioning(SimulationObject):
             FS=FS,
             FO=FO,
             PF=PartioningFactors(FR, FL, FS, FO),
+            shape=shape,
         )
         self._check_partitioning()
 
@@ -299,7 +300,7 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
     def _handle_partitioning_error(self, msg: str) -> None:
         raise exc.PartitioningError(msg)
 
-    def initialize(self, day, kiosk, parameters):
+    def initialize(self, day, kiosk, parameters, shape=None):
         """Initialize the DVS_Partitioning_N simulation object.
 
         Args:
@@ -307,8 +308,9 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
             kiosk (VariableKiosk): Variable kiosk of this PCSE instance.
             parameters (ParameterProvider): Dictionary with WOFOST cropdata
                 key/value pairs.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
-        self._initialize_from_tables(kiosk, parameters)
+        self._initialize_from_tables(kiosk, parameters, shape=shape)
 
     def _calculate_stressed_fr(self, DVS: torch.Tensor, RFTRA: torch.Tensor) -> torch.Tensor:
         """Computes the FR partitioning fraction under water/oxygen stress."""

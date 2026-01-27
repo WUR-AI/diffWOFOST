@@ -10,15 +10,15 @@ anthesis, 2 maturity).
 import torch
 from pcse import exceptions as exc
 from pcse import signals
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Enum
 from pcse.traitlets import Instance
 from pcse.util import daylength
 from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
@@ -108,16 +108,16 @@ class Vernalisation(SimulationObject):
         VERNRTB = AfgenTrait()
         VERNDVS = Tensor(-99.0)
 
-    class RateVariables(RatesTemplate):
+    class RateVariables(TensorRatesTemplate):
         VERNR = Tensor(0.0)
         VERNFAC = Tensor(0.0)
 
-    class StateVariables(StatesTemplate):
+    class StateVariables(TensorStatesTemplate):
         VERN = Tensor(-99.0)
         DOV = Tensor(-99.0)
         ISVERNALISED = Tensor(False, dtype=bool)
 
-    def initialize(self, day, kiosk, parvalues, dvs_shape=None):
+    def initialize(self, day, kiosk, parvalues, dvs_shape=None, shape=None):
         """Initialize the Vernalisation sub-module.
 
         Args:
@@ -126,6 +126,7 @@ class Vernalisation(SimulationObject):
             parvalues: ParameterProvider/dict containing VERNSAT, VERNBASE,
                 VERNRTB and VERNDVS.
             dvs_shape (torch.Size, optional): Shape of the DVS_phenology parameters
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
 
         Side Effects:
             - Instantiates params, rates and states containers.
@@ -137,7 +138,7 @@ class Vernalisation(SimulationObject):
             ISVERNALISED = False.
 
         """
-        self.params = self.Parameters(parvalues)
+        self.params = self.Parameters(parvalues, shape=shape)
         self.params_shape = _get_params_shape(self.params)
 
         # Small epsilon tensor reused in multiple safe divisions.
@@ -155,7 +156,7 @@ class Vernalisation(SimulationObject):
         self._ones = torch.ones(self.params_shape, dtype=self.dtype, device=self.device)
         self._zeros = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
         # Explicitly initialize rates
-        self.rates = self.RateVariables(kiosk, publish=["VERNFAC"])
+        self.rates = self.RateVariables(kiosk, publish=["VERNFAC"], shape=shape)
         self.rates.VERNR = _broadcast_to(
             self.rates.VERNR, self.params_shape, dtype=self.dtype, device=self.device
         )
@@ -185,6 +186,7 @@ class Vernalisation(SimulationObject):
             ),  # -1 indicates not yet fulfilled
             ISVERNALISED=torch.zeros(self.params_shape, dtype=torch.bool, device=self.device),
             publish=["ISVERNALISED"],
+            shape=shape,
         )
         # Per-element force flag (False for all elements initially)
         self._force_vernalisation = torch.zeros(
@@ -407,12 +409,12 @@ class DVS_Phenology(SimulationObject):
         CROP_START_TYPE = Enum(["sowing", "emergence"])
         CROP_END_TYPE = Enum(["maturity", "harvest", "earliest"])
 
-    class RateVariables(RatesTemplate):
+    class RateVariables(TensorRatesTemplate):
         DTSUME = Tensor(0.0)
         DTSUM = Tensor(0.0)
         DVR = Tensor(0.0)
 
-    class StateVariables(StatesTemplate):
+    class StateVariables(TensorStatesTemplate):
         DVS = Tensor(-99.0)
         TSUM = Tensor(-99.0)
         TSUME = Tensor(-99.0)
@@ -453,14 +455,14 @@ class DVS_Phenology(SimulationObject):
         if hasattr(p, "DTSMTB") and hasattr(p.DTSMTB, "to"):
             p.DTSMTB.to(device=self.device, dtype=self.dtype)
 
-    def initialize(self, day, kiosk, parvalues):
+    def initialize(self, day, kiosk, parvalues, shape=None):
         """:param day: start date of the simulation
 
         :param kiosk: variable kiosk of this PCSE  instance
         :param parvalues: `ParameterProvider` object providing parameters as
                 key/value pairs
         """
-        self.params = self.Parameters(parvalues)
+        self.params = self.Parameters(parvalues, shape=shape)
         self.params_shape = _get_params_shape(self.params)
 
         # Initialize vernalisation for IDSL>=2
@@ -490,7 +492,7 @@ class DVS_Phenology(SimulationObject):
         self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
 
         # Initialize rates and kiosk
-        self.rates = self.RateVariables(kiosk)
+        self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
 
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
@@ -527,6 +529,7 @@ class DVS_Phenology(SimulationObject):
             DOM=DOM,
             DOH=DOH,
             STAGE=STAGE,
+            shape=shape,
         )
 
     def _get_initial_stage(self, day):
