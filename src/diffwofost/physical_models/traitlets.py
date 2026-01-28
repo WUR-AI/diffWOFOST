@@ -5,6 +5,8 @@ from .config import ComputeConfig
 
 
 class Tensor(TraitType):
+    info_text = "an object that could be casted into a tensor"
+
     def __init__(
         self,
         default_value=Undefined,
