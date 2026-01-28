@@ -17,6 +17,8 @@ hide:
 ::: diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics
 
 
+::: diffwofost.physical_models.crop.respiration.WOFOST_Maintenance_Respiration
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration
