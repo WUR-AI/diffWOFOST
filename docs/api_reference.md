@@ -17,6 +17,8 @@ hide:
 ::: diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics
 
 
+::: diffwofost.physical_models.crop.evapotranspiration.Evapotranspiration
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration
