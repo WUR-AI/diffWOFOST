@@ -1,6 +1,3 @@
-# Copyright (c) 2004-2024 Wageningen Environmental Research, Wageningen-UR
-# Allard de Wit (allard.dewit@wur.nl) and Herman Berghuijs (herman.berghuijs@wur.nl), April 2024
-
 import datetime
 import torch
 from pcse.base import ParamTemplate
