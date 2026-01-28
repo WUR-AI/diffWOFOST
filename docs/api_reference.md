@@ -16,7 +16,7 @@ hide:
 
 ::: diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics
 
-::: diffwofost.physical_models.crop.storage_organ_dynamics.WOFOST_Storage_Organ_Dynamics.
+::: diffwofost.physical_models.crop.storage_organ_dynamics.WOFOST_Storage_Organ_Dynamics
 
 
 ## **Utility (under development)**
