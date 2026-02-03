@@ -343,7 +343,6 @@ class TestRootDynamics:
                 agro_management_inputs,
                 root_dynamics_config,
                 external_states,
-                device=device,
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
@@ -434,7 +433,7 @@ class TestDiffRootDynamicsGradients:
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
         """Test cases where parameters should not have gradients for specific outputs."""
-        model = get_test_diff_root_model(device=device)
+        model = get_test_diff_root_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -467,7 +466,7 @@ class TestDiffRootDynamicsGradients:
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
         """Test that forward and backward gradients match for parameter-output pairs."""
-        model = get_test_diff_root_model(device=device)
+        model = get_test_diff_root_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -497,10 +496,10 @@ class TestDiffRootDynamicsGradients:
         value, _ = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_root_model(device=device), param_name, param.data, output_name
+            lambda: get_test_diff_root_model(), param_name, param.data, output_name
         )
 
-        model = get_test_diff_root_model(device=device)
+        model = get_test_diff_root_model()
         output = model({param_name: param})
         loss = output[output_name].sum()
 

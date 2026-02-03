@@ -370,7 +370,7 @@ class TestDiffPartitioningGradients:
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
-        model = get_test_diff_partitioning(device=device)
+        model = get_test_diff_partitioning()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -394,7 +394,7 @@ class TestDiffPartitioningGradients:
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
-        model = get_test_diff_partitioning(device=device)
+        model = get_test_diff_partitioning()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -420,10 +420,10 @@ class TestDiffPartitioningGradients:
         value, _ = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_partitioning(device=device), param_name, param.data, output_name
+            lambda: get_test_diff_partitioning(), param_name, param.data, output_name
         )
 
-        model = get_test_diff_partitioning(device=device)
+        model = get_test_diff_partitioning()
         output = model({param_name: param})
         loss = output[output_name].sum()
 

@@ -537,7 +537,7 @@ class TestDiffLeafDynamicsGradients:
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
         """Test cases where parameters should not have gradients for specific outputs."""
-        model = get_test_diff_leaf_model(device=device)
+        model = get_test_diff_leaf_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -553,7 +553,7 @@ class TestDiffLeafDynamicsGradients:
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
         """Test that forward and backward gradients match for parameter-output pairs."""
-        model = get_test_diff_leaf_model(device=device)
+        model = get_test_diff_leaf_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -586,10 +586,10 @@ class TestDiffLeafDynamicsGradients:
         # for parameter `SPAN`
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_leaf_model(device=device), param_name, param, output_name
+            lambda: get_test_diff_leaf_model(), param_name, param, output_name
         )
 
-        model = get_test_diff_leaf_model(device=device)
+        model = get_test_diff_leaf_model()
         output = model({param_name: param})
         loss = output[output_name].sum()
 
