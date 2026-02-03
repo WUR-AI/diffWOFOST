@@ -19,7 +19,7 @@ class ComputeConfig:
 
     **Default Behavior:**
 
-    - **Device**: Automatically defaults to 'cuda' if available, otherwise 'cpu'
+    - **Device**: Defaults to 'cpu'
     - **Dtype**: Defaults to torch.float64
 
     **Basic Usage:**
