@@ -25,6 +25,7 @@ from pcse.settings import settings
 from pcse.timer import Timer
 from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
+from .config import ComputeConfig
 from .config import Configuration
 from .engine import Engine
 
@@ -96,8 +97,6 @@ class EngineTestHelper(Engine):
         agromanagement,
         config,
         external_states=None,
-        device=None,
-        dtype=None,
     ):
         BaseEngine.__init__(self)
 
@@ -108,12 +107,6 @@ class EngineTestHelper(Engine):
             self.mconf = config
 
         self.parameterprovider = parameterprovider
-
-        # Configure device and dtype on crop module class if it supports them
-        if hasattr(self.mconf.CROP, "device") and device is not None:
-            self.mconf.CROP.device = device
-        if hasattr(self.mconf.CROP, "dtype") and dtype is not None:
-            self.mconf.CROP.dtype = dtype
 
         # Variable kiosk for registering and publishing variables
         self.kiosk = VariableKioskTestHelper(external_states)
@@ -201,10 +194,11 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
             self._store_WeatherDataContainer(wdc, wdc.DAY)
 
 
-def prepare_engine_input(
-    test_data, crop_model_params, meteo_range_checks=True, dtype=torch.float64, device="cpu"
-):
+def prepare_engine_input(test_data, crop_model_params, meteo_range_checks=True):
     """Prepare the inputs for the engine from the YAML file."""
+    dtype = ComputeConfig.get_dtype()
+    device = ComputeConfig.get_device()
+
     agro_management_inputs = test_data["AgroManagement"]
     cropd = test_data["ModelParameters"]
 
@@ -224,7 +218,10 @@ def prepare_engine_input(
 
     # convert external states to tensors
     tensor_external_states = [
-        {k: v if k == "DAY" else torch.tensor(v, dtype=dtype) for k, v in item.items()}
+        {
+            k: v if k == "DAY" else torch.tensor(v, dtype=dtype, device=device)
+            for k, v in item.items()
+        }
         for item in external_states
     ]
     return (

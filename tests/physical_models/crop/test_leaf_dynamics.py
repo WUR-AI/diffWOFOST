@@ -18,12 +18,12 @@ leaf_dynamics_config = Configuration(
 )
 
 
-def get_test_diff_leaf_model(device: str = "cpu"):
+def get_test_diff_leaf_model():
     test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data, crop_model_params, device=device)
+        prepare_engine_input(test_data, crop_model_params)
     )
     return DiffLeafDynamics(
         copy.deepcopy(crop_model_params_provider),
@@ -31,7 +31,6 @@ def get_test_diff_leaf_model(device: str = "cpu"):
         agro_management_inputs,
         leaf_dynamics_config,
         copy.deepcopy(external_states),
-        device=device,
     )
 
 
@@ -43,7 +42,6 @@ class DiffLeafDynamics(torch.nn.Module):
         agro_management_inputs,
         config,
         external_states,
-        device: str = "cpu",
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
@@ -51,7 +49,6 @@ class DiffLeafDynamics(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
-        self.device = device
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
@@ -64,7 +61,6 @@ class DiffLeafDynamics(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -102,7 +98,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -136,9 +131,7 @@ class TestLeafDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(
-            test_data, crop_model_params, meteo_range_checks=False, device=device
-        )
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
@@ -163,7 +156,6 @@ class TestLeafDynamics:
                     agro_management_inputs,
                     leaf_dynamics_config,
                     external_states,
-                    device=device,
                 )
                 engine.run_till_terminate()
                 actual_results = engine.get_output()
@@ -174,7 +166,6 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 leaf_dynamics_config,
                 external_states,
-                device=device,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -239,7 +230,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -289,7 +279,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -336,7 +325,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -384,7 +372,6 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 leaf_dynamics_config,
                 external_states,
-                device="cpu",
             )
 
     def test_leaf_dynamics_with_incompatible_weather_parameter_vectors(self):
@@ -413,7 +400,6 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 leaf_dynamics_config,
                 external_states,
-                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
@@ -470,7 +456,6 @@ class TestLeafDynamics:
             agro_management_inputs,
             leaf_dynamics_config,
             external_states,
-            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()

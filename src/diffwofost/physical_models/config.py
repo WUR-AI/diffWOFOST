@@ -83,7 +83,7 @@ class ComputeConfig:
     def _initialize_defaults(cls):
         """Initialize default device and dtype if not already set."""
         if cls._device is None:
-            cls._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            cls._device = torch.device("cpu")
         if cls._dtype is None:
             cls._dtype = torch.float64
 
