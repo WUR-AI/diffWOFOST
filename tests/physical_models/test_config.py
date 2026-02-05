@@ -59,15 +59,15 @@ class TestConfiguration:
 
 
 class TestComputeConfig:
-    def test_default_device_is_cuda_or_cpu(self):
+    def test_default_device(self):
         ComputeConfig.reset_to_defaults()
         device = ComputeConfig.get_device()
-        assert device.type in ["cpu", "cuda"]
+        assert device == torch.get_default_device()
 
-    def test_default_dtype_is_float64(self):
+    def test_default_dtype(self):
         ComputeConfig.reset_to_defaults()
         dtype = ComputeConfig.get_dtype()
-        assert dtype == torch.float64
+        assert dtype == torch.get_default_dtype()
 
     def test_set_device_with_string(self):
         ComputeConfig.set_device("cpu")
@@ -92,5 +92,5 @@ class TestComputeConfig:
         device = ComputeConfig.get_device()
         dtype = ComputeConfig.get_dtype()
 
-        assert device.type in ["cpu", "cuda"]
-        assert dtype == torch.float64
+        assert device == torch.get_default_device()
+        assert dtype == torch.get_default_dtype()
