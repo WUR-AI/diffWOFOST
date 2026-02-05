@@ -194,10 +194,15 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
             self._store_WeatherDataContainer(wdc, wdc.DAY)
 
 
-def prepare_engine_input(test_data, crop_model_params, meteo_range_checks=True):
+def prepare_engine_input(
+    test_data, crop_model_params, device=None, dtype=None, meteo_range_checks=True
+):
     """Prepare the inputs for the engine from the YAML file."""
-    dtype = ComputeConfig.get_dtype()
-    device = ComputeConfig.get_device()
+    # If not specified, use default dtype and device
+    if device is None:
+        device = ComputeConfig.get_device()
+    if dtype is None:
+        dtype = ComputeConfig.get_dtype()
 
     agro_management_inputs = test_data["AgroManagement"]
     cropd = test_data["ModelParameters"]

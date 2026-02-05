@@ -19,8 +19,8 @@ class ComputeConfig:
 
     **Default Behavior:**
 
-    - **Device**: Defaults to 'cpu'
-    - **Dtype**: Defaults to torch.float64
+    - **Device**: Defaults to torch.get_default_device()
+    - **Dtype**: Defaults to torch.get_default_dtype()
 
     **Basic Usage:**
 
@@ -83,9 +83,9 @@ class ComputeConfig:
     def _initialize_defaults(cls):
         """Initialize default device and dtype if not already set."""
         if cls._device is None:
-            cls._device = torch.device("cpu")
+            cls._device = torch.get_default_device()
         if cls._dtype is None:
-            cls._dtype = torch.float64
+            cls._dtype = torch.get_default_dtype()
 
     @classmethod
     def get_device(cls) -> torch.device:
