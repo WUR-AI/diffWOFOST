@@ -23,10 +23,10 @@ from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
 from pcse.settings import settings
 from pcse.timer import Timer
-from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
 from .config import Configuration
 from .engine import Engine
+from .engine import _get_params_shape
 
 logging.disable(logging.CRITICAL)
 
@@ -108,6 +108,7 @@ class EngineTestHelper(Engine):
             self.mconf = config
 
         self.parameterprovider = parameterprovider
+        self._shape = _get_params_shape(self.parameterprovider)
 
         # Configure device and dtype on crop module class if it supports them
         if hasattr(self.mconf.CROP, "device") and device is not None:
@@ -543,33 +544,6 @@ class AfgenTrait(TraitType):
         elif isinstance(value, Iterable):
             return Afgen(value)
         self.error(obj, value)
-
-
-def _get_params_shape(params):
-    """Get the parameters shape.
-
-    Parameters can have arbitrary number of dimensions, but all parameters that are not zero-
-    dimensional should have the same shape.
-
-    This check if fundamental for vectorized operations in the physical models.
-    """
-    shape = ()
-    for parname in params.trait_names():
-        # Skip special traitlets attributes
-        if parname.startswith("trait"):
-            continue
-        param = getattr(params, parname)
-        # Skip Enum and str parameters
-        if isinstance(param, Enum) or isinstance(param, str):
-            continue
-        # Parameters that are not zero dimensional should all have the same shape
-        if param.shape and not shape:
-            shape = param.shape
-        elif param.shape:
-            assert param.shape == shape, (
-                "All parameters should have the same shape (or have no dimensions)"
-            )
-    return shape
 
 
 def _get_drv(drv_var, expected_shape, dtype, device=None):
