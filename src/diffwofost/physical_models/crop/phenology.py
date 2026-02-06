@@ -24,7 +24,6 @@ from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
-from diffwofost.physical_models.utils import _get_params_shape
 from diffwofost.physical_models.utils import _restore_state
 from diffwofost.physical_models.utils import _snapshot_state
 
@@ -90,8 +89,6 @@ class Vernalisation(SimulationObject):
     |      | for vernalisation reached)                             |             |      |
     """
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -117,7 +114,7 @@ class Vernalisation(SimulationObject):
         DOV = Tensor(-99.0)
         ISVERNALISED = Tensor(False, dtype=bool)
 
-    def initialize(self, day, kiosk, parvalues, dvs_shape=None, shape=None):
+    def initialize(self, day, kiosk, parvalues, shape=None):
         """Initialize the Vernalisation sub-module.
 
         Args:
@@ -125,7 +122,6 @@ class Vernalisation(SimulationObject):
             kiosk: Shared PCSE kiosk for inter-module variable exchange.
             parvalues: ParameterProvider/dict containing VERNSAT, VERNBASE,
                 VERNRTB and VERNDVS.
-            dvs_shape (torch.Size, optional): Shape of the DVS_phenology parameters
             shape (tuple | torch.Size | None): Target shape for the state and rate variables.
 
         Side Effects:
@@ -139,58 +135,31 @@ class Vernalisation(SimulationObject):
 
         """
         self.params = self.Parameters(parvalues, shape=shape)
-        self.params_shape = _get_params_shape(self.params)
 
         # Small epsilon tensor reused in multiple safe divisions.
         self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
-        if dvs_shape is not None:
-            if self.params_shape == ():
-                self.params_shape = dvs_shape
-            elif self.params_shape != dvs_shape:
-                raise ValueError(
-                    f"Vernalisation params shape {self.params_shape}"
-                    + " incompatible with dvs_shape {dvs_shape}"
-                )
 
         # Common constant tensors (same shape/dtype/device as this module).
-        self._ones = torch.ones(self.params_shape, dtype=self.dtype, device=self.device)
-        self._zeros = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
+        self._ones = torch.ones(self.params.shape, dtype=self.dtype, device=self.device)
+        self._zeros = torch.zeros(self.params.shape, dtype=self.dtype, device=self.device)
+
         # Explicitly initialize rates
         self.rates = self.RateVariables(kiosk, publish=["VERNFAC"], shape=shape)
-        self.rates.VERNR = _broadcast_to(
-            self.rates.VERNR, self.params_shape, dtype=self.dtype, device=self.device
-        )
-        self.rates.VERNFAC = _broadcast_to(
-            self.rates.VERNFAC, self.params_shape, dtype=self.dtype, device=self.device
-        )
-        self.kiosk = kiosk
 
-        # Explicitly broadcast all parameters to params_shape
-        self.params.VERNSAT = _broadcast_to(
-            self.params.VERNSAT, self.params_shape, dtype=self.dtype, device=self.device
-        )
-        self.params.VERNBASE = _broadcast_to(
-            self.params.VERNBASE, self.params_shape, dtype=self.dtype, device=self.device
-        )
-        self.params.VERNDVS = _broadcast_to(
-            self.params.VERNDVS, self.params_shape, dtype=self.dtype, device=self.device
-        )
-        self.params.VERNRTB = self.params.VERNRTB.to(device=self.device, dtype=self.dtype)
+        self.kiosk = kiosk
 
         # Define initial states
         self.states = self.StateVariables(
             kiosk,
-            VERN=torch.zeros(self.params_shape, dtype=self.dtype, device=self.device),
-            DOV=torch.full(
-                self.params_shape, -1.0, dtype=self.dtype, device=self.device
-            ),  # -1 indicates not yet fulfilled
-            ISVERNALISED=torch.zeros(self.params_shape, dtype=torch.bool, device=self.device),
+            VERN=0.0,
+            DOV=-1.0,  # -1 indicates not yet fulfilled
+            ISVERNALISED=False,
             publish=["ISVERNALISED"],
             shape=shape,
         )
         # Per-element force flag (False for all elements initially)
         self._force_vernalisation = torch.zeros(
-            self.params_shape, dtype=torch.bool, device=self.device
+            self.params.shape, dtype=torch.bool, device=self.device
         )
 
     @prepare_rates
@@ -213,7 +182,7 @@ class Vernalisation(SimulationObject):
         VERNBASE = params.VERNBASE
         DVS = self.kiosk["DVS"]
 
-        TEMP = _get_drv(drv.TEMP, self.params_shape, self.dtype, self.device)
+        TEMP = _get_drv(drv.TEMP, self.params.shape, self.dtype, self.device)
 
         # Operate elementwise only on elements not yet vernalised
         not_vernalised = ~self.states.ISVERNALISED
@@ -280,7 +249,7 @@ class Vernalisation(SimulationObject):
             states.DOV = torch.where(
                 newly_reached_and_no_dov,
                 torch.full(
-                    self.params_shape, day.toordinal(), dtype=self.dtype, device=self.device
+                    self.params.shape, day.toordinal(), dtype=self.dtype, device=self.device
                 ),
                 states.DOV,
             )
@@ -382,8 +351,6 @@ class DVS_Phenology(SimulationObject):
     # Placeholder for start/stop types and vernalisation module
     vernalisation = Instance(Vernalisation)
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -425,36 +392,6 @@ class DVS_Phenology(SimulationObject):
         DOH = Tensor(-99.0)
         STAGE = Tensor(-99.0)
 
-    def _cast_and_broadcast_params(self):
-        """Cast and broadcast all parameters to params_shape with correct dtype/device.
-
-        This ensures all parameters have consistent shape, dtype, and device.
-        Necessary if Vernalisation changes the params_shape during initialization.
-        """
-        p = self.params
-        # Broadcast numeric parameters to the final params_shape and ensure dtype/device.
-        for name in (
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-        ):
-            setattr(
-                p,
-                name,
-                _broadcast_to(getattr(p, name), self.params_shape, self.dtype, self.device),
-            )
-
-        # Move AFGEN table buffers, if present.
-        if hasattr(p, "DTSMTB") and hasattr(p.DTSMTB, "to"):
-            p.DTSMTB.to(device=self.device, dtype=self.dtype)
-
     def initialize(self, day, kiosk, parvalues, shape=None):
         """:param day: start date of the simulation
 
@@ -463,32 +400,16 @@ class DVS_Phenology(SimulationObject):
                 key/value pairs
         """
         self.params = self.Parameters(parvalues, shape=shape)
-        self.params_shape = _get_params_shape(self.params)
 
         # Initialize vernalisation for IDSL>=2
-        # It has to be done in advance to get the correct params_shape
-        IDSL = _broadcast_to(
-            self.params.IDSL, self.params_shape, dtype=self.dtype, device=self.device
-        )
-        self.params.IDSL = IDSL
-        if torch.any(IDSL >= 2):
-            if self.params_shape != ():
-                self.vernalisation = Vernalisation(
-                    day, kiosk, parvalues, dvs_shape=self.params_shape
-                )
-            else:
-                self.vernalisation = Vernalisation(day, kiosk, parvalues)
-            if self.vernalisation.params_shape != self.params_shape:
-                self.params_shape = self.vernalisation.params_shape
+        if torch.any(self.params.IDSL >= 2):
+            self.vernalisation = Vernalisation(day, kiosk, parvalues, shape=shape)
         else:
             self.vernalisation = None
 
-        # After Vernalisation initialization the final params_shape may have changed.
-        self._cast_and_broadcast_params()
-
         # Create scalar constants once at the beginning to avoid recreating them
-        self._ones = torch.ones(self.params_shape, dtype=self.dtype, device=self.device)
-        self._zeros = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
+        self._ones = torch.ones(self.params.shape, dtype=self.dtype, device=self.device)
+        self._zeros = torch.zeros(self.params.shape, dtype=self.dtype, device=self.device)
         self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
 
         # Initialize rates and kiosk
@@ -499,35 +420,18 @@ class DVS_Phenology(SimulationObject):
 
         # Define initial states
         DVS, DOS, DOE, STAGE = self._get_initial_stage(day)
-        DVS = _broadcast_to(DVS, self.params_shape, dtype=self.dtype, device=self.device)
-
-        # Initialize all date tensors with -1 (not yet occurred)
-        DOS = _broadcast_to(DOS, self.params_shape, dtype=self.dtype, device=self.device)
-        DOE = _broadcast_to(DOE, self.params_shape, dtype=self.dtype, device=self.device)
-        DOA = torch.full(self.params_shape, -1.0, dtype=self.dtype, device=self.device)
-        DOM = torch.full(self.params_shape, -1.0, dtype=self.dtype, device=self.device)
-        DOH = torch.full(self.params_shape, -1.0, dtype=self.dtype, device=self.device)
-        STAGE = _broadcast_to(STAGE, self.params_shape, dtype=self.dtype, device=self.device)
-
-        # Also ensure TSUM and TSUME are properly shaped
-        TSUM = torch.zeros(
-            self.params_shape, dtype=self.dtype, device=self.device, requires_grad=True
-        )
-        TSUME = torch.zeros(
-            self.params_shape, dtype=self.dtype, device=self.device, requires_grad=True
-        )
 
         self.states = self.StateVariables(
             kiosk,
             publish="DVS",
-            TSUM=TSUM,
-            TSUME=TSUME,
+            TSUM=0.0,
+            TSUME=0.0,
             DVS=DVS,
             DOS=DOS,
             DOE=DOE,
-            DOA=DOA,
-            DOM=DOM,
-            DOH=DOH,
+            DOA=-1.0,  # not yet occurred
+            DOM=-1.0,  # not yet occurred
+            DOH=-1.0,  # not yet occurred
             STAGE=STAGE,
             shape=shape,
         )
@@ -547,26 +451,24 @@ class DVS_Phenology(SimulationObject):
                 STAGE (Tensor): Integer stage code (0=emerging, 1=vegetative).
         """
         p = self.params
-        day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
+        day_ordinal = day.toordinal()
 
         # Define initial stage type (emergence/sowing) and fill the
         # respective day of sowing/emergence (DOS/DOE)
         if p.CROP_START_TYPE == "emergence":
-            STAGE = torch.tensor(1, dtype=torch.long, device=self.device)  # 1 = vegetative
+            STAGE = 1  # 1 = vegetative
             DOE = day_ordinal
-            DOS = torch.tensor(-1.0, dtype=self.dtype, device=self.device)  # Not applicable
+            DOS = -1.0  # Not applicable
             DVS = p.DVSI
-            if not isinstance(DVS, torch.Tensor):
-                DVS = torch.tensor(DVS, dtype=self.dtype, device=self.device)
 
             # send signal to indicate crop emergence
             self._send_signal(signals.crop_emerged)
 
         elif p.CROP_START_TYPE == "sowing":
-            STAGE = torch.tensor(0, dtype=torch.long, device=self.device)  # 0 = emerging
+            STAGE = 0  # 0 = emerging
             DOS = day_ordinal
-            DOE = torch.tensor(-1.0, dtype=self.dtype, device=self.device)  # Not yet occurred
-            DVS = torch.tensor(-0.1, dtype=self.dtype, device=self.device)
+            DOE = -1.0  # Not yet occurred
+            DVS = -0.1
 
         else:
             msg = f"Unknown start type: {p.CROP_START_TYPE}"
@@ -601,11 +503,10 @@ class DVS_Phenology(SimulationObject):
         p = self.params
         r = self.rates
         s = self.states
-        shape = self.params_shape
 
         # Day length sensitivity
         DAYLP = daylength(day, drv.LAT)
-        DAYLP_t = _broadcast_to(DAYLP, shape, dtype=self.dtype, device=self.device)
+        DAYLP_t = _broadcast_to(DAYLP, p.shape, dtype=self.dtype, device=self.device)
         # Compute DVRED conditionally based on IDSL >= 1
         safe_den = p.DLO - p.DLC
         safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
@@ -614,7 +515,7 @@ class DVS_Phenology(SimulationObject):
 
         # Vernalisation factor - always compute if module exists
         VERNFAC = self._ones
-        if hasattr(self, "vernalisation") and self.vernalisation is not None:
+        if self.vernalisation is not None:
             # Always call calc_rates (it handles stage internally now)
             self.vernalisation.calc_rates(day, drv)
             # Apply vernalisation only where IDSL >= 2 AND in vegetative stage
@@ -625,7 +526,7 @@ class DVS_Phenology(SimulationObject):
                 self._ones,
             )
 
-        TEMP = _get_drv(drv.TEMP, shape, self.dtype, self.device)
+        TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
 
         # Initialize all rate variables
         r.DTSUME = self._zeros
@@ -704,7 +605,6 @@ class DVS_Phenology(SimulationObject):
         p = self.params
         r = self.rates
         s = self.states
-        shape = self.params_shape
 
         # Integrate vernalisation module
         if self.vernalisation:
@@ -745,11 +645,11 @@ class DVS_Phenology(SimulationObject):
         is_emerging = s.STAGE == 0
         should_emerge = is_emerging & (s.DVS >= 0.0)
         s.STAGE = torch.where(
-            should_emerge, torch.ones(shape, dtype=torch.long, device=self.device), s.STAGE
+            should_emerge, torch.ones(p.shape, dtype=torch.long, device=self.device), s.STAGE
         )
         s.DOE = torch.where(
             should_emerge,
-            torch.full(shape, day_ordinal, dtype=self.dtype, device=self.device),
+            torch.full(p.shape, day_ordinal, dtype=self.dtype, device=self.device),
             s.DOE,
         )
         s.DVS = torch.where(should_emerge, torch.clamp(s.DVS, max=0.0), s.DVS)
@@ -762,11 +662,11 @@ class DVS_Phenology(SimulationObject):
         is_vegetative = s.STAGE == 1
         should_flower = is_vegetative & (s.DVS >= 1.0)
         s.STAGE = torch.where(
-            should_flower, torch.full(shape, 2, dtype=torch.long, device=self.device), s.STAGE
+            should_flower, torch.full(p.shape, 2, dtype=torch.long, device=self.device), s.STAGE
         )
         s.DOA = torch.where(
             should_flower,
-            torch.full(shape, day_ordinal, dtype=self.dtype, device=self.device),
+            torch.full(p.shape, day_ordinal, dtype=self.dtype, device=self.device),
             s.DOA,
         )
         s.DVS = torch.where(should_flower, torch.clamp(s.DVS, max=1.0), s.DVS)
@@ -775,11 +675,11 @@ class DVS_Phenology(SimulationObject):
         is_reproductive = s.STAGE == 2
         should_mature = is_reproductive & (s.DVS >= p.DVSEND)
         s.STAGE = torch.where(
-            should_mature, torch.full(shape, 3, dtype=torch.long, device=self.device), s.STAGE
+            should_mature, torch.full(p.shape, 3, dtype=torch.long, device=self.device), s.STAGE
         )
         s.DOM = torch.where(
             should_mature,
-            torch.full(shape, day_ordinal, dtype=self.dtype, device=self.device),
+            torch.full(p.shape, day_ordinal, dtype=self.dtype, device=self.device),
             s.DOM,
         )
         s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
@@ -816,7 +716,7 @@ class DVS_Phenology(SimulationObject):
         if finish_type in ["harvest", "earliest"]:
             day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
             self._for_finalize["DOH"] = torch.full(
-                self.params_shape, day_ordinal, dtype=self.dtype, device=self.device
+                self.params.shape, day_ordinal, dtype=self.dtype, device=self.device
             )
 
     def get_variable(self, varname):

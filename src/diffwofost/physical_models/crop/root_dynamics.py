@@ -12,8 +12,6 @@ from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
-from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_params_shape
 
 
 class WOFOST_Root_Dynamics(SimulationObject):
@@ -116,8 +114,6 @@ class WOFOST_Root_Dynamics(SimulationObject):
     better and more biophysical approach to root development in WOFOST.
     """  # noqa: E501
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -175,23 +171,14 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
         # INITIAL STATES
         params = self.params
-        self.params_shape = _get_params_shape(params)
-        shape = self.params_shape
 
         # Initial root depth states
-        RDI = _broadcast_to(params.RDI, shape, dtype=self.dtype, device=self.device)
-        RDMCR = _broadcast_to(params.RDMCR, shape, dtype=self.dtype, device=self.device)
-        RDMSOL = _broadcast_to(params.RDMSOL, shape, dtype=self.dtype, device=self.device)
-
-        rdmax = torch.maximum(RDI, torch.minimum(RDMCR, RDMSOL))
-        RDM = rdmax
-        RD = RDI
+        RDM = torch.maximum(params.RDI, torch.minimum(params.RDMCR, params.RDMSOL))
+        RD = params.RDI
 
         # Initial root biomass states
-        TDWI = _broadcast_to(params.TDWI, shape, dtype=self.dtype, device=self.device)
-        FR = _broadcast_to(self.kiosk["FR"], shape, dtype=self.dtype, device=self.device)
-        WRT = TDWI * FR
-        DWRT = torch.zeros(shape, dtype=self.dtype, device=self.device)
+        WRT = params.TDWI * self.kiosk["FR"]
+        DWRT = 0.0
         TWRT = WRT + DWRT
 
         self.states = self.StateVariables(
@@ -222,25 +209,19 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
-        DVS = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
-        dvs_mask = (DVS >= 0).to(dtype=self.dtype)
+        dvs_mask = k["DVS"] >= 0
 
         # Increase in root biomass
-        FR = _broadcast_to(k["FR"], self.params_shape, dtype=self.dtype, device=self.device)
-        DMI = _broadcast_to(k["DMI"], self.params_shape, dtype=self.dtype, device=self.device)
-        RDRRTB = p.RDRRTB.to(device=self.device, dtype=self.dtype)
-
-        r.GRRT = dvs_mask * FR * DMI
-        r.DRRT = dvs_mask * s.WRT * RDRRTB(DVS)
+        r.GRRT = dvs_mask * k["FR"] * k["DMI"]
+        r.DRRT = dvs_mask * s.WRT * p.RDRRTB(k["DVS"])
         r.GWRT = r.GRRT - r.DRRT
 
         # Increase in root depth
-        RRI = _broadcast_to(p.RRI, self.params_shape, dtype=self.dtype, device=self.device)
-        r.RR = dvs_mask * torch.minimum((s.RDM - s.RD), RRI)
+        r.RR = dvs_mask * torch.minimum((s.RDM - s.RD), p.RRI)
 
         # Do not let the roots growth if partioning to the roots
         # (variable FR) is zero.
-        mask = (FR > 0.0).to(dtype=self.dtype)
+        mask = k["FR"] > 0.0
         r.RR = r.RR * mask * dvs_mask
 
     @prepare_states

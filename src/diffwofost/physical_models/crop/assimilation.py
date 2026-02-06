@@ -17,7 +17,6 @@ from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
-from diffwofost.physical_models.utils import _get_params_shape
 
 
 def _as_python_float(x) -> float:
@@ -42,6 +41,8 @@ def totass7(
     COSLD: torch.Tensor,
     *,
     epsilon: torch.Tensor,
+    dtype: torch.Size | tuple,
+    device: str,
 ) -> torch.Tensor:
     """Calculates daily total gross CO2 assimilation.
 
@@ -69,9 +70,9 @@ def totass7(
     COSLD   R4  Amplitude of sine of solar height             -      I
     DTGA    R4  Daily total gross assimilation           kg CO2/ha/d O
     """
-    xgauss = torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=DAYL.dtype, device=DAYL.device)
-    wgauss = torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=DAYL.dtype, device=DAYL.device)
-    pi = torch.tensor(torch.pi, dtype=DAYL.dtype, device=DAYL.device)
+    xgauss = torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=dtype, device=device)
+    wgauss = torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=dtype, device=device)
+    pi = torch.tensor(torch.pi, dtype=dtype, device=device)
 
     # Only compute where it can be non-zero.
     mask = (AMAX > 0) & (LAI > 0) & (DAYL > 0)
@@ -229,8 +230,6 @@ class WOFOST72_Assimilation(SimulationObject):
     | PGASS  | AMAXTB, EFFTB, KDIFTB, TMPFTB, TMNFTB     |
     """  # noqa: E501
 
-    params_shape = None
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -261,7 +260,6 @@ class WOFOST72_Assimilation(SimulationObject):
         """Initialize the assimilation module."""
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues, shape=shape)
-        self.params_shape = _get_params_shape(self.params)
         self.rates = self.RateVariables(kiosk, publish=["PGASS"], shape=shape)
 
         # 7-day running average buffer for TMIN (stored as tensors).
@@ -280,16 +278,16 @@ class WOFOST72_Assimilation(SimulationObject):
         _exist_required_external_variables(k)
 
         # External states
-        dvs = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
-        lai = _broadcast_to(k["LAI"], self.params_shape, dtype=self.dtype, device=self.device)
+        dvs = _broadcast_to(k["DVS"], self.params.shape, dtype=self.dtype, device=self.device)
+        lai = _broadcast_to(k["LAI"], self.params.shape, dtype=self.dtype, device=self.device)
 
         # Weather drivers
-        irrad = _get_drv(drv.IRRAD, self.params_shape, dtype=self.dtype, device=self.device)
-        dtemp = _get_drv(drv.DTEMP, self.params_shape, dtype=self.dtype, device=self.device)
-        tmin = _get_drv(drv.TMIN, self.params_shape, dtype=self.dtype, device=self.device)
+        irrad = _get_drv(drv.IRRAD, self.params.shape, dtype=self.dtype, device=self.device)
+        dtemp = _get_drv(drv.DTEMP, self.params.shape, dtype=self.dtype, device=self.device)
+        tmin = _get_drv(drv.TMIN, self.params.shape, dtype=self.dtype, device=self.device)
 
         # Assimilation is zero before crop emergence (DVS < 0)
-        dvs_mask = (dvs >= 0).to(dtype=self.dtype)
+        dvs_mask = dvs >= 0
         # 7-day running average of TMIN
         self._tmn_window.appendleft(tmin * dvs_mask)
         self._tmn_window_mask.appendleft(dvs_mask)
@@ -302,11 +300,11 @@ class WOFOST72_Assimilation(SimulationObject):
         irrad_for_astro = _as_python_float(drv.IRRAD)
         dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(day, lat, irrad_for_astro)
 
-        dayl_t = _broadcast_to(dayl, self.params_shape, dtype=self.dtype, device=self.device)
-        sinld_t = _broadcast_to(sinld, self.params_shape, dtype=self.dtype, device=self.device)
-        cosld_t = _broadcast_to(cosld, self.params_shape, dtype=self.dtype, device=self.device)
-        difpp_t = _broadcast_to(difpp, self.params_shape, dtype=self.dtype, device=self.device)
-        dsinbe_t = _broadcast_to(dsinbe, self.params_shape, dtype=self.dtype, device=self.device)
+        dayl_t = _broadcast_to(dayl, self.params.shape, dtype=self.dtype, device=self.device)
+        sinld_t = _broadcast_to(sinld, self.params.shape, dtype=self.dtype, device=self.device)
+        cosld_t = _broadcast_to(cosld, self.params.shape, dtype=self.dtype, device=self.device)
+        difpp_t = _broadcast_to(difpp, self.params.shape, dtype=self.dtype, device=self.device)
+        dsinbe_t = _broadcast_to(dsinbe, self.params.shape, dtype=self.dtype, device=self.device)
 
         # Parameter tables
         amax = p.AMAXTB(dvs)
@@ -326,6 +324,8 @@ class WOFOST72_Assimilation(SimulationObject):
             sinld_t,
             cosld_t,
             epsilon=self._epsilon,
+            dtype=self.dtype,
+            device=self.device,
         )
 
         # Correction for low minimum temperature potential
