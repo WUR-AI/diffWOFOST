@@ -303,7 +303,7 @@ class TestAssimilation:
             "EFFTB", crop_model_params_provider["EFFTB"].repeat(5, 1), check=False
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,

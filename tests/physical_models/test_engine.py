@@ -1,7 +1,11 @@
+from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.crop.phenology import DVS_Phenology
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from . import phy_data_folder
+
+config = Configuration(CROP=DVS_Phenology)
 
 
 class TestEngine:
@@ -31,6 +35,6 @@ class TestEngine:
             parameterprovider=crop_model_params_provider,
             weatherdataprovider=weather_data_provider,
             agromanagement=agro_management_inputs,
-            config="Wofost72_Pheno.conf",
+            config=config,
         )
         assert isinstance(engine, Engine)

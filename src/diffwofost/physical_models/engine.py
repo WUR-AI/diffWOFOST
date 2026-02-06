@@ -1,4 +1,5 @@
 from pathlib import Path
+import torch
 from pcse import signals
 from pcse.base import BaseEngine
 from pcse.base.variablekiosk import VariableKiosk
@@ -27,6 +28,7 @@ class Engine(Engine):
             self.mconf = config
 
         self.parameterprovider = parameterprovider
+        self._shape = _get_params_shape(self.parameterprovider)
 
         # Variable kiosk for registering and publishing variables
         self.kiosk = VariableKiosk()
@@ -65,3 +67,37 @@ class Engine(Engine):
 
         # Calculate initial rates
         self.calc_rates(self.day, self.drv)
+
+    def _on_CROP_START(
+        self, day, crop_name=None, variety_name=None, crop_start_type=None, crop_end_type=None
+    ):
+        """Starts the crop."""
+        self.logger.debug(f"Received signal 'CROP_START' on day {day}")
+
+        if self.crop is not None:
+            raise RuntimeError(
+                "A CROP_START signal was received while self.cropsimulation still holds a valid "
+                "cropsimulation object. It looks like you forgot to send a CROP_FINISH signal with "
+                "option crop_delete=True"
+            )
+
+        self.parameterprovider.set_active_crop(
+            crop_name, variety_name, crop_start_type, crop_end_type
+        )
+        self.crop = self.mconf.CROP(day, self.kiosk, self.parameterprovider, shape=self._shape)
+
+
+def _get_params_shape(parameterprovider):
+    shape = ()
+    for paramname in parameterprovider._unique_parameters:
+        param = parameterprovider[paramname]
+        if isinstance(param, torch.Tensor):
+            # We need to drop the last dimension from the Afgen table parameters
+            param_shape = param.shape[:-1] if paramname.endswith("TB") else param.shape
+            if not param_shape or shape == param_shape:
+                continue
+            elif param_shape and not shape:
+                shape = tuple(param_shape)
+            else:
+                raise ValueError("Non-matching shapes found in parameter provider!")
+    return shape
