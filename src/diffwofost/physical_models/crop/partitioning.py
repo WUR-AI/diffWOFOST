@@ -40,12 +40,12 @@ class _BaseDVSPartitioning(SimulationObject):
     @property
     def device(self):
         """Get device from ComputeConfig."""
-        return ComputeConfig.get_device()
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
         """Get dtype from ComputeConfig."""
-        return ComputeConfig.get_dtype()
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
     class Parameters(ParamTemplate):
         FRTB = AfgenTrait()
@@ -127,6 +127,9 @@ class _BaseDVSPartitioning(SimulationObject):
         return FR, FL, FS, FO
 
     def _initialize_from_tables(self, kiosk, parvalues):
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+
         self.params = self.Parameters(parvalues)
         self.kiosk = kiosk
         self.params_shape = _get_params_shape(self.params)

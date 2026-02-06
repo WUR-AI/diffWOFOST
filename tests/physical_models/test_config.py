@@ -94,3 +94,69 @@ class TestComputeConfig:
 
         assert device == torch.get_default_device()
         assert dtype == torch.get_default_dtype()
+
+    def test_models_capture_config_at_initialization(self):
+        """Test that models capture the device/dtype at initialization time."""
+        import datetime
+        from pcse.base.variablekiosk import VariableKiosk
+        from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
+
+        # Setup mocks
+        day = datetime.date(2000, 1, 1)
+
+        class MockKiosk(VariableKiosk):
+            pass
+
+        mock_kiosk = MockKiosk()
+        mock_kiosk.update(
+            {
+                "FL": 0.5,
+                "FR": 0.5,
+                "DVS": 0.5,
+                "SAI": 0.5,
+                "PAI": 0.5,
+                "ADMI": 0.5,
+                "RFTRA": 1.0,
+                "RF_FROST": 1.0,
+            }
+        )
+
+        mock_parvalues = {
+            "RGRLAI": torch.tensor(0.01),
+            "SPAN": torch.tensor(30.0),
+            "TBASE": torch.tensor(5.0),
+            "PERDL": torch.tensor(0.05),
+            "TDWI": torch.tensor(50.0),
+            "SLATB": [0.0, 20.0, 2.0, 20.0],
+            "KDIFTB": [0.0, 0.6, 2.0, 0.6],
+        }
+
+        # 1. Config = float32
+        ComputeConfig.set_dtype(torch.float32)
+        model1 = WOFOST_Leaf_Dynamics(day, mock_kiosk, mock_parvalues)
+
+        # 2. Config = float64
+        ComputeConfig.set_dtype(torch.float64)
+        mock_kiosk2 = MockKiosk()
+        mock_kiosk2.update(
+            {
+                "FL": 0.5,
+                "FR": 0.5,
+                "DVS": 0.5,
+                "SAI": 0.5,
+                "PAI": 0.5,
+                "ADMI": 0.5,
+                "RFTRA": 1.0,
+                "RF_FROST": 1.0,
+            }
+        )
+        model2 = WOFOST_Leaf_Dynamics(day, mock_kiosk2, mock_parvalues)
+
+        # 3. Assertions
+        assert model1.dtype == torch.float32, "Model 1 should retain float32"
+        assert model2.dtype == torch.float64, "Model 2 should use float64"
+        assert model1.states.LV[0].dtype == torch.float32, "Model 1 states should be float32"
+        assert model2.states.LV[0].dtype == torch.float64, "Model 2 states should be float64"
+
+        # Cleanup
+        ComputeConfig.reset_to_defaults()
