@@ -584,33 +584,23 @@ def _get_drv(drv_var, expected_shape, dtype, device=None):
         )
 
 
-def _broadcast_to(x, shape, dtype, device=None):
+def _broadcast_to(x, shape, dtype=None, device=None):
     """Create a view of tensor X with the given shape.
 
     Args:
         x: The tensor or value to broadcast
         shape: The target shape
-        dtype: dtype for the tensor
+        dtype: Optional dtype for the tensor
         device: Optional device for the tensor
     """
-    # If x is not a tensor, convert it
-    if not isinstance(x, torch.Tensor):
-        x = torch.tensor(x, dtype=dtype)
-    # Ensure correct dtype and device
-    if dtype is not None:
-        x = x.to(dtype=dtype)
+    # Make sure x is a tensor
+    x = torch.as_tensor(x, dtype=dtype)
     if device is not None:
         x = x.to(device=device)
     # If already the correct shape, return as-is
     if x.shape == shape:
         return x
-    if x.dim() == 0:
-        # For 0-d tensors, we simply broadcast to the given shape
-        return torch.broadcast_to(x, shape)
-    # The given shape should match x in all but the last axis, which represents
-    # the dimension along which the time integration is carried out.
-    # We first append an axis to x, then expand to the given shape
-    return x.unsqueeze(-1).expand(shape)
+    return torch.broadcast_to(x, shape)
 
 
 def _snapshot_state(obj):
