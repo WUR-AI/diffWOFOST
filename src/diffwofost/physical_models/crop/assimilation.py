@@ -234,12 +234,12 @@ class WOFOST72_Assimilation(SimulationObject):
     @property
     def device(self):
         """Get device from ComputeConfig."""
-        return ComputeConfig.get_device()
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
         """Get dtype from ComputeConfig."""
-        return ComputeConfig.get_dtype()
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
     class Parameters(ParamTemplate):
         AMAXTB = AfgenTrait()
@@ -264,6 +264,9 @@ class WOFOST72_Assimilation(SimulationObject):
         self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
     ) -> None:
         """Initialize the assimilation module."""
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues)
         self.params_shape = _get_params_shape(self.params)

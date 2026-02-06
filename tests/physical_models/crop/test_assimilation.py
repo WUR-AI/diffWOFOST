@@ -18,12 +18,12 @@ assimilation_config = Configuration(
 )
 
 
-def get_test_diff_assimilation_model(device: str = "cpu"):
+def get_test_diff_assimilation_model():
     test_data_url = f"{phy_data_folder}/test_assimilation_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data, crop_model_params, device=device)
+        prepare_engine_input(test_data, crop_model_params)
     )
     return DiffAssimilation(
         copy.deepcopy(crop_model_params_provider),
@@ -31,7 +31,6 @@ def get_test_diff_assimilation_model(device: str = "cpu"):
         agro_management_inputs,
         assimilation_config,
         copy.deepcopy(external_states),
-        device=device,
     )
 
 
@@ -43,7 +42,6 @@ class DiffAssimilation(torch.nn.Module):
         agro_management_inputs,
         config,
         external_states,
-        device: str = "cpu",
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
@@ -51,7 +49,6 @@ class DiffAssimilation(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
-        self.device = device
 
     def forward(self, params_dict):
         for name, value in params_dict.items():
@@ -63,7 +60,6 @@ class DiffAssimilation(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -98,7 +94,6 @@ class TestAssimilation:
             agro_management_inputs,
             assimilation_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -137,7 +132,6 @@ class TestAssimilation:
             agro_management_inputs,
             assimilation_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -187,7 +181,6 @@ class TestAssimilation:
             agro_management_inputs,
             assimilation_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -226,7 +219,6 @@ class TestAssimilation:
             agro_management_inputs,
             assimilation_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -269,7 +261,6 @@ class TestAssimilation:
             agro_management_inputs,
             assimilation_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -310,7 +301,6 @@ class TestAssimilation:
                 agro_management_inputs,
                 assimilation_config,
                 external_states,
-                device="cpu",
             )
 
     def test_assimilation_with_incompatible_weather_parameter_vectors(self):
@@ -337,7 +327,6 @@ class TestAssimilation:
                 agro_management_inputs,
                 assimilation_config,
                 external_states,
-                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
@@ -433,7 +422,7 @@ class TestDiffAssimilationGradients:
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
-        model = get_test_diff_assimilation_model(device=device)
+        model = get_test_diff_assimilation_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -446,7 +435,7 @@ class TestDiffAssimilationGradients:
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
-        model = get_test_diff_assimilation_model(device=device)
+        model = get_test_diff_assimilation_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -471,7 +460,7 @@ class TestDiffAssimilationGradients:
         param_value = torch.tensor(value, dtype=torch.float64, device=device)
 
         def get_model_fn():
-            return get_test_diff_assimilation_model(device=device)
+            return get_test_diff_assimilation_model()
 
         grad_num = calculate_numerical_grad(get_model_fn, param_name, param_value, output_name)
 

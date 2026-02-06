@@ -121,12 +121,12 @@ class WOFOST_Root_Dynamics(SimulationObject):
     @property
     def device(self):
         """Get device from ComputeConfig."""
-        return ComputeConfig.get_device()
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
         """Get dtype from ComputeConfig."""
-        return ComputeConfig.get_dtype()
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
     class Parameters(ParamTemplate):
         RDI = Any()
@@ -214,6 +214,9 @@ class WOFOST_Root_Dynamics(SimulationObject):
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
         """
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues)
         self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
