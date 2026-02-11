@@ -5,11 +5,14 @@ from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from . import phy_data_folder
 
-config = Configuration(CROP=DVS_Phenology)
+config = Configuration(
+    CROP=DVS_Phenology,
+    OUTPUT_VARS=["DVR", "DVS", "TSUM", "TSUME", "VERN"],
+)
 
 
 class TestEngine:
-    def test_engine_can_be_instantiated_from_default_pcse_config(self):
+    def test_engine(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
@@ -36,5 +39,8 @@ class TestEngine:
             weatherdataprovider=weather_data_provider,
             agromanagement=agro_management_inputs,
             config=config,
-        )
-        assert isinstance(engine, Engine)
+)
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert len(actual_results) == len(test_data["ModelResults"])
