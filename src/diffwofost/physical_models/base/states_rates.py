@@ -100,6 +100,12 @@ class TensorParamTemplate(TensorContainer, ParamTemplate):
 
 
 class TensorStatesTemplate(TensorContainer, StatesTemplate):
+    """Template for storing state variable values as tensors.
+
+    It includes functionality to broadcast state variables to a common shape. See
+    `diffwofost.base.states_rates.TensorContainer` and
+    `pcse.base.states_rates.StatesTemplate` for details.
+    """
     def __init__(self, kiosk=None, publish=None, shape=None, do_not_broadcast=None, **kwargs):
         self._shape = ()
         self._do_not_broadcast = [] if do_not_broadcast is None else do_not_broadcast
