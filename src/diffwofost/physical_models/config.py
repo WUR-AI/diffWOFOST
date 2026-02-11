@@ -61,7 +61,7 @@ class ComputeConfig:
         >>> model_cpu = WOFOST_Leaf_Dynamics(...)
         >>>
         >>> # model_gpu remains on cuda, model_cpu stays on cpu.
-        
+
     Setting the model properties like model.device = torch.device("cpu") or
     model.dtype = torch.float64 returns `AttributeError`. Always use
     ComputeConfig.set_device(...) and ComputeConfig.set_dtype(...).
