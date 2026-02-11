@@ -5,7 +5,10 @@ from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
 from . import phy_data_folder
 
-config = Configuration(CROP=DVS_Phenology)
+config = Configuration(
+    CROP=DVS_Phenology,
+    OUTPUT_VARS=["DVR", "DVS", "TSUM", "TSUME", "VERN"],
+)
 
 
 class TestEngine:
