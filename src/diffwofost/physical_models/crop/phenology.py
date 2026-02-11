@@ -92,12 +92,12 @@ class Vernalisation(SimulationObject):
     @property
     def device(self):
         """Get device from ComputeConfig."""
-        return ComputeConfig.get_device()
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
         """Get dtype from ComputeConfig."""
-        return ComputeConfig.get_dtype()
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
     class Parameters(TensorParamTemplate):
         VERNSAT = Tensor(-99.0)
@@ -134,6 +134,9 @@ class Vernalisation(SimulationObject):
             ISVERNALISED = False.
 
         """
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+
         self.params = self.Parameters(parvalues, shape=shape)
 
         # Small epsilon tensor reused in multiple safe divisions.
@@ -349,12 +352,12 @@ class DVS_Phenology(SimulationObject):
     @property
     def device(self):
         """Get device from ComputeConfig."""
-        return ComputeConfig.get_device()
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
         """Get dtype from ComputeConfig."""
-        return ComputeConfig.get_dtype()
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
     class Parameters(TensorParamTemplate):
         TSUMEM = Tensor(-99.0)
@@ -394,6 +397,9 @@ class DVS_Phenology(SimulationObject):
         :param parvalues: `ParameterProvider` object providing parameters as
                 key/value pairs
         """
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+
         self.params = self.Parameters(parvalues, shape=shape)
 
         # Initialize vernalisation for IDSL>=2

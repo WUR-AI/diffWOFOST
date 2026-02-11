@@ -117,12 +117,12 @@ class WOFOST_Root_Dynamics(SimulationObject):
     @property
     def device(self):
         """Get device from ComputeConfig."""
-        return ComputeConfig.get_device()
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
         """Get dtype from ComputeConfig."""
-        return ComputeConfig.get_dtype()
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
     class Parameters(TensorParamTemplate):
         RDI = Tensor(-99.0)
@@ -165,6 +165,9 @@ class WOFOST_Root_Dynamics(SimulationObject):
                 arrays or scalars. See PCSE documentation for details.
             shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"], shape=shape)

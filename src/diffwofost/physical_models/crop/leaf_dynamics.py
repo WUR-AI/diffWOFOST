@@ -121,12 +121,12 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
     @property
     def device(self):
         """Get device from ComputeConfig."""
-        return ComputeConfig.get_device()
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
         """Get dtype from ComputeConfig."""
-        return ComputeConfig.get_dtype()
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
     class Parameters(TensorParamTemplate):
         RGRLAI = Tensor(-99.0)
@@ -184,6 +184,11 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         """
         self.START_DATE = day
         self.kiosk = kiosk
+
+        # Get defaults from ComputeConfig if not already set
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+
         # TODO check if parvalues are already torch.nn.Parameters
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, shape=shape)

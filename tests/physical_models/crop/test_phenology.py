@@ -38,7 +38,7 @@ def assert_reference_match(reference, model, expected_precision):
         assert torch.all(torch.abs(ref_t - model_t) < precision)
 
 
-def get_test_diff_phenology_model(device: str = "cpu"):
+def get_test_diff_phenology_model():
     test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     # Phenology-related crop model parameters
@@ -60,14 +60,13 @@ def get_test_diff_phenology_model(device: str = "cpu"):
         "VERNDVS",
     ]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-        prepare_engine_input(test_data, crop_model_params, device=device)
+        prepare_engine_input(test_data, crop_model_params)
     )
     return DiffPhenologyDynamics(
         copy.deepcopy(crop_model_params_provider),
         weather_data_provider,
         agro_management_inputs,
         phenology_config,
-        device=device,
     )
 
 
@@ -78,14 +77,12 @@ class DiffPhenologyDynamics(torch.nn.Module):
         weather_data_provider,
         agro_management_inputs,
         config,
-        device: str = "cpu",
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
         self.weather_data_provider = weather_data_provider
         self.agro_management_inputs = agro_management_inputs
         self.config = config
-        self.device = device
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
@@ -97,7 +94,6 @@ class DiffPhenologyDynamics(torch.nn.Module):
             self.weather_data_provider,
             self.agro_management_inputs,
             self.config,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -140,14 +136,13 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -209,9 +204,7 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(
-            test_data, crop_model_params, meteo_range_checks=False, device=device
-        )
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         if param == "TEMP":
             if device == "cuda":
@@ -234,7 +227,6 @@ class TestPhenologyDynamics:
                     weather_data_provider,
                     agro_management_inputs,
                     phenology_config,
-                    device=device,
                 )
                 engine.run_till_terminate()
                 _ = engine.get_output()
@@ -244,7 +236,6 @@ class TestPhenologyDynamics:
                 weather_data_provider,
                 agro_management_inputs,
                 phenology_config,
-                device=device,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -297,7 +288,7 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         test_value = crop_model_params_provider[param]
         if param == "DTSMTB":
@@ -314,7 +305,6 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -372,7 +362,6 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -438,7 +427,6 @@ class TestPhenologyDynamics:
             weather_data_provider,
             agro_management_inputs,
             phenology_config,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -492,7 +480,6 @@ class TestPhenologyDynamics:
                 weather_data_provider,
                 agro_management_inputs,
                 phenology_config,
-                device="cpu",
             )
 
     def test_phenology_with_incompatible_weather_parameter_vectors(self):
@@ -533,7 +520,6 @@ class TestPhenologyDynamics:
                 weather_data_provider,
                 agro_management_inputs,
                 phenology_config,
-                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
@@ -556,7 +542,7 @@ class TestPhenologyDynamics:
             "VERNDVS",
         ]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params, device="cpu")
+            prepare_engine_input(test_data, crop_model_params)
         )
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
@@ -658,7 +644,7 @@ class TestDiffPhenologyDynamicsGradients:
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
-        model = get_test_diff_phenology_model(device=device)
+        model = get_test_diff_phenology_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -674,7 +660,7 @@ class TestDiffPhenologyDynamicsGradients:
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
-        model = get_test_diff_phenology_model(device=device)
+        model = get_test_diff_phenology_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -693,12 +679,12 @@ class TestDiffPhenologyDynamicsGradients:
         value, _ = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_phenology_model(device=device),
+            lambda: get_test_diff_phenology_model(),
             param_name,
             param.data,
             output_name,
         )
-        model = get_test_diff_phenology_model(device=device)
+        model = get_test_diff_phenology_model()
         output = model({param_name: param})
         loss = output[output_name].sum()
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
