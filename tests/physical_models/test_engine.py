@@ -39,5 +39,8 @@ class TestEngine:
             weatherdataprovider=weather_data_provider,
             agromanagement=agro_management_inputs,
             config=config,
-        )
-        assert isinstance(engine, Engine)
+)
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert len(actual_results) == len(test_data["ModelResults"])
