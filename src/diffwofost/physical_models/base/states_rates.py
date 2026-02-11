@@ -86,6 +86,12 @@ class TensorContainer(HasTraits):
 
 
 class TensorParamTemplate(TensorContainer, ParamTemplate):
+    """Template for storing parameter values as tensors.
+    
+    It includes functionality to broadcast parameters to a common shape. See
+    `diffwofost.base.states_rates.TensorContainer` and
+    `pcse.base.states_rates.ParamTemplate` for details.
+    """
     def __init__(self, parvalues, shape=None, do_not_broadcast=None):
         self._shape = ()
         self._do_not_broadcast = [] if do_not_broadcast is None else do_not_broadcast
