@@ -39,7 +39,7 @@ class TestEngine:
             weatherdataprovider=weather_data_provider,
             agromanagement=agro_management_inputs,
             config=config,
-)
+        )
         engine.run_till_terminate()
         actual_results = engine.get_output()
 
