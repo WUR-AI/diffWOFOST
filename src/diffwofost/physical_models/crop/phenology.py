@@ -246,13 +246,8 @@ class Vernalisation(SimulationObject):
         # set DOV only for newly reached elements
         newly_reached_and_no_dov = reached & (states.DOV < 0.0)
         if torch.any(newly_reached_and_no_dov):
-            states.DOV = torch.where(
-                newly_reached_and_no_dov,
-                torch.full(
-                    self.params.shape, day.toordinal(), dtype=self.dtype, device=self.device
-                ),
-                states.DOV,
-            )
+            day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
+            states.DOV = torch.where(newly_reached_and_no_dov, day_ordinal, states.DOV)
             self.logger.info(f"Vernalization requirements reached at day {day}.")
 
         # forced vernalisation per-element
@@ -644,14 +639,8 @@ class DVS_Phenology(SimulationObject):
         # Check transitions for emerging -> vegetative (STAGE 0 -> 1)
         is_emerging = s.STAGE == 0
         should_emerge = is_emerging & (s.DVS >= 0.0)
-        s.STAGE = torch.where(
-            should_emerge, torch.ones(p.shape, dtype=torch.long, device=self.device), s.STAGE
-        )
-        s.DOE = torch.where(
-            should_emerge,
-            torch.full(p.shape, day_ordinal, dtype=self.dtype, device=self.device),
-            s.DOE,
-        )
+        s.STAGE = torch.where(should_emerge, 1.0, s.STAGE)
+        s.DOE = torch.where(should_emerge, day_ordinal, s.DOE)
         s.DVS = torch.where(should_emerge, torch.clamp(s.DVS, max=0.0), s.DVS)
 
         # Send signal if any crop emerged (only once per day)
@@ -661,27 +650,15 @@ class DVS_Phenology(SimulationObject):
         # Check transitions for vegetative -> reproductive (STAGE 1 -> 2)
         is_vegetative = s.STAGE == 1
         should_flower = is_vegetative & (s.DVS >= 1.0)
-        s.STAGE = torch.where(
-            should_flower, torch.full(p.shape, 2, dtype=torch.long, device=self.device), s.STAGE
-        )
-        s.DOA = torch.where(
-            should_flower,
-            torch.full(p.shape, day_ordinal, dtype=self.dtype, device=self.device),
-            s.DOA,
-        )
+        s.STAGE = torch.where(should_flower, 2.0, s.STAGE)
+        s.DOA = torch.where(should_flower, day_ordinal, s.DOA)
         s.DVS = torch.where(should_flower, torch.clamp(s.DVS, max=1.0), s.DVS)
 
         # Check transitions for reproductive -> mature (STAGE 2 -> 3)
         is_reproductive = s.STAGE == 2
         should_mature = is_reproductive & (s.DVS >= p.DVSEND)
-        s.STAGE = torch.where(
-            should_mature, torch.full(p.shape, 3, dtype=torch.long, device=self.device), s.STAGE
-        )
-        s.DOM = torch.where(
-            should_mature,
-            torch.full(p.shape, day_ordinal, dtype=self.dtype, device=self.device),
-            s.DOM,
-        )
+        s.STAGE = torch.where(should_mature, 3.0, s.STAGE)
+        s.DOM = torch.where(should_mature, day_ordinal, s.DOM)
         s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
 
         # Send crop_finish signal if maturity reached for one.
@@ -714,9 +691,8 @@ class DVS_Phenology(SimulationObject):
 
         """
         if finish_type in ["harvest", "earliest"]:
-            day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
             self._for_finalize["DOH"] = torch.full(
-                self.params.shape, day_ordinal, dtype=self.dtype, device=self.device
+                self.params.shape, day.toordinal(), dtype=self.dtype, device=self.device
             )
 
     def get_variable(self, varname):
