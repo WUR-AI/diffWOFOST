@@ -114,6 +114,12 @@ class TensorStatesTemplate(TensorContainer, StatesTemplate):
 
 
 class TensorRatesTemplate(TensorContainer, RatesTemplate):
+    """Template for storing rate variable values as tensors.
+
+    It includes functionality to broadcast rate variables to a common shape. See
+    `diffwofost.base.states_rates.TensorContainer` and
+    `pcse.base.states_rates.RatesTemplate` for details.
+    """
     def __init__(self, kiosk=None, publish=None, shape=None, do_not_broadcast=None):
         self._shape = ()
         self._do_not_broadcast = [] if do_not_broadcast is None else do_not_broadcast
