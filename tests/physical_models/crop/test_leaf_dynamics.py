@@ -365,7 +365,7 @@ class TestLeafDynamics:
             "SPAN", crop_model_params_provider["SPAN"].repeat(5), check=False
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,

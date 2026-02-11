@@ -23,11 +23,11 @@ from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
 from pcse.settings import settings
 from pcse.timer import Timer
-from pcse.traitlets import Enum
 from pcse.traitlets import TraitType
 from .config import ComputeConfig
 from .config import Configuration
 from .engine import Engine
+from .engine import _get_params_shape
 
 logging.disable(logging.CRITICAL)
 
@@ -107,6 +107,7 @@ class EngineTestHelper(Engine):
             self.mconf = config
 
         self.parameterprovider = parameterprovider
+        self._shape = _get_params_shape(self.parameterprovider)
 
         # Variable kiosk for registering and publishing variables
         self.kiosk = VariableKioskTestHelper(external_states)
@@ -547,33 +548,6 @@ class AfgenTrait(TraitType):
         self.error(obj, value)
 
 
-def _get_params_shape(params):
-    """Get the parameters shape.
-
-    Parameters can have arbitrary number of dimensions, but all parameters that are not zero-
-    dimensional should have the same shape.
-
-    This check if fundamental for vectorized operations in the physical models.
-    """
-    shape = ()
-    for parname in params.trait_names():
-        # Skip special traitlets attributes
-        if parname.startswith("trait"):
-            continue
-        param = getattr(params, parname)
-        # Skip Enum and str parameters
-        if isinstance(param, Enum) or isinstance(param, str):
-            continue
-        # Parameters that are not zero dimensional should all have the same shape
-        if param.shape and not shape:
-            shape = param.shape
-        elif param.shape:
-            assert param.shape == shape, (
-                "All parameters should have the same shape (or have no dimensions)"
-            )
-    return shape
-
-
 def _get_drv(drv_var, expected_shape, dtype, device=None):
     """Check that the driving variables have the expected shape and fetch them.
 
@@ -612,33 +586,23 @@ def _get_drv(drv_var, expected_shape, dtype, device=None):
         )
 
 
-def _broadcast_to(x, shape, dtype, device=None):
+def _broadcast_to(x, shape, dtype=None, device=None):
     """Create a view of tensor X with the given shape.
 
     Args:
         x: The tensor or value to broadcast
         shape: The target shape
-        dtype: dtype for the tensor
+        dtype: Optional dtype for the tensor
         device: Optional device for the tensor
     """
-    # If x is not a tensor, convert it
-    if not isinstance(x, torch.Tensor):
-        x = torch.tensor(x, dtype=dtype)
-    # Ensure correct dtype and device
-    if dtype is not None:
-        x = x.to(dtype=dtype)
+    # Make sure x is a tensor
+    x = torch.as_tensor(x, dtype=dtype)
     if device is not None:
         x = x.to(device=device)
     # If already the correct shape, return as-is
     if x.shape == shape:
         return x
-    if x.dim() == 0:
-        # For 0-d tensors, we simply broadcast to the given shape
-        return torch.broadcast_to(x, shape)
-    # The given shape should match x in all but the last axis, which represents
-    # the dimension along which the time integration is carried out.
-    # We first append an axis to x, then expand to the given shape
-    return x.unsqueeze(-1).expand(shape)
+    return torch.broadcast_to(x, shape)
 
 
 def _snapshot_state(obj):

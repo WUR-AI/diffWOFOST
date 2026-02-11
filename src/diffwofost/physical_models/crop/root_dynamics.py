@@ -1,19 +1,17 @@
 import datetime
 import torch
-from pcse.base import ParamTemplate
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
+from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
-from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_params_shape
 
 
 class WOFOST_Root_Dynamics(SimulationObject):
@@ -116,8 +114,6 @@ class WOFOST_Root_Dynamics(SimulationObject):
     better and more biophysical approach to root development in WOFOST.
     """  # noqa: E501
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -128,80 +124,34 @@ class WOFOST_Root_Dynamics(SimulationObject):
         """Get dtype from ComputeConfig."""
         return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
-    class Parameters(ParamTemplate):
-        RDI = Any()
-        RRI = Any()
-        RDMCR = Any()
-        RDMSOL = Any()
-        TDWI = Any()
-        IAIRDU = Any()
+    class Parameters(TensorParamTemplate):
+        RDI = Tensor(-99.0)
+        RRI = Tensor(-99.0)
+        RDMCR = Tensor(-99.0)
+        RDMSOL = Tensor(-99.0)
+        TDWI = Tensor(-99.0)
+        IAIRDU = Tensor(-99.0)
         RDRRTB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
+    class RateVariables(TensorRatesTemplate):
+        RR = Tensor(0.0)
+        GRRT = Tensor(0.0)
+        DRRT = Tensor(0.0)
+        GWRT = Tensor(0.0)
 
-            # Set default values
-            self.RDI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.RRI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.RDMCR = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.RDMSOL = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.TDWI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.IAIRDU = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(parvalues)
-
-    class RateVariables(RatesTemplate):
-        RR = Any()
-        GRRT = Any()
-        DRRT = Any()
-        GWRT = Any()
-
-        def __init__(self, kiosk, publish=None):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.RR = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GRRT = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DRRT = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GWRT = torch.tensor(0.0, dtype=dtype, device=device)
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish)
-
-    class StateVariables(StatesTemplate):
-        RD = Any()
-        RDM = Any()
-        WRT = Any()
-        DWRT = Any()
-        TWRT = Any()
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            if "RD" not in kwargs:
-                self.RD = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "RDM" not in kwargs:
-                self.RDM = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "WRT" not in kwargs:
-                self.WRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "DWRT" not in kwargs:
-                self.DWRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "TWRT" not in kwargs:
-                self.TWRT = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish, **kwargs)
+    class StateVariables(TensorStatesTemplate):
+        RD = Tensor(-99.0)
+        RDM = Tensor(-99.0)
+        WRT = Tensor(-99.0)
+        DWRT = Tensor(-99.0)
+        TWRT = Tensor(-99.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | torch.Size | None = None,
     ) -> None:
         """Initialize the model.
 
@@ -213,37 +163,36 @@ class WOFOST_Root_Dynamics(SimulationObject):
             parvalues (ParameterProvider): A dictionary-like container holding
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
         self._device = ComputeConfig.get_device()
         self._dtype = ComputeConfig.get_dtype()
 
         self.kiosk = kiosk
-        self.params = self.Parameters(parvalues)
-        self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"])
+        self.params = self.Parameters(parvalues, shape=shape)
+        self.rates = self.RateVariables(kiosk, publish=["DRRT", "GRRT"], shape=shape)
 
         # INITIAL STATES
         params = self.params
-        self.params_shape = _get_params_shape(params)
-        shape = self.params_shape
 
         # Initial root depth states
-        RDI = _broadcast_to(params.RDI, shape, dtype=self.dtype, device=self.device)
-        RDMCR = _broadcast_to(params.RDMCR, shape, dtype=self.dtype, device=self.device)
-        RDMSOL = _broadcast_to(params.RDMSOL, shape, dtype=self.dtype, device=self.device)
-
-        rdmax = torch.maximum(RDI, torch.minimum(RDMCR, RDMSOL))
-        RDM = rdmax
-        RD = RDI
+        RDM = torch.maximum(params.RDI, torch.minimum(params.RDMCR, params.RDMSOL))
+        RD = params.RDI
 
         # Initial root biomass states
-        TDWI = _broadcast_to(params.TDWI, shape, dtype=self.dtype, device=self.device)
-        FR = _broadcast_to(self.kiosk["FR"], shape, dtype=self.dtype, device=self.device)
-        WRT = TDWI * FR
-        DWRT = torch.zeros(shape, dtype=self.dtype, device=self.device)
+        WRT = params.TDWI * self.kiosk["FR"]
+        DWRT = 0.0
         TWRT = WRT + DWRT
 
         self.states = self.StateVariables(
-            kiosk, publish=["RD", "WRT", "TWRT"], RD=RD, RDM=RDM, WRT=WRT, DWRT=DWRT, TWRT=TWRT
+            kiosk,
+            publish=["RD", "WRT", "TWRT"],
+            RD=RD,
+            RDM=RDM,
+            WRT=WRT,
+            DWRT=DWRT,
+            TWRT=TWRT,
+            shape=shape,
         )
 
     @prepare_rates
@@ -263,25 +212,19 @@ class WOFOST_Root_Dynamics(SimulationObject):
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
-        DVS = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
-        dvs_mask = (DVS >= 0).to(dtype=self.dtype)
+        dvs_mask = k["DVS"] >= 0
 
         # Increase in root biomass
-        FR = _broadcast_to(k["FR"], self.params_shape, dtype=self.dtype, device=self.device)
-        DMI = _broadcast_to(k["DMI"], self.params_shape, dtype=self.dtype, device=self.device)
-        RDRRTB = p.RDRRTB.to(device=self.device, dtype=self.dtype)
-
-        r.GRRT = dvs_mask * FR * DMI
-        r.DRRT = dvs_mask * s.WRT * RDRRTB(DVS)
+        r.GRRT = dvs_mask * k["FR"] * k["DMI"]
+        r.DRRT = dvs_mask * s.WRT * p.RDRRTB(k["DVS"])
         r.GWRT = r.GRRT - r.DRRT
 
         # Increase in root depth
-        RRI = _broadcast_to(p.RRI, self.params_shape, dtype=self.dtype, device=self.device)
-        r.RR = dvs_mask * torch.minimum((s.RDM - s.RD), RRI)
+        r.RR = dvs_mask * torch.minimum((s.RDM - s.RD), p.RRI)
 
         # Do not let the roots growth if partioning to the roots
         # (variable FR) is zero.
-        mask = (FR > 0.0).to(dtype=self.dtype)
+        mask = k["FR"] > 0.0
         r.RR = r.RR * mask * dvs_mask
 
     @prepare_states

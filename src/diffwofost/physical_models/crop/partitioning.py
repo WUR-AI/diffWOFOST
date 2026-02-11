@@ -2,16 +2,15 @@ from collections import namedtuple
 from warnings import warn
 import torch
 from pcse import exceptions as exc
-from pcse.base import ParamTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
 from pcse.traitlets import Instance
+from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_params_shape
 
 
 # Template for namedtuple containing partitioning factors
@@ -35,8 +34,6 @@ class _BaseDVSPartitioning(SimulationObject):
     the public partitioning classes.
     """
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -47,36 +44,18 @@ class _BaseDVSPartitioning(SimulationObject):
         """Get dtype from ComputeConfig."""
         return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
-    class Parameters(ParamTemplate):
+    class Parameters(TensorParamTemplate):
         FRTB = AfgenTrait()
         FLTB = AfgenTrait()
         FSTB = AfgenTrait()
         FOTB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            super().__init__(parvalues)
-
-    class StateVariables(StatesTemplate):
-        FR = Any()
-        FL = Any()
-        FS = Any()
-        FO = Any()
+    class StateVariables(TensorStatesTemplate):
+        FR = Tensor(-99.0)
+        FL = Tensor(-99.0)
+        FS = Tensor(-99.0)
+        FO = Tensor(-99.0)
         PF = Instance(PartioningFactors)
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            if "FR" not in kwargs:
-                kwargs["FR"] = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "FL" not in kwargs:
-                kwargs["FL"] = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "FS" not in kwargs:
-                kwargs["FS"] = torch.tensor(-99.0, dtype=dtype, device=device)
-            if "FO" not in kwargs:
-                kwargs["FO"] = torch.tensor(-99.0, dtype=dtype, device=device)
-
-            super().__init__(kiosk, publish=publish, **kwargs)
 
     def _handle_partitioning_error(self, msg: str) -> None:
         """Hook for error handling (warn vs raise)."""
@@ -104,13 +83,6 @@ class _BaseDVSPartitioning(SimulationObject):
             self.logger.error(msg)
             self._handle_partitioning_error(msg)
 
-    def _broadcast_partitioning(self, FR, FL, FS, FO):
-        FR = _broadcast_to(FR, self.params_shape, dtype=self.dtype, device=self.device)
-        FL = _broadcast_to(FL, self.params_shape, dtype=self.dtype, device=self.device)
-        FS = _broadcast_to(FS, self.params_shape, dtype=self.dtype, device=self.device)
-        FO = _broadcast_to(FO, self.params_shape, dtype=self.dtype, device=self.device)
-        return FR, FL, FS, FO
-
     def _set_partitioning_states(self, FR, FL, FS, FO):
         self.states.FR = FR
         self.states.FL = FL
@@ -126,18 +98,14 @@ class _BaseDVSPartitioning(SimulationObject):
         FO = p.FOTB(DVS)
         return FR, FL, FS, FO
 
-    def _initialize_from_tables(self, kiosk, parvalues):
+    def _initialize_from_tables(self, kiosk, parvalues, shape=None):
         self._device = ComputeConfig.get_device()
         self._dtype = ComputeConfig.get_dtype()
 
-        self.params = self.Parameters(parvalues)
+        self.params = self.Parameters(parvalues, shape=shape)
         self.kiosk = kiosk
-        self.params_shape = _get_params_shape(self.params)
-
-        DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)
+        DVS = _broadcast_to(self.kiosk["DVS"], self.params.shape)
         FR, FL, FS, FO = self._compute_partitioning_from_tables(DVS)
-        FR, FL, FS, FO = self._broadcast_partitioning(FR, FL, FS, FO)
-
         self.states = self.StateVariables(
             kiosk,
             publish=["FR", "FL", "FS", "FO"],
@@ -146,13 +114,13 @@ class _BaseDVSPartitioning(SimulationObject):
             FS=FS,
             FO=FO,
             PF=PartioningFactors(FR, FL, FS, FO),
+            shape=shape,
         )
         self._check_partitioning()
 
     def _update_from_tables(self):
-        DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)
+        DVS = _broadcast_to(self.kiosk["DVS"], self.params.shape)
         FR, FL, FS, FO = self._compute_partitioning_from_tables(DVS)
-        FR, FL, FS, FO = self._broadcast_partitioning(FR, FL, FS, FO)
         self._set_partitioning_states(FR, FL, FS, FO)
         self._check_partitioning()
 
@@ -223,7 +191,7 @@ class DVS_Partitioning(_BaseDVSPartitioning):
     stems and storage organs on a given day do not add up to 1.
     """
 
-    def initialize(self, day, kiosk, parvalues):
+    def initialize(self, day, kiosk, parvalues, shape=None):
         """Initialize the DVS_Partitioning simulation object.
 
         Args:
@@ -231,8 +199,9 @@ class DVS_Partitioning(_BaseDVSPartitioning):
             kiosk (VariableKiosk): Variable kiosk of this PCSE instance.
             parvalues (ParameterProvider): Object providing parameters as
                 key/value pairs.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
-        self._initialize_from_tables(kiosk, parvalues)
+        self._initialize_from_tables(kiosk, parvalues, shape=shape)
 
     @prepare_states
     def integrate(self, day, delt=1.0):
@@ -320,7 +289,7 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
     def _handle_partitioning_error(self, msg: str) -> None:
         raise exc.PartitioningError(msg)
 
-    def initialize(self, day, kiosk, parameters):
+    def initialize(self, day, kiosk, parameters, shape=None):
         """Initialize the DVS_Partitioning_N simulation object.
 
         Args:
@@ -328,8 +297,9 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
             kiosk (VariableKiosk): Variable kiosk of this PCSE instance.
             parameters (ParameterProvider): Dictionary with WOFOST cropdata
                 key/value pairs.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
-        self._initialize_from_tables(kiosk, parameters)
+        self._initialize_from_tables(kiosk, parameters, shape=shape)
 
     def _calculate_stressed_fr(self, DVS: torch.Tensor, RFTRA: torch.Tensor) -> torch.Tensor:
         """Computes the FR partitioning fraction under water/oxygen stress."""
@@ -339,15 +309,12 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
     @prepare_states
     def integrate(self, day, delt=1.0):
         """Update partitioning factors based on DVS and water/oxygen stress."""
-        DVS = torch.as_tensor(self.kiosk["DVS"], dtype=self.dtype, device=self.device)
-        RFTRA = torch.as_tensor(self.kiosk["RFTRA"], dtype=self.dtype, device=self.device)
-
+        DVS = _broadcast_to(self.kiosk["DVS"], self.params.shape)
+        RFTRA = _broadcast_to(self.kiosk["RFTRA"], self.params.shape)
         FR = self._calculate_stressed_fr(DVS, RFTRA)
         FL = self.params.FLTB(DVS)
         FS = self.params.FSTB(DVS)
         FO = self.params.FOTB(DVS)
-
-        FR, FL, FS, FO = self._broadcast_partitioning(FR, FL, FS, FO)
         self._set_partitioning_states(FR, FL, FS, FO)
         self._check_partitioning()
 

@@ -26,3 +26,15 @@ hide:
 ::: diffwofost.physical_models.engine.Engine
 
 ::: diffwofost.physical_models.utils.EngineTestHelper
+
+## **Other classes (for developers)**
+
+::: diffwofost.physical_models.base.states_rates.TensorStatesTemplate
+
+::: diffwofost.physical_models.base.states_rates.TensorRatesTemplate
+
+::: diffwofost.physical_models.base.states_rates.TensorParamTemplate
+
+::: diffwofost.physical_models.base.states_rates.TensorContainer
+
+::: diffwofost.physical_models.traitlets.Tensor
