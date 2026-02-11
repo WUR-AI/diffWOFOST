@@ -34,7 +34,7 @@ license = {file = "LICENSE"}
 name = "diffwofost"
 readme = {file = "README.md", content-type = "text/markdown"}
 requires-python = ">=3.11"
-version = "0.2.0"
+version = "0.3.0"
 
 [project.optional-dependencies]
 dev = [
@@ -131,7 +131,7 @@ force-single-line = true
 no-lines-before = ["future","standard-library","third-party","first-party","local-folder"]
 
 [tool.bumpversion]
-current_version = "0.2.0"
+current_version = "0.3.0"
 
 [[tool.bumpversion.files]]
 filename = "src/diffwofost/__init__.py"
@@ -141,6 +141,3 @@ filename = "pyproject.toml"
 
 [[tool.bumpversion.files]]
 filename = "CITATION.cff"
-
-[[tool.bumpversion.files]]
-filename = "docs/conf.py"

@@ -63,3 +63,9 @@ def device(request):
 
     # Reset to defaults after the test
     ComputeConfig.reset_to_defaults()
+
+
+@pytest.fixture(autouse=True)
+def configure_compute_config_dtype():
+    """Ensure all tests run with float64 precision."""
+    ComputeConfig.set_dtype(torch.float64)
