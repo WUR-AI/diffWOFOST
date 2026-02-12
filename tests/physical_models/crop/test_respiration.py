@@ -18,7 +18,7 @@ respiration_config = Configuration(
 )
 
 
-def get_test_diff_respiration_model(device: str = "cpu"):
+def get_test_diff_respiration_model():
     test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
@@ -27,14 +27,13 @@ def get_test_diff_respiration_model(device: str = "cpu"):
         weather_data_provider,
         agro_management_inputs,
         external_states,
-    ) = prepare_engine_input(test_data, crop_model_params, device=device)
+    ) = prepare_engine_input(test_data, crop_model_params)
     return DiffRespiration(
         copy.deepcopy(crop_model_params_provider),
         weather_data_provider,
         agro_management_inputs,
         respiration_config,
         copy.deepcopy(external_states),
-        device=device,
     )
 
 
@@ -46,7 +45,6 @@ class DiffRespiration(torch.nn.Module):
         agro_management_inputs,
         config,
         external_states,
-        device: str = "cpu",
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
@@ -54,7 +52,6 @@ class DiffRespiration(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
-        self.device = device
 
     def forward(self, params_dict):
         for name, value in params_dict.items():
@@ -66,7 +63,6 @@ class DiffRespiration(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -94,7 +90,7 @@ class TestRespiration:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -102,7 +98,6 @@ class TestRespiration:
             agro_management_inputs,
             respiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -130,9 +125,7 @@ class TestRespiration:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(
-            test_data, crop_model_params, meteo_range_checks=False, device=device
-        )
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         if param == "TEMP":
             for (_, _), wdc in weather_data_provider.store.items():
@@ -144,7 +137,6 @@ class TestRespiration:
                     agro_management_inputs,
                     respiration_config,
                     external_states,
-                    device=device,
                 )
                 engine.run_till_terminate()
                 _ = engine.get_output()
@@ -162,7 +154,6 @@ class TestRespiration:
             agro_management_inputs,
             respiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -197,7 +188,7 @@ class TestRespiration:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         test_value = crop_model_params_provider[param]
         param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
@@ -209,7 +200,6 @@ class TestRespiration:
             agro_management_inputs,
             respiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -234,7 +224,7 @@ class TestRespiration:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         for param in ("Q10", "RMR", "RML", "RMS", "RMO"):
             repeated = crop_model_params_provider[param].repeat(10)
@@ -249,7 +239,6 @@ class TestRespiration:
             agro_management_inputs,
             respiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -273,9 +262,7 @@ class TestRespiration:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(
-            test_data, crop_model_params, meteo_range_checks=False, device=device
-        )
+        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         for param in ("Q10", "RMR", "RML", "RMS", "RMO"):
             repeated = crop_model_params_provider[param].broadcast_to((30, 5))
@@ -293,7 +280,6 @@ class TestRespiration:
             agro_management_inputs,
             respiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -327,14 +313,13 @@ class TestRespiration:
             "RML", crop_model_params_provider["RML"].repeat(5), check=False
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
                 respiration_config,
                 external_states,
-                device="cpu",
             )
 
     def test_respiration_with_incompatible_weather_parameter_vectors(self):
@@ -361,11 +346,10 @@ class TestRespiration:
                 agro_management_inputs,
                 respiration_config,
                 external_states,
-                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost_pp_with_leaf_dynamics(self, test_data_url):
+    def test_wofost_pp_with_respiration(self, test_data_url):
         # prepare model input
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
@@ -416,9 +400,9 @@ class TestDiffRespirationGradients:
     @pytest.mark.parametrize("param_name", ["Q10", "RMR", "RML", "RMS", "RMO"])
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, config_type, device):
-        model = get_test_diff_respiration_model(device=device)
+        model = get_test_diff_respiration_model()
         value, dtype = self.param_configs[config_type][param_name]
-        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype))
         output = model({param_name: param})
         loss = output["PMRES"].sum()
 
@@ -437,16 +421,16 @@ class TestDiffRespirationGradients:
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_numerical(self, param_name, config_type, device):
         value, _ = self.param_configs[config_type][param_name]
-        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
+        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64))
 
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_respiration_model(device=device),
+            lambda: get_test_diff_respiration_model(),
             param_name,
             param,
             "PMRES",
         )
 
-        model = get_test_diff_respiration_model(device=device)
+        model = get_test_diff_respiration_model()
         output = model({param_name: param})
         loss = output["PMRES"].sum()
         grads = torch.autograd.grad(loss, param, retain_graph=True)[0]

@@ -2,19 +2,18 @@
 
 import datetime
 import torch
-from pcse.base import ParamTemplate
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
-from pcse.traitlets import Any
+from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
-from diffwofost.physical_models.utils import _get_params_shape
 
 
 class WOFOST_Maintenance_Respiration(SimulationObject):
@@ -74,8 +73,6 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
     | PMRES  | Q10, RMR, RML, RMS, RMO, RFSETB          |
     """
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -86,35 +83,35 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         """Get dtype from ComputeConfig."""
         return ComputeConfig.get_dtype()
 
-    class Parameters(ParamTemplate):
-        Q10 = Any()
-        RMR = Any()
-        RML = Any()
-        RMS = Any()
-        RMO = Any()
+    class Parameters(TensorParamTemplate):
+        Q10 = Tensor(1)
+        RMR = Tensor(1)
+        RML = Tensor(1)
+        RMS = Tensor(1)
+        RMO = Tensor(1)
         RFSETB = AfgenTrait()
 
-    class RateVariables(RatesTemplate):
-        PMRES = Any()
+    class RateVariables(TensorRatesTemplate):
+        PMRES = Tensor(1)
 
-        def __init__(self, kiosk, publish=None):
-            self.PMRES = torch.tensor(
-                0.0, dtype=ComputeConfig.get_dtype(), device=ComputeConfig.get_device()
-            )
-            super().__init__(kiosk, publish=publish)
-
-    def initialize(self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider):
+    def initialize(
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | None = None,
+    ):
         """Initialize the maintenance respiration module.
 
         Args:
             day: Start date of the simulation
             kiosk: Variable kiosk of this PCSE instance
             parvalues: ParameterProvider object providing parameters as key/value pairs
+            shape: Shape of the parameters tensors (optional)
         """
-        self.params = self.Parameters(parvalues)
-        self.rates = self.RateVariables(kiosk, publish=["PMRES"])
+        self.params = self.Parameters(parvalues, shape=shape)
+        self.rates = self.RateVariables(kiosk, publish=["PMRES"], shape=shape)
         self.kiosk = kiosk
-        self.params_shape = _get_params_shape(self.params)
 
     @prepare_rates
     def calc_rates(self, day: datetime.date, drv: WeatherDataContainer):
@@ -128,19 +125,21 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         kk = self.kiosk
         r = self.rates
 
-        Q10 = _broadcast_to(p.Q10, self.params_shape, dtype=self.dtype, device=self.device)
-        RMR = _broadcast_to(p.RMR, self.params_shape, dtype=self.dtype, device=self.device)
-        RML = _broadcast_to(p.RML, self.params_shape, dtype=self.dtype, device=self.device)
-        RMS = _broadcast_to(p.RMS, self.params_shape, dtype=self.dtype, device=self.device)
-        RMO = _broadcast_to(p.RMO, self.params_shape, dtype=self.dtype, device=self.device)
+        Q10 = p.Q10
+        RMR = p.RMR
+        RML = p.RML
+        RMS = p.RMS
+        RMO = p.RMO
 
-        WRT = _broadcast_to(kk["WRT"], self.params_shape, dtype=self.dtype, device=self.device)
-        WLV = _broadcast_to(kk["WLV"], self.params_shape, dtype=self.dtype, device=self.device)
-        WST = _broadcast_to(kk["WST"], self.params_shape, dtype=self.dtype, device=self.device)
-        WSO = _broadcast_to(kk["WSO"], self.params_shape, dtype=self.dtype, device=self.device)
-        DVS = _broadcast_to(kk["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
+        WRT = kk["WRT"]
+        WLV = kk["WLV"]
+        WST = kk["WST"]
+        WSO = kk["WSO"]
+        # [!] DVS needs to be broadcasted explicetly because it is used
+        # in torch.where and the kiosk does not format it correctly
+        DVS = _broadcast_to(kk["DVS"], p.shape, self.dtype, self.device)
 
-        TEMP = _get_drv(drv.TEMP, self.params_shape, dtype=self.dtype, device=self.device)
+        TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
 
         RMRES = RMR * WRT + RML * WLV + RMS * WST + RMO * WSO
         RMRES = RMRES * p.RFSETB(DVS)
