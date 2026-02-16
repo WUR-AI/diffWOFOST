@@ -137,6 +137,7 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         WSO = kk["WSO"]
         # [!] DVS needs to be broadcasted explicetly because it is used
         # in torch.where and the kiosk does not format it correctly
+        #TODO see #22
         DVS = _broadcast_to(kk["DVS"], p.shape, self.dtype, self.device)
 
         TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
