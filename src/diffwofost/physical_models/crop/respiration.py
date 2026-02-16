@@ -84,15 +84,15 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         return ComputeConfig.get_dtype()
 
     class Parameters(TensorParamTemplate):
-        Q10 = Tensor(1)
-        RMR = Tensor(1)
-        RML = Tensor(1)
-        RMS = Tensor(1)
-        RMO = Tensor(1)
+        Q10 = Tensor(-99.0)
+        RMR = Tensor(-99.0)
+        RML = Tensor(-99.0)
+        RMS = Tensor(-99.0)
+        RMO = Tensor(-99.0)
         RFSETB = AfgenTrait()
 
     class RateVariables(TensorRatesTemplate):
-        PMRES = Tensor(1)
+        PMRES = Tensor(0.0)
 
     def initialize(
         self,
@@ -110,7 +110,7 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
             shape: Shape of the parameters tensors (optional)
         """
         self.params = self.Parameters(parvalues, shape=shape)
-        self.rates = self.RateVariables(kiosk, publish=["PMRES"], shape=shape)
+        self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
 
     @prepare_rates
@@ -137,7 +137,7 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         WSO = kk["WSO"]
         # [!] DVS needs to be broadcasted explicetly because it is used
         # in torch.where and the kiosk does not format it correctly
-        #TODO see #22
+        # TODO see #22
         DVS = _broadcast_to(kk["DVS"], p.shape, self.dtype, self.device)
 
         TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
