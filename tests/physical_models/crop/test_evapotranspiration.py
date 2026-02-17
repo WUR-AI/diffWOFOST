@@ -25,12 +25,13 @@ evapotranspiration_config = Configuration(
 )
 
 
-def _augment_params_for_variant(crop_model_params_provider, variant: str):
+def _augment_params_for_variant(crop_model_params_provider, variant: str, device: str):
     """Augment parameters to enable specific evapotranspiration variant.
 
     Args:
         crop_model_params_provider: Base parameter provider
         variant: One of 'base', 'co2', or 'layered'
+        device: The device to create tensors on
     """
     if variant == "base":
         # No augmentation needed
@@ -38,18 +39,22 @@ def _augment_params_for_variant(crop_model_params_provider, variant: str):
     elif variant == "co2":
         # Add CO2 parameters to enable EvapotranspirationCO2
         crop_model_params_provider.set_override(
-            "CO2", torch.tensor(360.0, dtype=torch.float64), check=False
+            "CO2", torch.tensor(360.0, dtype=torch.float64, device=device), check=False
         )
         crop_model_params_provider.set_override(
-            "CO2TRATB", torch.tensor([0.0, 1.0, 1000.0, 0.5], dtype=torch.float64), check=False
+            "CO2TRATB",
+            torch.tensor([0.0, 1.0, 1000.0, 0.5], dtype=torch.float64, device=device),
+            check=False,
         )
     elif variant == "layered":
         # Add CO2 and soil_profile to enable EvapotranspirationCO2Layered
         crop_model_params_provider.set_override(
-            "CO2", torch.tensor(360.0, dtype=torch.float64), check=False
+            "CO2", torch.tensor(360.0, dtype=torch.float64, device=device), check=False
         )
         crop_model_params_provider.set_override(
-            "CO2TRATB", torch.tensor([0.0, 1.0, 1000.0, 0.5], dtype=torch.float64), check=False
+            "CO2TRATB",
+            torch.tensor([0.0, 1.0, 1000.0, 0.5], dtype=torch.float64, device=device),
+            check=False,
         )
         # Create a simple two-layer soil profile using existing soil parameters
         smw = crop_model_params_provider["SMW"]
@@ -131,7 +136,6 @@ class DiffEvapotranspiration(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -175,7 +179,7 @@ class TestEvapotranspiration:
         )
 
         # Augment parameters based on variant to test different implementations
-        _augment_params_for_variant(crop_model_params_provider, variant)
+        _augment_params_for_variant(crop_model_params_provider, variant, device)
 
         # For layered variant, also need to augment external_states with SM as a list and RD
         if variant == "layered":
@@ -194,7 +198,6 @@ class TestEvapotranspiration:
             agro_management_inputs,
             evapotranspiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -274,7 +277,6 @@ class TestEvapotranspiration:
                     agro_management_inputs,
                     evapotranspiration_config,
                     external_states,
-                    device=device,
                 )
             return
 
@@ -290,7 +292,6 @@ class TestEvapotranspiration:
             agro_management_inputs,
             evapotranspiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -357,7 +358,6 @@ class TestEvapotranspiration:
             agro_management_inputs,
             evapotranspiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -410,7 +410,6 @@ class TestEvapotranspiration:
             agro_management_inputs,
             evapotranspiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -467,7 +466,6 @@ class TestEvapotranspiration:
             agro_management_inputs,
             evapotranspiration_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -510,14 +508,13 @@ class TestEvapotranspiration:
             "DEPNR", crop_model_params_provider["DEPNR"].repeat(5), check=False
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError, match="Non-matching shapes found in parameter provider!"):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
                 evapotranspiration_config,
                 external_states,
-                device="cpu",
             )
 
     def test_evapotranspiration_with_incompatible_weather_parameter_vectors(self):
@@ -554,10 +551,9 @@ class TestEvapotranspiration:
                 agro_management_inputs,
                 evapotranspiration_config,
                 external_states,
-                device="cpu",
             )
 
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls[:1])
+    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost_pp_with_evapotranspiration(self, test_data_url):
         test_data = get_test_data(test_data_url)
         crop_model_params = [
@@ -587,6 +583,13 @@ class TestEvapotranspiration:
             assert len(actual_results) == len(expected_results)
             for reference, model in zip(expected_results, actual_results, strict=False):
                 assert reference["DAY"] == model["day"]
+                for var, precision in expected_precision.items():
+                    if abs(reference[var] - model[var]) >= precision:
+                        print(
+                            f"Mismatch for {var} on day {model['day']}: expected {reference[var]},"
+                            + f" got {model[var]}, diff {abs(reference[var] - model[var])}"
+                            + f", precision {precision}"
+                        )
                 assert all(
                     abs(reference[var] - model[var]) < precision
                     for var, precision in expected_precision.items()

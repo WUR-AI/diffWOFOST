@@ -1,9 +1,6 @@
 import datetime
 import torch
-from pcse.base import ParamTemplate
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
@@ -12,28 +9,14 @@ from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from pcse.traitlets import Bool
 from pcse.traitlets import Instance
+from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
-from diffwofost.physical_models.utils import _get_params_shape
-
-
-def _clamp(x: torch.Tensor, lo: float, hi: float) -> torch.Tensor:
-    """Clamp tensor values to the range [lo, hi]."""
-    return torch.clamp(x, min=lo, max=hi)
-
-
-def _as_tensor(x, *, dtype: torch.dtype, device: torch.device) -> torch.Tensor:
-    """Convert input to a tensor with specified dtype and device."""
-    if isinstance(x, torch.Tensor):
-        t = x
-        if dtype is not None:
-            t = t.to(dtype=dtype)
-        if device is not None:
-            t = t.to(device=device)
-        return t
-    return torch.tensor(x, dtype=dtype, device=device)
 
 
 def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
@@ -64,7 +47,7 @@ def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
         torch.where(DEPNR >= 3.0, torch.zeros_like(DEPNR), taper_mid),
     )
     sweaf = sweaf + correction * taper
-    return _clamp(sweaf, 0.10, 0.95)
+    return torch.clamp(sweaf, min=0.10, max=0.95)
 
 
 class EvapotranspirationWrapper(SimulationObject):
@@ -79,7 +62,11 @@ class EvapotranspirationWrapper(SimulationObject):
     etmodule = Instance(SimulationObject)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | None = None,
     ) -> None:
         """Select and initialize the evapotranspiration implementation.
 
@@ -87,11 +74,11 @@ class EvapotranspirationWrapper(SimulationObject):
         based on available parameters.
         """
         if "soil_profile" in parvalues:
-            self.etmodule = EvapotranspirationCO2Layered(day, kiosk, parvalues)
+            self.etmodule = EvapotranspirationCO2Layered(day, kiosk, parvalues, shape=shape)
         elif "CO2TRATB" in parvalues:
-            self.etmodule = EvapotranspirationCO2(day, kiosk, parvalues)
+            self.etmodule = EvapotranspirationCO2(day, kiosk, parvalues, shape=shape)
         else:
-            self.etmodule = Evapotranspiration(day, kiosk, parvalues)
+            self.etmodule = Evapotranspiration(day, kiosk, parvalues, shape=shape)
 
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
@@ -115,51 +102,29 @@ class _BaseEvapotranspiration(SimulationObject):
 
     @property
     def device(self):
-        """Get the compute device (CPU or CUDA) from global configuration."""
-        return ComputeConfig.get_device()
+        """Get device from ComputeConfig."""
+        return getattr(self, "_device", ComputeConfig.get_device())
 
     @property
     def dtype(self):
-        """Get the default data type (float32/float64) from global configuration."""
-        return ComputeConfig.get_dtype()
+        """Get dtype from ComputeConfig."""
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
 
-    class RateVariables(RatesTemplate):
-        EVWMX = Any()
-        EVSMX = Any()
-        TRAMX = Any()
-        TRA = Any()
-        TRALY = Any()
+    class RateVariables(TensorRatesTemplate):
+        EVWMX = Tensor(0.0)
+        EVSMX = Tensor(0.0)
+        TRAMX = Tensor(0.0)
+        TRA = Tensor(0.0)
+        TRALY = Tensor(0.0)
         IDOS = Bool(False)
         IDWS = Bool(False)
-        RFWS = Any()
-        RFOS = Any()
-        RFTRA = Any()
+        RFWS = Tensor(0.0)
+        RFOS = Tensor(0.0)
+        RFTRA = Tensor(0.0)
 
-        def __init__(self, kiosk, publish=None):
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            self.EVWMX = torch.tensor(0.0, dtype=dtype, device=device)
-            self.EVSMX = torch.tensor(0.0, dtype=dtype, device=device)
-            self.TRAMX = torch.tensor(0.0, dtype=dtype, device=device)
-            self.TRA = torch.tensor(0.0, dtype=dtype, device=device)
-            self.TRALY = torch.tensor(0.0, dtype=dtype, device=device)
-            self.RFWS = torch.tensor(0.0, dtype=dtype, device=device)
-            self.RFOS = torch.tensor(0.0, dtype=dtype, device=device)
-            self.RFTRA = torch.tensor(0.0, dtype=dtype, device=device)
-            super().__init__(kiosk, publish=publish)
-
-    class StateVariables(StatesTemplate):
-        IDOST = Any()
-        IDWST = Any()
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            if "IDOST" not in kwargs:
-                kwargs["IDOST"] = torch.tensor(0.0, dtype=dtype, device=device)
-            if "IDWST" not in kwargs:
-                kwargs["IDWST"] = torch.tensor(0.0, dtype=dtype, device=device)
-            super().__init__(kiosk, publish=publish, **kwargs)
+    class StateVariables(TensorStatesTemplate):
+        IDOST = Tensor(-99.0)
+        IDWST = Tensor(-99.0)
 
     def _initialize_base(
         self,
@@ -168,6 +133,7 @@ class _BaseEvapotranspiration(SimulationObject):
         parvalues: ParameterProvider,
         *,
         publish_rates: list[str],
+        shape: tuple | None = None,
     ) -> None:
         """Shared initialization for evapotranspiration modules.
 
@@ -176,9 +142,13 @@ class _BaseEvapotranspiration(SimulationObject):
         """
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues)
-        self.params_shape = _get_params_shape(self.params)
-        self.rates = self.RateVariables(kiosk, publish=publish_rates)
-        self.states = self.StateVariables(kiosk, publish=["IDOST", "IDWST"])
+        if shape is None:
+            shape = self.params.shape
+        self.params_shape = shape
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+        self.rates = self.RateVariables(kiosk, publish=publish_rates, shape=shape)
+        self.states = self.StateVariables(kiosk, shape=shape, IDOST=-999, IDWST=-999)
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
 
     def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None):
@@ -207,9 +177,12 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         r = self.rates
         k = self.kiosk
 
+        lai = k["LAI"]
+        sm = k["SM"]
+        # [!] DVS needs to be broadcasted explicetly because it is used
+        # in torch.where and the kiosk does not format it correctly
+        # TODO see #22
         dvs = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
-        lai = _broadcast_to(k["LAI"], self.params_shape, dtype=self.dtype, device=self.device)
-        sm = _broadcast_to(k["SM"], self.params_shape, dtype=self.dtype, device=self.device)
 
         et0 = _get_drv(drv.ET0, self.params_shape, dtype=self.dtype, device=self.device)
         e0 = _get_drv(drv.E0, self.params_shape, dtype=self.dtype, device=self.device)
@@ -218,16 +191,16 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
 
         pre_emergence = dvs < 0.0
         if bool(torch.all(pre_emergence)):
-            zeros = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
-            ones = torch.ones(self.params_shape, dtype=self.dtype, device=self.device)
-            r.EVWMX = zeros
-            r.EVSMX = zeros
-            r.TRAMX = zeros
-            r.TRA = zeros
-            r.TRALY = zeros
-            r.RFWS = ones
-            r.RFOS = ones
-            r.RFTRA = ones
+            _z = torch.zeros_like(et0)
+            _o = torch.ones_like(et0)
+            r.EVWMX = _z
+            r.EVSMX = _z
+            r.TRAMX = _z
+            r.TRA = _z
+            r.TRALY = _z
+            r.RFWS = _o
+            r.RFOS = _o
+            r.RFTRA = _o
             r.IDWS = False
             r.IDOS = False
             return r.TRA, r.TRAMX
@@ -244,23 +217,23 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         smcr = (1.0 - swdep) * (p.SMFCF - p.SMW) + p.SMW
 
         denom = torch.where((smcr - p.SMW).abs() > self._epsilon, (smcr - p.SMW), self._epsilon)
-        r.RFWS = _clamp((sm - p.SMW) / denom, 0.0, 1.0)
+        r.RFWS = torch.clamp((sm - p.SMW) / denom, min=0.0, max=1.0)
 
         # Oxygen-stress reduction factor (RFOS)
-        r.RFOS = torch.ones_like(r.RFWS)
-        iairdu = _broadcast_to(p.IAIRDU, self.params_shape, dtype=self.dtype, device=self.device)
-        iox = _broadcast_to(p.IOX, self.params_shape, dtype=self.dtype, device=self.device)
+        r.RFOS = torch.ones_like(et0)
+        iairdu = p.IAIRDU
+        iox = p.IOX
         mask_ox = (iairdu == 0) & (iox == 1)
 
         if "DSOS" in k:
-            dsos = _broadcast_to(k["DSOS"], self.params_shape, dtype=self.dtype, device=self.device)
+            dsos = k["DSOS"]
         else:
-            dsos = torch.zeros_like(r.RFWS)
+            dsos = torch.zeros_like(dvs)
 
-        crairc = _broadcast_to(p.CRAIRC, self.params_shape, dtype=self.dtype, device=self.device)
-        sm0 = _broadcast_to(p.SM0, self.params_shape, dtype=self.dtype, device=self.device)
+        crairc = p.CRAIRC
+        sm0 = p.SM0
         denom_ox = torch.where(crairc.abs() > self._epsilon, crairc, self._epsilon)
-        rfosmx = _clamp((sm0 - sm) / denom_ox, 0.0, 1.0)
+        rfosmx = torch.clamp((sm0 - sm) / denom_ox, min=0.0, max=1.0)
         rfos = rfosmx + (1.0 - torch.clamp(dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
         r.RFOS = torch.where(mask_ox, rfos, r.RFOS)
 
@@ -269,16 +242,14 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         r.TRALY = r.TRA
 
         if bool(torch.any(pre_emergence)):
-            zeros = torch.zeros_like(r.TRA)
-            ones = torch.ones_like(r.RFTRA)
-            r.EVWMX = torch.where(pre_emergence, zeros, r.EVWMX)
-            r.EVSMX = torch.where(pre_emergence, zeros, r.EVSMX)
-            r.TRAMX = torch.where(pre_emergence, zeros, r.TRAMX)
-            r.TRA = torch.where(pre_emergence, zeros, r.TRA)
-            r.TRALY = torch.where(pre_emergence, zeros, r.TRALY)
-            r.RFWS = torch.where(pre_emergence, ones, r.RFWS)
-            r.RFOS = torch.where(pre_emergence, ones, r.RFOS)
-            r.RFTRA = torch.where(pre_emergence, ones, r.RFTRA)
+            r.EVWMX = torch.where(pre_emergence, 0.0, r.EVWMX)
+            r.EVSMX = torch.where(pre_emergence, 0.0, r.EVSMX)
+            r.TRAMX = torch.where(pre_emergence, 0.0, r.TRAMX)
+            r.TRA = torch.where(pre_emergence, 0.0, r.TRA)
+            r.TRALY = torch.where(pre_emergence, 0.0, r.TRALY)
+            r.RFWS = torch.where(pre_emergence, 1.0, r.RFWS)
+            r.RFOS = torch.where(pre_emergence, 1.0, r.RFOS)
+            r.RFTRA = torch.where(pre_emergence, 1.0, r.RFTRA)
 
         r.IDWS = bool(torch.any(r.RFWS < 1.0))
         r.IDOS = bool(torch.any(r.RFOS < 1.0))
@@ -330,32 +301,23 @@ class Evapotranspiration(_BaseEvapotranspirationNonLayered):
     | SM   | Volumetric soil moisture content  | Waterbalance  | -    |
     """
 
-    class Parameters(ParamTemplate):
-        CFET = Any()
-        DEPNR = Any()
+    class Parameters(TensorParamTemplate):
+        CFET = Tensor(-99.0)
+        DEPNR = Tensor(-99.0)
         KDIFTB = AfgenTrait()
-        IAIRDU = Any()
-        IOX = Any()
-        CRAIRC = Any()
-        SM0 = Any()
-        SMW = Any()
-        SMFCF = Any()
-
-        def __init__(self, parvalues):
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            self.CFET = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.DEPNR = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.IAIRDU = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.IOX = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.CRAIRC = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.SM0 = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.SMW = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.SMFCF = torch.tensor(-99.0, dtype=dtype, device=device)
-            super().__init__(parvalues)
+        IAIRDU = Tensor(-99.0)
+        IOX = Tensor(-99.0)
+        CRAIRC = Tensor(-99.0)
+        SM0 = Tensor(-99.0)
+        SMW = Tensor(-99.0)
+        SMFCF = Tensor(-99.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | None = None,
     ) -> None:
         """Initialize the standard evapotranspiration module (no CO2 effects)."""
         self._initialize_base(
@@ -363,6 +325,7 @@ class Evapotranspiration(_BaseEvapotranspirationNonLayered):
             kiosk,
             parvalues,
             publish_rates=["EVWMX", "EVSMX", "TRAMX", "TRA", "RFTRA"],
+            shape=shape,
         )
 
 
@@ -413,36 +376,25 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
     | SM   | Volumetric soil moisture content  | Waterbalance  | -    |
     """
 
-    class Parameters(ParamTemplate):
-        CFET = Any()
-        DEPNR = Any()
+    class Parameters(TensorParamTemplate):
+        CFET = Tensor(-99.0)
+        DEPNR = Tensor(-99.0)
         KDIFTB = AfgenTrait()
-        IAIRDU = Any()
-        IOX = Any()
-        CRAIRC = Any()
-        SM0 = Any()
-        SMW = Any()
-        SMFCF = Any()
-        CO2 = Any()
+        IAIRDU = Tensor(-99.0)
+        IOX = Tensor(-99.0)
+        CRAIRC = Tensor(-99.0)
+        SM0 = Tensor(-99.0)
+        SMW = Tensor(-99.0)
+        SMFCF = Tensor(-99.0)
+        CO2 = Tensor(-99.0)
         CO2TRATB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            """Initialize CO2-aware parameters with default placeholder values before loading."""
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            self.CFET = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.DEPNR = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.IAIRDU = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.IOX = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.CRAIRC = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.SM0 = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.SMW = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.SMFCF = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.CO2 = torch.tensor(-99.0, dtype=dtype, device=device)
-            super().__init__(parvalues)
-
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | None = None,
     ) -> None:
         """Initialize the CO2-aware evapotranspiration module."""
         self._initialize_base(
@@ -450,6 +402,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
             kiosk,
             parvalues,
             publish_rates=["EVWMX", "EVSMX", "TRAMX", "TRA", "TRALY", "RFTRA"],
+            shape=shape,
         )
 
     def _rf_tramx_co2(self, drv: WeatherDataContainer, et0: torch.Tensor) -> torch.Tensor:
@@ -459,7 +412,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
         if hasattr(drv, "CO2") and drv.CO2 is not None:
             co2 = _get_drv(drv.CO2, self.params_shape, dtype=self.dtype, device=self.device)
         else:
-            co2 = _broadcast_to(p.CO2, self.params_shape, dtype=self.dtype, device=self.device)
+            co2 = p.CO2
         return p.CO2TRATB(co2)
 
 
@@ -515,70 +468,38 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
     soil_profile = Any()
 
-    class Parameters(ParamTemplate):
-        CFET = Any()
-        DEPNR = Any()
+    class Parameters(TensorParamTemplate):
+        CFET = Tensor(-99.0)
+        DEPNR = Tensor(-99.0)
         KDIFTB = AfgenTrait()
-        IAIRDU = Any()
-        IOX = Any()
-        CO2 = Any()
+        IAIRDU = Tensor(-99.0)
+        IOX = Tensor(-99.0)
+        CO2 = Tensor(-99.0)
         CO2TRATB = AfgenTrait()
 
-        def __init__(self, parvalues):
-            """Initialize layered CO2-aware parameters with default placeholder values."""
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            self.CFET = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.DEPNR = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.IAIRDU = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.IOX = torch.tensor(-99.0, dtype=dtype, device=device)
-            self.CO2 = torch.tensor(-99.0, dtype=dtype, device=device)
-            super().__init__(parvalues)
-
-    class RateVariables(RatesTemplate):
-        EVWMX = Any()
-        EVSMX = Any()
-        TRAMX = Any()
-        TRA = Any()
-        TRALY = Any()
+    class RateVariables(TensorRatesTemplate):
+        EVWMX = Tensor(0)
+        EVSMX = Tensor(0)
+        TRAMX = Tensor(0)
+        TRA = Tensor(0)
+        TRALY = Tensor(0)
         IDOS = Bool(False)
         IDWS = Bool(False)
-        RFWS = Any()
-        RFOS = Any()
-        RFTRALY = Any()
-        RFTRA = Any()
+        RFWS = Tensor(0)
+        RFOS = Tensor(0)
+        RFTRALY = Tensor(0)
+        RFTRA = Tensor(0)
 
-        def __init__(self, kiosk, publish=None):
-            """Initialize rate variables including per-layer transpiration and stress factors."""
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            self.EVWMX = torch.tensor(0.0, dtype=dtype, device=device)
-            self.EVSMX = torch.tensor(0.0, dtype=dtype, device=device)
-            self.TRAMX = torch.tensor(0.0, dtype=dtype, device=device)
-            self.TRA = torch.tensor(0.0, dtype=dtype, device=device)
-            self.TRALY = torch.tensor(0.0, dtype=dtype, device=device)
-            self.RFWS = torch.tensor(0.0, dtype=dtype, device=device)
-            self.RFOS = torch.tensor(0.0, dtype=dtype, device=device)
-            self.RFTRALY = torch.tensor(0.0, dtype=dtype, device=device)
-            self.RFTRA = torch.tensor(0.0, dtype=dtype, device=device)
-            super().__init__(kiosk, publish=publish)
-
-    class StateVariables(StatesTemplate):
-        IDOST = Any()
-        IDWST = Any()
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            """Initialize state variables for layered stress-day counters."""
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-            if "IDOST" not in kwargs:
-                kwargs["IDOST"] = torch.tensor(0.0, dtype=dtype, device=device)
-            if "IDWST" not in kwargs:
-                kwargs["IDWST"] = torch.tensor(0.0, dtype=dtype, device=device)
-            super().__init__(kiosk, publish=publish, **kwargs)
+    class StateVariables(TensorStatesTemplate):
+        IDOST = Tensor(-99.0)
+        IDWST = Tensor(-99.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | None = None,
     ) -> None:
         """Initialize the layered-soil CO2-aware evapotranspiration module.
 
@@ -590,7 +511,31 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             kiosk,
             parvalues,
             publish_rates=["EVWMX", "EVSMX", "TRAMX", "TRA", "TRALY", "RFTRA"],
+            shape=shape,
         )
+
+        # Pre-stack layer soil properties as tensors (avoids repeated
+        # torch.as_tensor conversions on every calc_rates call).
+        n_layers = len(self.soil_profile)
+        self._n_layers = n_layers
+        self._layer_smw = torch.tensor(
+            [layer.SMW for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        )
+        self._layer_smfcf = torch.tensor(
+            [layer.SMFCF for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        )
+        self._layer_sm0 = torch.tensor(
+            [layer.SM0 for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        )
+        self._layer_crairc = torch.tensor(
+            [layer.CRAIRC for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        )
+        thicknesses = torch.tensor(
+            [layer.Thickness for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        )
+        self._layer_depth_hi = torch.cumsum(thicknesses, dim=0)
+        self._layer_depth_lo = self._layer_depth_hi - thicknesses
+
         # Internal DSOS tracker for layered oxygen-stress response (vectorized).
         self._dsos = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
 
@@ -600,7 +545,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         if hasattr(drv, "CO2") and drv.CO2 is not None:
             co2 = _get_drv(drv.CO2, self.params_shape, dtype=self.dtype, device=self.device)
         else:
-            co2 = _broadcast_to(p.CO2, self.params_shape, dtype=self.dtype, device=self.device)
+            co2 = p.CO2
         return p.CO2TRATB(co2)
 
     @prepare_rates
@@ -614,12 +559,12 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         r = self.rates
         k = self.kiosk
 
-        dvs = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
-        lai = _broadcast_to(k["LAI"], self.params_shape, dtype=self.dtype, device=self.device)
-        rd = _broadcast_to(k["RD"], self.params_shape, dtype=self.dtype, device=self.device)
+        dvs = k["DVS"]
+        lai = k["LAI"]
+        rd = k["RD"]
 
         pre_emergence = dvs < 0.0
-        n_layers = len(self.soil_profile)
+        n_layers = self._n_layers
 
         et0 = _get_drv(drv.ET0, self.params_shape, dtype=self.dtype, device=self.device)
         e0 = _get_drv(drv.E0, self.params_shape, dtype=self.dtype, device=self.device)
@@ -628,22 +573,17 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
         if bool(torch.all(pre_emergence)):
-            zeros = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
-            ones = torch.ones(self.params_shape, dtype=self.dtype, device=self.device)
-            r.EVWMX = zeros
-            r.EVSMX = zeros
-            r.TRAMX = zeros
-            r.TRA = zeros
-            r.TRALY = torch.zeros(
-                (n_layers,) + self.params_shape, dtype=self.dtype, device=self.device
-            )
-            r.RFWS = torch.ones(
-                (n_layers,) + self.params_shape, dtype=self.dtype, device=self.device
-            )
-            r.RFOS = torch.ones(
-                (n_layers,) + self.params_shape, dtype=self.dtype, device=self.device
-            )
-            r.RFTRA = ones
+            _z = torch.zeros_like(et0)
+            _o = torch.ones_like(et0)
+            _layered_shape = (n_layers,) + self.params_shape
+            r.EVWMX = _z
+            r.EVSMX = _z
+            r.TRAMX = _z
+            r.TRA = _z
+            r.TRALY = torch.zeros(_layered_shape, dtype=self.dtype, device=self.device)
+            r.RFWS = torch.ones(_layered_shape, dtype=self.dtype, device=self.device)
+            r.RFOS = torch.ones(_layered_shape, dtype=self.dtype, device=self.device)
+            r.RFTRA = _o
             r.IDWS = False
             r.IDOS = False
             return r.TRA, r.TRAMX
@@ -701,80 +641,63 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
                 + f"{n_layers}, got {sm_layers_t.shape[0]}."
             )
 
-        rfws_list = []
-        rfos_list = []
-        traly_list = []
+        # Reshape pre-stacked layer properties for broadcasting against
+        # (n_layers, *params_shape) tensors: (n_layers,) → (n_layers, 1, 1, ...)
+        ndim = len(self.params_shape)
+        expand = (-1,) + (1,) * ndim
+        layer_smw = self._layer_smw.view(expand)
+        layer_smfcf = self._layer_smfcf.view(expand)
+        depth_lo = self._layer_depth_lo.view(expand)
+        depth_hi = self._layer_depth_hi.view(expand)
 
-        depth = 0.0
-        for i, layer in enumerate(self.soil_profile):
-            sm_i = _broadcast_to(
-                sm_layers_t[i], self.params_shape, dtype=self.dtype, device=self.device
-            )
-            layer_smw = _as_tensor(layer.SMW, dtype=self.dtype, device=self.device)
-            layer_smfcf = _as_tensor(layer.SMFCF, dtype=self.dtype, device=self.device)
+        # Vectorised RFWS across all layers: (n_layers, *params_shape)
+        smcr = (1.0 - swdep) * (layer_smfcf - layer_smw) + layer_smw
+        denom = torch.where(
+            (smcr - layer_smw).abs() > self._epsilon, smcr - layer_smw, self._epsilon
+        )
+        r.RFWS = torch.clamp((sm_layers_t - layer_smw) / denom, min=0.0, max=1.0)
 
-            smcr = (1.0 - swdep) * (layer_smfcf - layer_smw) + layer_smw
-            denom = torch.where(
-                (smcr - layer_smw).abs() > self._epsilon, (smcr - layer_smw), self._epsilon
-            )
-            rfws_i = _clamp((sm_i - layer_smw) / denom, 0.0, 1.0)
+        # Vectorised root fraction across all layers: (n_layers, *params_shape)
+        root_len = torch.clamp(torch.minimum(rd, depth_hi) - depth_lo, min=0.0)
+        root_fraction = torch.where(rd > self._epsilon, root_len / rd, 0.0)
 
-            rfos_i = torch.ones_like(rfws_i)
-            iairdu = _broadcast_to(
-                p.IAIRDU, self.params_shape, dtype=self.dtype, device=self.device
-            )
-            iox = _broadcast_to(p.IOX, self.params_shape, dtype=self.dtype, device=self.device)
-            if bool(torch.any((iairdu == 0) & (iox == 1))):
-                layer_sm0 = _as_tensor(layer.SM0, dtype=self.dtype, device=self.device)
-                layer_crairc = _as_tensor(layer.CRAIRC, dtype=self.dtype, device=self.device)
-                smair = layer_sm0 - layer_crairc
+        # Oxygen-stress reduction factor (sequential across layers due to
+        # temporal _dsos accumulator that feeds forward between layers).
+        r.RFOS = torch.ones_like(r.RFWS)
+        mask_ox = (p.IAIRDU == 0) & (p.IOX == 1)
+        if bool(torch.any(mask_ox)):
+            layer_sm0 = self._layer_sm0.view(expand)
+            layer_crairc = self._layer_crairc.view(expand)
+            for i in range(n_layers):
+                smair = layer_sm0[i] - layer_crairc[i]
                 self._dsos = torch.where(
-                    sm_i >= smair,
+                    sm_layers_t[i] >= smair,
                     torch.clamp(self._dsos + 1.0, max=4.0),
-                    torch.zeros_like(self._dsos),
+                    0.0,
                 )
                 denom_ox = torch.where(
-                    layer_crairc.abs() > self._epsilon, layer_crairc, self._epsilon
+                    layer_crairc[i].abs() > self._epsilon, layer_crairc[i], self._epsilon
                 )
-                rfosmx = _clamp((layer_sm0 - sm_i) / denom_ox, 0.0, 1.0)
-                rfos_i = rfosmx + (1.0 - torch.clamp(self._dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
+                rfosmx = torch.clamp((layer_sm0[i] - sm_layers_t[i]) / denom_ox, min=0.0, max=1.0)
+                r.RFOS[i] = rfosmx + (1.0 - torch.clamp(self._dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
 
-            thickness = float(layer.Thickness)
-            depth_lo = _as_tensor(depth, dtype=self.dtype, device=self.device)
-            depth_hi = _as_tensor(depth + thickness, dtype=self.dtype, device=self.device)
-            root_len = torch.clamp(torch.minimum(rd, depth_hi) - depth_lo, min=0.0)
-            root_fraction = torch.where(
-                rd > self._epsilon, root_len / rd, torch.zeros_like(root_len)
-            )
-            rftra_i = rfos_i * rfws_i
-            traly_i = r.TRAMX * rftra_i * root_fraction
-
-            rfws_list.append(rfws_i)
-            rfos_list.append(rfos_i)
-            traly_list.append(traly_i)
-            depth += thickness
-
-        r.RFWS = torch.stack(rfws_list, dim=0)
-        r.RFOS = torch.stack(rfos_list, dim=0)
-        r.TRALY = torch.stack(traly_list, dim=0)
+        # Transpiration per layer
+        rftra = r.RFOS * r.RFWS
+        r.TRALY = r.TRAMX * rftra * root_fraction
         r.TRA = r.TRALY.sum(dim=0)
-        r.RFTRA = torch.where(r.TRAMX > self._epsilon, r.TRA / r.TRAMX, torch.ones_like(r.TRA))
+        r.RFTRA = torch.where(r.TRAMX > self._epsilon, r.TRA / r.TRAMX, 1.0)
 
         if bool(torch.any(pre_emergence)):
-            zeros = torch.zeros_like(r.TRA)
-            ones = torch.ones_like(r.RFTRA)
-            r.EVWMX = torch.where(pre_emergence, zeros, r.EVWMX)
-            r.EVSMX = torch.where(pre_emergence, zeros, r.EVSMX)
-            r.TRAMX = torch.where(pre_emergence, zeros, r.TRAMX)
-            r.TRA = torch.where(pre_emergence, zeros, r.TRA)
-            r.RFTRA = torch.where(pre_emergence, ones, r.RFTRA)
+            r.EVWMX = torch.where(pre_emergence, 0.0, r.EVWMX)
+            r.EVSMX = torch.where(pre_emergence, 0.0, r.EVSMX)
+            r.TRAMX = torch.where(pre_emergence, 0.0, r.TRAMX)
+            r.TRA = torch.where(pre_emergence, 0.0, r.TRA)
+            r.RFTRA = torch.where(pre_emergence, 1.0, r.RFTRA)
 
             pre_layers = pre_emergence.unsqueeze(0).expand_as(r.RFWS)
-            ones_layers = torch.ones_like(r.RFWS)
-            zeros_layers = torch.zeros_like(r.TRALY)
-            r.RFWS = torch.where(pre_layers, ones_layers, r.RFWS)
-            r.RFOS = torch.where(pre_layers, ones_layers, r.RFOS)
-            r.TRALY = torch.where(pre_layers, zeros_layers, r.TRALY)
+            r.RFWS = torch.where(pre_layers, 1.0, r.RFWS)
+            r.RFOS = torch.where(pre_layers, 1.0, r.RFOS)
+            r.TRALY = torch.where(pre_layers, 0.0, r.TRALY)
 
         r.IDWS = bool(torch.any(r.RFWS < 1.0))
         r.IDOS = bool(torch.any(r.RFOS < 1.0))
