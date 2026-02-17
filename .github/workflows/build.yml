@@ -30,7 +30,7 @@ jobs:
       - name: Run unit tests
         run: |
           python -c "import pcse" 
-          pytest -v -n 8
+          pytest -v -n auto
       - name: Verify that we can build the package
         run: python -m build
   lint:
