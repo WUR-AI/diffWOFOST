@@ -514,8 +514,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             shape=shape,
         )
 
-        # Pre-stack layer soil properties as tensors (avoids repeated
-        # torch.as_tensor conversions on every calc_rates call).
+        # Pre-stack layer soil properties as tensors
         n_layers = len(self.soil_profile)
         self._n_layers = n_layers
         self._layer_smw = torch.tensor(
@@ -536,7 +535,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         self._layer_depth_hi = torch.cumsum(thicknesses, dim=0)
         self._layer_depth_lo = self._layer_depth_hi - thicknesses
 
-        # Internal DSOS tracker for layered oxygen-stress response (vectorized).
+        # Internal DSOS tracker for layered oxygen-stress response
         self._dsos = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
 
     def _rf_tramx_co2(self, drv: WeatherDataContainer, et0: torch.Tensor) -> torch.Tensor:
