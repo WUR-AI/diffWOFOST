@@ -28,7 +28,9 @@ jobs:
           python -m pip install build
           python -m pip install .[dev]
       - name: Run unit tests
-        run: pytest -v -n auto
+        run: |
+          python -c "import pcse" 
+          pytest -v -n auto
       - name: Verify that we can build the package
         run: python -m build
   lint:
@@ -40,6 +42,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
@@ -57,6 +60,7 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: 'pip'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
