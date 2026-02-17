@@ -19,6 +19,8 @@ hide:
 
 ::: diffwofost.physical_models.crop.respiration.WOFOST_Maintenance_Respiration
 
+::: diffwofost.physical_models.crop.evapotranspiration.Evapotranspiration
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration

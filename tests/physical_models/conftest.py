@@ -14,6 +14,7 @@ model_names = [
     "phenology",
     "partitioning",
     "assimilation",
+    "transpiration",
     "respiration",
 ]
 FILE_NAMES = [
