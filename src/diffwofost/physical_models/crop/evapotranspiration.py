@@ -499,6 +499,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
     | EVSMX | Max evaporation rate from wet soil surface          | Y   | cm day⁻¹  |
     | TRAMX | Max transpiration rate from canopy (CO2-adjusted)   | Y   | cm day⁻¹  |
     | TRA   | Actual canopy transpiration (sum over layers)       | Y   | cm day⁻¹  |
+    | IDOS  | Indicates oxygen stress on this day (True|False)    | N   | -         |
+    | IDWS  | Indicates water stress on this day (True|False)     | N   | -         |
     | TRALY | Transpiration per soil layer                        | Y   | cm day⁻¹  |
     | RFWS  | Water-stress reduction per layer                    | N   | -         |
     | RFOS  | Oxygen-stress reduction per layer                   | N   | -         |
