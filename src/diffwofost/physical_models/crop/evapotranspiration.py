@@ -291,6 +291,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
             r.RFOS = torch.where(pre_emergence, 1.0, r.RFOS)
             r.RFTRA = torch.where(pre_emergence, 1.0, r.RFTRA)
 
+        # Counting stress days
         r.IDWS = bool(torch.any(r.RFWS < 1.0))
         r.IDOS = bool(torch.any(r.RFOS < 1.0))
         return r.TRA, r.TRAMX
