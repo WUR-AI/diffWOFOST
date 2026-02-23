@@ -272,6 +272,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         sm0 = p.SM0
         denom_ox = torch.where(crairc.abs() > self._epsilon, crairc, self._epsilon)
         rfosmx = torch.clamp((sm0 - sm) / denom_ox, min=0.0, max=1.0)
+        # maximum reduction reached after 4 days
         rfos = rfosmx + (1.0 - torch.clamp(dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
         r.RFOS = torch.where(mask_ox, rfos, r.RFOS)
 
