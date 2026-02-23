@@ -339,6 +339,28 @@ class Evapotranspiration(_BaseEvapotranspirationNonLayered):
     | DVS  | Crop development stage            | Phenology     | -    |
     | LAI  | Leaf area index                   | Leaf dynamics | -    |
     | SM   | Volumetric soil moisture content  | Waterbalance  | -    |
+
+
+    **Outputs**
+
+    | Name  | Description                                         | Pbl | Unit      |
+    |-------|-----------------------------------------------------|-----|-----------|
+    | TRA   | Actual transpiration rate from canopy               | Y   | cm day⁻¹  |
+    | TRAMX | Max transpiration rate from canopy                  | Y   | cm day⁻¹  |
+    | EVWMX | Max evaporation rate from open water surface        | Y   | cm day⁻¹  |
+    | EVSMX | Max evaporation rate from wet soil surface          | Y   | cm day⁻¹  |
+    | RFTRA | Combined reduction factor for transpiration         | Y   | -         |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                          |
+    |--------|----------------------------------------------------|
+    | EVWMX  | KDIFTB                                             |
+    | EVSMX  | KDIFTB                                             |
+    | TRAMX  | CFET, KDIFTB                                       |
+    | TRA    | CFET, KDIFTB, DEPNR, SMFCF, SMW, CRAIRC, SM0      |
+    | RFTRA  | CFET, DEPNR, SMFCF, SMW, CRAIRC, SM0               |
+
     """
 
     class Parameters(TensorParamTemplate):

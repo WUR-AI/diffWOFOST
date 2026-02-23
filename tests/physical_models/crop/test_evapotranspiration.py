@@ -21,7 +21,7 @@ from .. import phy_data_folder
 
 evapotranspiration_config = Configuration(
     CROP=EvapotranspirationWrapper,
-    OUTPUT_VARS=["EVSMX", "EVWMX", "TRAMX", "TRA"],
+    OUTPUT_VARS=["EVSMX", "EVWMX", "TRAMX", "TRA", "RFTRA"],
 )
 
 
@@ -141,7 +141,7 @@ class DiffEvapotranspiration(torch.nn.Module):
         results = engine.get_output()
         return {
             var: torch.stack([item[var] for item in results])
-            for var in ["EVSMX", "EVWMX", "TRAMX", "TRA"]
+            for var in ["EVSMX", "EVWMX", "TRAMX", "TRA", "RFTRA"]
         }
 
 
@@ -681,14 +681,18 @@ class TestEvapotranspirationVariants:
 
 
 class TestDiffEvapotranspirationGradients:
-    param_names = ["CFET", "DEPNR", "KDIFTB"]
-    output_names = ["EVWMX", "EVSMX", "TRAMX", "TRA"]
+    param_names = ["CFET", "DEPNR", "KDIFTB", "SMW", "SMFCF", "SM0", "CRAIRC"]
+    output_names = ["EVWMX", "EVSMX", "TRAMX", "TRA", "RFTRA"]
 
     param_configs = {
         "single": {
             "CFET": (1.0, torch.float64),
             "DEPNR": (2.0, torch.float64),
             "KDIFTB": ([[0.0, 0.69, 2.0, 0.69]], torch.float64),
+            "SMW": (0.15, torch.float64),
+            "SMFCF": (0.29, torch.float64),
+            "SM0": (0.40, torch.float64),
+            "CRAIRC": (0.06, torch.float64),
         },
         "tensor": {
             "CFET": ([0.8, 1.0, 1.2], torch.float64),
@@ -697,13 +701,21 @@ class TestDiffEvapotranspirationGradients:
                 [[0.0, 0.60, 2.0, 0.60], [0.0, 0.69, 2.0, 0.69], [0.0, 0.78, 2.0, 0.78]],
                 torch.float64,
             ),
+            "SMW": ([0.12, 0.15, 0.18], torch.float64),
+            "SMFCF": ([0.26, 0.29, 0.32], torch.float64),
+            "SM0": ([0.37, 0.40, 0.43], torch.float64),
+            "CRAIRC": ([0.04, 0.06, 0.08], torch.float64),
         },
     }
 
     gradient_mapping = {
-        "CFET": ["TRAMX", "TRA"],
-        "DEPNR": ["TRA"],
+        "CFET": ["TRAMX", "TRA", "RFTRA"],
+        "DEPNR": ["TRA", "RFTRA"],
         "KDIFTB": ["EVWMX", "EVSMX", "TRAMX", "TRA"],
+        "SMW": ["TRA", "RFTRA"],
+        "SMFCF": ["TRA", "RFTRA"],
+        "SM0": ["TRA", "RFTRA"],
+        "CRAIRC": ["TRA", "RFTRA"],
     }
 
     gradient_params = []
