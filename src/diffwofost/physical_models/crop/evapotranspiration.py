@@ -252,6 +252,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         swdep = SWEAF(et0_crop, p.DEPNR)
         smcr = (1.0 - swdep) * (p.SMFCF - p.SMW) + p.SMW
 
+        # Reduction factor for transpiration in case of water shortage (RFWS)
         denom = torch.where((smcr - p.SMW).abs() > self._epsilon, (smcr - p.SMW), self._epsilon)
         r.RFWS = torch.clamp((sm - p.SMW) / denom, min=0.0, max=1.0)
 
