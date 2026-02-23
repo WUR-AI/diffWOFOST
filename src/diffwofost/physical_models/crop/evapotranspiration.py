@@ -355,7 +355,18 @@ class Evapotranspiration(_BaseEvapotranspirationNonLayered):
         parvalues: ParameterProvider,
         shape: tuple | None = None,
     ) -> None:
-        """Initialize the standard evapotranspiration module (no CO2 effects)."""
+        """Initialize the standard evapotranspiration module (no CO2 effects).
+
+        Args:
+            day (datetime.date): The starting date of the simulation.
+            kiosk (VariableKiosk): A container for registering and publishing
+                (internal and external) state variables. See PCSE documentation for
+                details.
+            parvalues (ParameterProvider): A dictionary-like container holding
+                all parameter sets (crop, soil, site) as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
+        """
         self._initialize_base(
             day,
             kiosk,
