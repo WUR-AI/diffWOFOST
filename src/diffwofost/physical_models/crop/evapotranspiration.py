@@ -322,6 +322,8 @@ class Evapotranspiration(_BaseEvapotranspirationNonLayered):
     | EVSMX | Max evaporation rate from wet soil surface          | Y   | cm day⁻¹  |
     | TRAMX | Max transpiration rate from canopy                  | Y   | cm day⁻¹  |
     | TRA   | Actual transpiration rate from canopy               | Y   | cm day⁻¹  |
+    | IDOS  | Indicates oxygen stress on this day (True|False)    | N   | -         |
+    | IDWS  | Indicates water stress on this day (True|False)     | N   | -         |
     | RFWS  | Reduction factor for water stress                   | N   | -         |
     | RFOS  | Reduction factor for oxygen stress                  | N   | -         |
     | RFTRA | Combined reduction factor for transpiration         | Y   | -         |
