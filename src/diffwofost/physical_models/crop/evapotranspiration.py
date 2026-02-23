@@ -103,7 +103,14 @@ class EvapotranspirationWrapper(SimulationObject):
 
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
-        """Delegate rate calculation to the selected evapotranspiration module."""
+        """Delegate rate calculation to the selected evapotranspiration module.
+
+        Args:
+            day (datetime.date, optional): The current date of the simulation.
+            drv (WeatherDataContainer, optional): A dictionary-like container holding
+                weather data elements as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+        """
         return self.etmodule.calc_rates(day, drv)
 
     def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None):
