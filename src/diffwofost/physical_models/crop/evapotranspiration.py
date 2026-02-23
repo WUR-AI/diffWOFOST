@@ -256,7 +256,8 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         denom = torch.where((smcr - p.SMW).abs() > self._epsilon, (smcr - p.SMW), self._epsilon)
         r.RFWS = torch.clamp((sm - p.SMW) / denom, min=0.0, max=1.0)
 
-        # Oxygen-stress reduction factor (RFOS)
+        # reduction in transpiration in case of oxygen shortage (RFOS)
+        # for non-rice crops, and possibly deficient land drainage
         r.RFOS = torch.ones_like(et0)
         iairdu = p.IAIRDU
         iox = p.IOX
