@@ -248,6 +248,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         r.EVSMX = torch.clamp(es0 * ekl, min=0.0)
         r.TRAMX = et0_crop * (1.0 - ekl) * rf_tramx_co2
 
+       # Critical soil moisture
         swdep = SWEAF(et0_crop, p.DEPNR)
         smcr = (1.0 - swdep) * (p.SMFCF - p.SMW) + p.SMW
 
