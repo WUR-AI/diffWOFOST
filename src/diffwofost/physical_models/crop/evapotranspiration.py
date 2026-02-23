@@ -665,6 +665,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
         # crop specific correction on potential transpiration rate
         et0_crop = torch.clamp(p.CFET * et0, min=0.0)
+        # maximum evaporation and transpiration rates
         kglob = 0.75 * p.KDIFTB(dvs)
         ekl = torch.exp(-kglob * lai)
         r.EVWMX = e0 * ekl
