@@ -663,6 +663,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             r.IDOS = False
             return r.TRA, r.TRAMX
 
+        # crop specific correction on potential transpiration rate
         et0_crop = torch.clamp(p.CFET * et0, min=0.0)
         kglob = 0.75 * p.KDIFTB(dvs)
         ekl = torch.exp(-kglob * lai)
