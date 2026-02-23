@@ -225,21 +225,9 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         es0 = _get_drv(drv.ES0, self.params_shape, dtype=self.dtype, device=self.device)
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
-        pre_emergence = dvs < 0.0
-        if bool(torch.all(pre_emergence)):
-            _z = torch.zeros_like(et0)
-            _o = torch.ones_like(et0)
-            r.EVWMX = _z
-            r.EVSMX = _z
-            r.TRAMX = _z
-            r.TRA = _z
-            r.TRALY = _z
-            r.RFWS = _o
-            r.RFOS = _o
-            r.RFTRA = _o
-            r.IDWS = False
-            r.IDOS = False
-            return r.TRA, r.TRAMX
+        # If DVS < 0, the crop has not yet emerged, so we zero the rates using a mask
+        # A mask (1 if DVS >= 0, 0 if DVS < 0)
+        dvs_mask = (dvs >= 0.0).to(dtype=self.dtype)
 
         kglob = 0.75 * p.KDIFTB(dvs)
         # crop specific correction on potential transpiration rate
@@ -247,9 +235,9 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         # maximum evaporation and transpiration rates
         ekl = torch.exp(-kglob * lai)
 
-        r.EVWMX = e0 * ekl
-        r.EVSMX = torch.clamp(es0 * ekl, min=0.0)
-        r.TRAMX = et0_crop * (1.0 - ekl) * rf_tramx_co2
+        r.EVWMX = dvs_mask * e0 * ekl
+        r.EVSMX = dvs_mask * torch.clamp(es0 * ekl, min=0.0)
+        r.TRAMX = dvs_mask * et0_crop * (1.0 - ekl) * rf_tramx_co2
 
         # Critical soil moisture
         swdep = SWEAF(et0_crop, p.DEPNR)
@@ -257,7 +245,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
 
         # Reduction factor for transpiration in case of water shortage (RFWS)
         denom = torch.where((smcr - p.SMW).abs() > self._epsilon, (smcr - p.SMW), self._epsilon)
-        r.RFWS = torch.clamp((sm - p.SMW) / denom, min=0.0, max=1.0)
+        r.RFWS = dvs_mask * torch.clamp((sm - p.SMW) / denom, min=0.0, max=1.0) + (1.0 - dvs_mask)
 
         # reduction in transpiration in case of oxygen shortage (RFOS)
         # for non-rice crops, and possibly deficient land drainage
@@ -278,21 +266,13 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         # maximum reduction reached after 4 days
         rfos = rfosmx + (1.0 - torch.clamp(dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
         r.RFOS = torch.where(mask_ox, rfos, r.RFOS)
+        # Pre-emergence: RFOS = 1.0
+        r.RFOS = dvs_mask * r.RFOS + (1.0 - dvs_mask)
 
         # Transpiration rate multiplied with reduction factors for oxygen and water
         r.RFTRA = r.RFOS * r.RFWS
         r.TRA = r.TRAMX * r.RFTRA
         r.TRALY = r.TRA
-
-        if bool(torch.any(pre_emergence)):
-            r.EVWMX = torch.where(pre_emergence, 0.0, r.EVWMX)
-            r.EVSMX = torch.where(pre_emergence, 0.0, r.EVSMX)
-            r.TRAMX = torch.where(pre_emergence, 0.0, r.TRAMX)
-            r.TRA = torch.where(pre_emergence, 0.0, r.TRA)
-            r.TRALY = torch.where(pre_emergence, 0.0, r.TRALY)
-            r.RFWS = torch.where(pre_emergence, 1.0, r.RFWS)
-            r.RFOS = torch.where(pre_emergence, 1.0, r.RFOS)
-            r.RFTRA = torch.where(pre_emergence, 1.0, r.RFTRA)
 
         # Counting stress days
         r.IDWS = bool(torch.any(r.RFWS < 1.0))

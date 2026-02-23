@@ -692,7 +692,7 @@ class TestDiffEvapotranspirationGradients:
         },
         "tensor": {
             "CFET": ([0.8, 1.0, 1.2], torch.float64),
-            "DEPNR": ([1.0, 2.0, 3.0], torch.float64),
+            "DEPNR": ([1.0, 2.0, 4.0], torch.float64),
             "KDIFTB": (
                 [[0.0, 0.60, 2.0, 0.60], [0.0, 0.69, 2.0, 0.69], [0.0, 0.78, 2.0, 0.78]],
                 torch.float64,
