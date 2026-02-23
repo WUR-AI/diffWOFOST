@@ -33,6 +33,7 @@ def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
     Args:
         ET0: The evapotranpiration from a reference crop.
         DEPNR: The crop dependency number.
+
     Returns:
         SWEAF value between 0.10 and 0.95.
     """
@@ -41,23 +42,25 @@ def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
     sweaf = 1.0 / (A + B * ET0) - (5.0 - DEPNR) * 0.10
     correction = (ET0 - 0.6) / (DEPNR * (DEPNR + 3.0))
     # NOTE: PCSE applies `correction` only when `DEPNR < 3` (hard switch), which
-    # is non-differentiable at `DEPNR==3` and causes numerical vs autograd
-    # gradient mismatches when treating DEPNR as a continuous tensor.
+    # is non-differentiable at `DEPNR==3`.
     #
-    # To keep regression behaviour intact we preserve exact values at the
-    # discrete DEPNR values used in the YAML fixtures (2.0/3.0/3.5/4.5):
-    # - DEPNR <= 2: full correction
-    # - DEPNR >= 3: no correction
-    # and smoothly transition (C1) between 2 and 3 using a cubic smoothstep.
-    t = DEPNR - 2.0
-    s = 3.0 * t**2 - 2.0 * t**3  # smoothstep on [0,1]
-    taper_mid = 1.0 - s
-    taper = torch.where(
-        DEPNR <= 2.0,
-        torch.ones_like(DEPNR),
-        torch.where(DEPNR >= 3.0, torch.zeros_like(DEPNR), taper_mid),
-    )
-    sweaf = sweaf + correction * taper
+    # We use a Straight-Through Estimator (STE): the forward pass applies the
+    # exact hard switch (identical to PCSE), while the backward pass routes
+    # gradients through a smooth sigmoid surrogate so that autograd works.
+    # TODO: sharpness can be exposed as a parameter
+    _sigmoid_sharpness = 1000.0
+    _sigmoid_epsilon = 1e-14
+
+    # soft mask using sigmoid
+    soft_mask = torch.sigmoid((3.0 - DEPNR - _sigmoid_epsilon) / _sigmoid_sharpness)
+
+    # original hard mask
+    hard_mask = (DEPNR < 3.0).to(dtype=DEPNR.dtype)
+
+    # STE method: during forward pass the hard_mask is used, during
+    # backpropagation the gradient is computed only through soft_mask.
+    correction_mask = hard_mask.detach() + soft_mask - soft_mask.detach()
+    sweaf = sweaf + correction * correction_mask
     return torch.clamp(sweaf, min=0.10, max=0.95)
 
 
@@ -96,7 +99,7 @@ class EvapotranspirationWrapper(SimulationObject):
         """
         if "soil_profile" in parvalues:
             self.etmodule = EvapotranspirationCO2Layered(day, kiosk, parvalues, shape=shape)
-        elif "CO2TRATB" in parvalues:
+        elif "CO2" in parvalues and "CO2TRATB" in parvalues:
             self.etmodule = EvapotranspirationCO2(day, kiosk, parvalues, shape=shape)
         else:
             self.etmodule = Evapotranspiration(day, kiosk, parvalues, shape=shape)
@@ -248,7 +251,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         r.EVSMX = torch.clamp(es0 * ekl, min=0.0)
         r.TRAMX = et0_crop * (1.0 - ekl) * rf_tramx_co2
 
-       # Critical soil moisture
+        # Critical soil moisture
         swdep = SWEAF(et0_crop, p.DEPNR)
         smcr = (1.0 - swdep) * (p.SMFCF - p.SMW) + p.SMW
 
@@ -298,8 +301,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
 
 
 class Evapotranspiration(_BaseEvapotranspirationNonLayered):
-    """Calculation of potential evaporation (water and soil) rates and actual
-    crop transpiration rate.
+    """Potential evaporation (water and soil) rates and crop transpiration rate.
 
     **Simulation parameters**
 
@@ -392,7 +394,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
     | Name     | Description                                            | Type | Unit |
     |----------|--------------------------------------------------------|------|------|
     | CFET     | Correction factor for potential transpiration rate      | SCr  | -    |
-    | DEPNR    | Dependency number for crop sensitivity to soil moisture stress.      | SCr  | -    |
+    | DEPNR    | Dependency number for crop sensitivity to soil moisture stress | SCr  | -    |
     | KDIFTB   | Extinction coefficient for diffuse visible light vs DVS | TCr  | -    |
     | IAIRDU   | Switch airducts on (1) or off (0)                       | SCr  | -    |
     | IOX      | Switch oxygen stress on (1) or off (0)                  | SCr  | -    |
@@ -417,7 +419,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
     | EVWMX | Max evaporation rate from open water surface        | Y   | cm day⁻¹  |
     | EVSMX | Max evaporation rate from wet soil surface          | Y   | cm day⁻¹  |
     | TRAMX | Max transpiration rate from canopy (CO2-adjusted)   | Y   | cm day⁻¹  |
-    | TRA   | Actual transpiration rate from canopy               | Y   | cm day⁻¹  |              | Y   | cm day⁻¹  |
+    | TRA   | Actual transpiration rate from canopy               | Y   | cm day⁻¹  |
     | IDOS  | Indicates oxygen stress on this day (True|False)    | N   | -         |
     | IDWS  | Indicates water stress on this day (True|False)     | N   | -         |
     | RFWS  | Reduction factor for water stress                   | N   | -         |
@@ -454,6 +456,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
         shape: tuple | None = None,
     ) -> None:
         """Initialize the CO2-aware evapotranspiration module.
+
         Args:
             day (datetime.date): The starting date of the simulation.
             kiosk (VariableKiosk): A container for registering and publishing
