@@ -570,6 +570,15 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         """Initialize the layered-soil CO2-aware evapotranspiration module.
 
         Sets up layer-specific soil parameters and internal oxygen stress tracking.
+        Args:
+            day (datetime.date): The starting date of the simulation.
+            kiosk (VariableKiosk): A container for registering and publishing
+                (internal and external) state variables. See PCSE documentation for
+                details.
+            parvalues (ParameterProvider): A dictionary-like container holding
+                all parameter sets (crop, soil, site) as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.        
         """
         self.soil_profile = parvalues["soil_profile"]
         self._initialize_base(
