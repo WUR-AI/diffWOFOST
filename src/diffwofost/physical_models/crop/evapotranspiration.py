@@ -151,7 +151,6 @@ class _BaseEvapotranspiration(SimulationObject):
         EVSMX = Tensor(0.0)
         TRAMX = Tensor(0.0)
         TRA = Tensor(0.0)
-        TRALY = Tensor(0.0)
         IDOS = Bool(False)
         IDWS = Bool(False)
         RFWS = Tensor(0.0)
@@ -272,7 +271,6 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         # Transpiration rate multiplied with reduction factors for oxygen and water
         r.RFTRA = r.RFOS * r.RFWS
         r.TRA = r.TRAMX * r.RFTRA
-        r.TRALY = r.TRA
 
         # Counting stress days
         r.IDWS = bool(torch.any(r.RFWS < 1.0))
@@ -451,7 +449,7 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
             day,
             kiosk,
             parvalues,
-            publish_rates=["EVWMX", "EVSMX", "TRAMX", "TRA", "TRALY", "RFTRA"],
+            publish_rates=["EVWMX", "EVSMX", "TRAMX", "TRA", "RFTRA"],
             shape=shape,
         )
 
