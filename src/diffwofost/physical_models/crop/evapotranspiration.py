@@ -22,8 +22,19 @@ from diffwofost.physical_models.utils import _get_drv
 def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
     """Soil Water Easily Available Fraction (SWEAF).
 
-    SWEAF is a function of the potential evapotranspiration rate for a closed
-    canopy (cm day⁻¹) and the crop dependency number (1..5).
+    The fraction of easily available soil water between field capacity and
+    wilting point is a function of the potential evapotranspiration rate (for a
+    closed canopy) in cm/day, ET0, and the crop group number, DEPNR (from 1
+    (=drought-sensitive) to 5 (=drought-resistent)). The function SWEAF
+    describes this relationship given in tabular form by Doorenbos & Kassam
+    (1979) and by Van Keulen & Wolf (1986; p.108, table 20)
+    http://edepot.wur.nl/168025.
+
+    Args:
+        ET0: The evapotranpiration from a reference crop.
+        DEPNR: The crop dependency number.
+    Returns:
+        SWEAF value between 0.10 and 0.95.
     """
     A = 0.76
     B = 1.5
