@@ -119,7 +119,12 @@ class EvapotranspirationWrapper(SimulationObject):
 
     @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
-        """Delegate state integration to the selected evapotranspiration module."""
+        """Delegate state integration to the selected evapotranspiration module.
+
+        Args:
+            day (datetime.date, optional): The current date of the simulation.
+            delt (float, optional): The time step for integration. Defaults to 1.0.
+        """
         return self.etmodule.integrate(day, delt)
 
 
