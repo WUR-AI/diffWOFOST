@@ -276,6 +276,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         rfos = rfosmx + (1.0 - torch.clamp(dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
         r.RFOS = torch.where(mask_ox, rfos, r.RFOS)
 
+        # Transpiration rate multiplied with reduction factors for oxygen and water
         r.RFTRA = r.RFOS * r.RFWS
         r.TRA = r.TRAMX * r.RFTRA
         r.TRALY = r.TRA
