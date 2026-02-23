@@ -493,7 +493,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
     | Name     | Description                                            | Type | Unit |
     |----------|--------------------------------------------------------|------|------|
     | CFET     | Correction factor for potential transpiration rate      | SCr  | -    |
-    | DEPNR    | Crop dependency number (drought sensitivity, 1..5)      | SCr  | -    |
+    | DEPNR    | Dependency number for crop sensitivity to soil moisture stress.     | SCr  | -    |
     | KDIFTB   | Extinction coefficient for diffuse visible light vs DVS | TCr  | -    |
     | IAIRDU   | Switch airducts on (1) or off (0)                       | SCr  | -    |
     | IOX      | Switch oxygen stress on (1) or off (0)                  | SCr  | -    |
