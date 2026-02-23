@@ -780,6 +780,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             r.RFOS = torch.where(pre_layers, 1.0, r.RFOS)
             r.TRALY = torch.where(pre_layers, 0.0, r.TRALY)
 
+        # Counting stress days
         r.IDWS = bool(torch.any(r.RFWS < 1.0))
         r.IDOS = bool(torch.any(r.RFOS < 1.0))
         return r.TRA, r.TRAMX
