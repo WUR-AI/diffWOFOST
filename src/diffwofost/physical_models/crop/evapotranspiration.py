@@ -644,6 +644,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         e0 = _get_drv(drv.E0, self.params_shape, dtype=self.dtype, device=self.device)
         es0 = _get_drv(drv.ES0, self.params_shape, dtype=self.dtype, device=self.device)
 
+        # reduction factor for CO2 on TRAMX
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
         if bool(torch.all(pre_emergence)):
