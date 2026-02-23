@@ -241,6 +241,7 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         kglob = 0.75 * p.KDIFTB(dvs)
         # crop specific correction on potential transpiration rate
         et0_crop = torch.clamp(p.CFET * et0, min=0.0)
+        # maximum evaporation and transpiration rates
         ekl = torch.exp(-kglob * lai)
 
         r.EVWMX = e0 * ekl
