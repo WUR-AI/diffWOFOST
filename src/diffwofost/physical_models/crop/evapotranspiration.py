@@ -742,6 +742,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
         # Oxygen-stress reduction factor (sequential across layers due to
         # temporal _dsos accumulator that feeds forward between layers).
+         # reduction in transpiration in case of oxygen shortage (RFOS)
+         # for non-rice crops, and possibly deficient land drainage
         r.RFOS = torch.ones_like(r.RFWS)
         mask_ox = (p.IAIRDU == 0) & (p.IOX == 1)
         if bool(torch.any(mask_ox)):
