@@ -83,6 +83,16 @@ class EvapotranspirationWrapper(SimulationObject):
 
         Chooses between layered CO2-aware, non-layered CO2, or standard evapotranspiration
         based on available parameters.
+
+        Args:
+            day (datetime.date): The starting date of the simulation.
+            kiosk (VariableKiosk): A container for registering and publishing
+                (internal and external) state variables. See PCSE documentation for
+                details.
+            parvalues (ParameterProvider): A dictionary-like container holding
+                all parameter sets (crop, soil, site) as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
         if "soil_profile" in parvalues:
             self.etmodule = EvapotranspirationCO2Layered(day, kiosk, parvalues, shape=shape)
