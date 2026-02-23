@@ -290,7 +290,8 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
 
 
 class Evapotranspiration(_BaseEvapotranspirationNonLayered):
-    """Potential evaporation and crop transpiration (no CO2 effect).
+    """Calculation of potential evaporation (water and soil) rates and actual
+    crop transpiration rate.
 
     **Simulation parameters**
 
