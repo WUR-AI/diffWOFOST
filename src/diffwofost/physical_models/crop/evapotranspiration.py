@@ -130,6 +130,11 @@ class EvapotranspirationWrapper(SimulationObject):
         """
         return self.etmodule.integrate(day, delt)
 
+    @prepare_states
+    def finalize(self, day: datetime.date) -> None:
+        """Delegate finalization to the selected evapotranspiration module."""
+        self.etmodule.finalize(day)
+
 
 class _BaseEvapotranspiration(SimulationObject):
     """Shared base class for evapotranspiration implementations."""
@@ -186,6 +191,10 @@ class _BaseEvapotranspiration(SimulationObject):
         self.states = self.StateVariables(kiosk, shape=shape, IDOST=-999, IDWST=-999)
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
 
+        # Private accumulators for stress-day counters (written to states in finalize)
+        self._IDWST = torch.zeros(shape, dtype=self.dtype, device=self.device)
+        self._IDOST = torch.zeros(shape, dtype=self.dtype, device=self.device)
+
     def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None):
         """Callable interface for rate calculation."""
         return self.calc_rates(day, drv)
@@ -195,8 +204,15 @@ class _BaseEvapotranspiration(SimulationObject):
         """Accumulate stress-day counters for water and oxygen stress."""
         rfws_stress = (self.rates.RFWS < 1.0).to(dtype=self.dtype)
         rfos_stress = (self.rates.RFOS < 1.0).to(dtype=self.dtype)
-        self.states.IDWST = self.states.IDWST + rfws_stress
-        self.states.IDOST = self.states.IDOST + rfos_stress
+        self._IDWST = self._IDWST + rfws_stress
+        self._IDOST = self._IDOST + rfos_stress
+
+    @prepare_states
+    def finalize(self, day: datetime.date) -> None:
+        """Finalize the evapotranspiration simulation."""
+        self.states.IDWST = self._IDWST
+        self.states.IDOST = self._IDOST
+        SimulationObject.finalize(self, day)
 
 
 class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
@@ -761,5 +777,5 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         """Accumulate stress-day counters based on any layer experiencing stress."""
         rfws_stress = (self.rates.RFWS < 1.0).any(dim=0).to(dtype=self.dtype)
         rfos_stress = (self.rates.RFOS < 1.0).any(dim=0).to(dtype=self.dtype)
-        self.states.IDWST = self.states.IDWST + rfws_stress
-        self.states.IDOST = self.states.IDOST + rfos_stress
+        self._IDWST = self._IDWST + rfws_stress
+        self._IDOST = self._IDOST + rfos_stress
