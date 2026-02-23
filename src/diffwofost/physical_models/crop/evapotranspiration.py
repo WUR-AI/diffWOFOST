@@ -471,13 +471,11 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
 
     def _rf_tramx_co2(self, drv: WeatherDataContainer, et0: torch.Tensor) -> torch.Tensor:
         """Calculate CO2 reduction factor for TRAMX based on atmospheric CO2 concentration."""
-        p = self.params
-
         if hasattr(drv, "CO2") and drv.CO2 is not None:
             co2 = _get_drv(drv.CO2, self.params_shape, dtype=self.dtype, device=self.device)
         else:
-            co2 = p.CO2
-        return p.CO2TRATB(co2)
+            co2 = self.params.CO2
+        return self.params.CO2TRATB(co2)
 
 
 class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
@@ -570,6 +568,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         """Initialize the layered-soil CO2-aware evapotranspiration module.
 
         Sets up layer-specific soil parameters and internal oxygen stress tracking.
+
         Args:
             day (datetime.date): The starting date of the simulation.
             kiosk (VariableKiosk): A container for registering and publishing
@@ -578,7 +577,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             parvalues (ParameterProvider): A dictionary-like container holding
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
-            shape (tuple | torch.Size | None): Target shape for the state and rate variables.        
+            shape (tuple | torch.Size | None): Target shape for the states and rates.
         """
         self.soil_profile = parvalues["soil_profile"]
         self._initialize_base(
@@ -615,12 +614,11 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
     def _rf_tramx_co2(self, drv: WeatherDataContainer, et0: torch.Tensor) -> torch.Tensor:
         """Calculate CO2 reduction factor for TRAMX using CO2 from driver or parameters."""
-        p = self.params
         if hasattr(drv, "CO2") and drv.CO2 is not None:
             co2 = _get_drv(drv.CO2, self.params_shape, dtype=self.dtype, device=self.device)
         else:
-            co2 = p.CO2
-        return p.CO2TRATB(co2)
+            co2 = self.params.CO2
+        return self.params.CO2TRATB(co2)
 
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
@@ -637,7 +635,6 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         lai = k["LAI"]
         rd = k["RD"]
 
-        pre_emergence = dvs < 0.0
         n_layers = self._n_layers
 
         et0 = _get_drv(drv.ET0, self.params_shape, dtype=self.dtype, device=self.device)
@@ -647,30 +644,20 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         # reduction factor for CO2 on TRAMX
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
-        if bool(torch.all(pre_emergence)):
-            _z = torch.zeros_like(et0)
-            _o = torch.ones_like(et0)
-            _layered_shape = (n_layers,) + self.params_shape
-            r.EVWMX = _z
-            r.EVSMX = _z
-            r.TRAMX = _z
-            r.TRA = _z
-            r.TRALY = torch.zeros(_layered_shape, dtype=self.dtype, device=self.device)
-            r.RFWS = torch.ones(_layered_shape, dtype=self.dtype, device=self.device)
-            r.RFOS = torch.ones(_layered_shape, dtype=self.dtype, device=self.device)
-            r.RFTRA = _o
-            r.IDWS = False
-            r.IDOS = False
-            return r.TRA, r.TRAMX
+        # If DVS < 0, the crop has not yet emerged, so we zero the rates using a mask
+        # A mask (1 if DVS >= 0, 0 if DVS < 0)
+        dvs_mask = (dvs >= 0.0).to(dtype=self.dtype)
+        # Layered mask: (n_layers, *params_shape)
+        dvs_mask_layers = dvs_mask.unsqueeze(0).expand(n_layers, *self.params_shape)
 
         # crop specific correction on potential transpiration rate
         et0_crop = torch.clamp(p.CFET * et0, min=0.0)
         # maximum evaporation and transpiration rates
         kglob = 0.75 * p.KDIFTB(dvs)
         ekl = torch.exp(-kglob * lai)
-        r.EVWMX = e0 * ekl
-        r.EVSMX = torch.clamp(es0 * ekl, min=0.0)
-        r.TRAMX = et0_crop * (1.0 - ekl) * rf_tramx_co2
+        r.EVWMX = dvs_mask * e0 * ekl
+        r.EVSMX = dvs_mask * torch.clamp(es0 * ekl, min=0.0)
+        r.TRAMX = dvs_mask * et0_crop * (1.0 - ekl) * rf_tramx_co2
 
         # Critical soil moisture
         swdep = SWEAF(et0_crop, p.DEPNR)
@@ -734,7 +721,9 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             (smcr - layer_smw).abs() > self._epsilon, smcr - layer_smw, self._epsilon
         )
         # Reduction factor for transpiration in case of water shortage (RFWS)
-        r.RFWS = torch.clamp((sm_layers_t - layer_smw) / denom, min=0.0, max=1.0)
+        r.RFWS = dvs_mask_layers * torch.clamp(
+            (sm_layers_t - layer_smw) / denom, min=0.0, max=1.0
+        ) + (1.0 - dvs_mask_layers)
 
         # Vectorised root fraction across all layers: (n_layers, *params_shape)
         root_len = torch.clamp(torch.minimum(rd, depth_hi) - depth_lo, min=0.0)
@@ -742,8 +731,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
         # Oxygen-stress reduction factor (sequential across layers due to
         # temporal _dsos accumulator that feeds forward between layers).
-         # reduction in transpiration in case of oxygen shortage (RFOS)
-         # for non-rice crops, and possibly deficient land drainage
+        # reduction in transpiration in case of oxygen shortage (RFOS)
+        # for non-rice crops, and possibly deficient land drainage
         r.RFOS = torch.ones_like(r.RFWS)
         mask_ox = (p.IAIRDU == 0) & (p.IOX == 1)
         if bool(torch.any(mask_ox)):
@@ -768,17 +757,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         r.TRA = r.TRALY.sum(dim=0)
         r.RFTRA = torch.where(r.TRAMX > self._epsilon, r.TRA / r.TRAMX, 1.0)
 
-        if bool(torch.any(pre_emergence)):
-            r.EVWMX = torch.where(pre_emergence, 0.0, r.EVWMX)
-            r.EVSMX = torch.where(pre_emergence, 0.0, r.EVSMX)
-            r.TRAMX = torch.where(pre_emergence, 0.0, r.TRAMX)
-            r.TRA = torch.where(pre_emergence, 0.0, r.TRA)
-            r.RFTRA = torch.where(pre_emergence, 1.0, r.RFTRA)
-
-            pre_layers = pre_emergence.unsqueeze(0).expand_as(r.RFWS)
-            r.RFWS = torch.where(pre_layers, 1.0, r.RFWS)
-            r.RFOS = torch.where(pre_layers, 1.0, r.RFOS)
-            r.TRALY = torch.where(pre_layers, 0.0, r.TRALY)
+        # Pre-emergence: RFOS = 1.0
+        r.RFOS = dvs_mask_layers * r.RFOS + (1.0 - dvs_mask_layers)
 
         # Counting stress days
         r.IDWS = bool(torch.any(r.RFWS < 1.0))
