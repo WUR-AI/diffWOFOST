@@ -733,6 +733,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         denom = torch.where(
             (smcr - layer_smw).abs() > self._epsilon, smcr - layer_smw, self._epsilon
         )
+        # Reduction factor for transpiration in case of water shortage (RFWS)
         r.RFWS = torch.clamp((sm_layers_t - layer_smw) / denom, min=0.0, max=1.0)
 
         # Vectorised root fraction across all layers: (n_layers, *params_shape)
