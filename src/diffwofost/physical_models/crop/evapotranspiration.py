@@ -438,8 +438,8 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
     | TRA   | Actual transpiration rate from canopy               | Y   | cm day⁻¹  |
     | IDOS  | Indicates oxygen stress on this day (True|False)    | N   | -         |
     | IDWS  | Indicates water stress on this day (True|False)     | N   | -         |
-    | RFWS  | Reduction factor for water stress                   | N   | -         |
-    | RFOS  | Reduction factor for oxygen stress                  | N   | -         |
+    | RFWS  | Reduction factor for water stress                   | Y   | -         |
+    | RFOS  | Reduction factor for oxygen stress                  | Y  | -         |
     | RFTRA | Combined reduction factor for transpiration         | Y   | -         |
 
     **External dependencies**
