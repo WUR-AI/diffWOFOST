@@ -546,8 +546,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
     | IDOS  | Indicates oxygen stress on this day (True|False)    | N   | -         |
     | IDWS  | Indicates water stress on this day (True|False)     | N   | -         |
     | TRALY | Transpiration per soil layer                        | Y   | cm day⁻¹  |
-    | RFWS  | Water-stress reduction per layer                    | N   | -         |
-    | RFOS  | Oxygen-stress reduction per layer                   | N   | -         |
+    | RFWS  | Water-stress reduction per layer                    | Y   | -         |
+    | RFOS  | Oxygen-stress reduction per layer                   | Y   | -         |
     | RFTRA | Combined reduction factor for transpiration         | Y   | -         |
 
     **External dependencies**
