@@ -509,13 +509,13 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
     | Name     | Description                                            | Type | Unit |
     |----------|--------------------------------------------------------|------|------|
-    | CFET     | Correction factor for potential transpiration rate      | SCr  | -    |
-    | DEPNR    | Dependency number for crop sensitivity to soil moisture stress.     | SCr  | -    |
-    | KDIFTB   | Extinction coefficient for diffuse visible light vs DVS | TCr  | -    |
-    | IAIRDU   | Switch airducts on (1) or off (0)                       | SCr  | -    |
-    | IOX      | Switch oxygen stress on (1) or off (0)                  | SCr  | -    |
-    | CO2      | Atmospheric CO2 concentration (used if not in drivers)  | SCr  | ppm  |
-    | CO2TRATB | Reduction factor for TRAMX as function of CO2           | TCr  | -    |
+    | CFET     | Correction factor for potential transpiration rate      | S  | -    |
+    | DEPNR    | Dependency number for crop sensitivity to soil moisture stress.     | S  | -    |
+    | KDIFTB   | Extinction coefficient for diffuse visible light vs DVS | T  | -    |
+    | IAIRDU   | Switch airducts on (1) or off (0)                       | S  | -    |
+    | IOX      | Switch oxygen stress on (1) or off (0)                  | S  | -    |
+    | CO2      | Atmospheric CO2 concentration (used if not in drivers)  | S  | ppm  |
+    | CO2TRATB | Reduction factor for TRAMX as function of CO2           | T  | -    |
 
     Layer-specific soil parameters (SMW, SMFCF, SM0, CRAIRC, Thickness) are
     taken from `soil_profile` entries.
