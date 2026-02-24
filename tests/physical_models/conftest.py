@@ -14,6 +14,8 @@ model_names = [
     "phenology",
     "partitioning",
     "assimilation",
+    "transpiration",
+    "respiration",
 ]
 FILE_NAMES = [
     f"test_{model_name}_wofost72_{i:02d}.yaml" for model_name in model_names for i in range(1, 45)
@@ -62,3 +64,9 @@ def device(request):
 
     # Reset to defaults after the test
     ComputeConfig.reset_to_defaults()
+
+
+@pytest.fixture(autouse=True)
+def configure_compute_config_dtype():
+    """Ensure all tests run with float64 precision."""
+    ComputeConfig.set_dtype(torch.float64)

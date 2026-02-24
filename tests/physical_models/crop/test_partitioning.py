@@ -16,7 +16,7 @@ from .. import phy_data_folder
 partitioning_config = Configuration(CROP=DVS_Partitioning, OUTPUT_VARS=["FR", "FL", "FS", "FO"])
 
 
-def get_test_diff_partitioning(device: str = "cpu"):
+def get_test_diff_partitioning():
     """Build a small wrapper module for differentiable tests."""
     test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
@@ -26,14 +26,13 @@ def get_test_diff_partitioning(device: str = "cpu"):
         weather_data_provider,
         agro_management_inputs,
         external_states,
-    ) = prepare_engine_input(test_data, crop_model_params, device=device)
+    ) = prepare_engine_input(test_data, crop_model_params)
     return DiffPartitioning(
         copy.deepcopy(crop_model_params_provider),
         weather_data_provider,
         agro_management_inputs,
         partitioning_config,
         copy.deepcopy(external_states),
-        device=device,
     )
 
 
@@ -45,7 +44,6 @@ class DiffPartitioning(torch.nn.Module):
         agro_management_inputs,
         config,
         external_states,
-        device: str = "cpu",
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
@@ -53,13 +51,10 @@ class DiffPartitioning(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
-        self.device = device
 
     def forward(self, params_dict: dict[str, torch.Tensor]):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
-            if isinstance(value, torch.Tensor) and value.device.type != self.device:
-                value = value.to(self.device)
             self.crop_model_params_provider.set_override(name, value, check=False)
 
         engine = EngineTestHelper(
@@ -68,7 +63,6 @@ class DiffPartitioning(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -99,7 +93,7 @@ class TestPartitioning:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -107,7 +101,6 @@ class TestPartitioning:
             agro_management_inputs,
             partitioning_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -141,7 +134,7 @@ class TestPartitioning:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         # AfgenTrait parameters need to have shape (N, M)
         repeated = crop_model_params_provider[param].repeat(10, 1)
@@ -153,7 +146,6 @@ class TestPartitioning:
             agro_management_inputs,
             partitioning_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -172,7 +164,7 @@ class TestPartitioning:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = prepare_engine_input(test_data, crop_model_params, device=device)
+        ) = prepare_engine_input(test_data, crop_model_params)
 
         # Setting vectors with multiple values for each table parameter
         for param in ("FRTB", "FLTB", "FSTB", "FOTB"):
@@ -188,7 +180,6 @@ class TestPartitioning:
             agro_management_inputs,
             partitioning_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -221,7 +212,6 @@ class TestPartitioning:
             agro_management_inputs,
             partitioning_config,
             external_states,
-            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -254,7 +244,6 @@ class TestPartitioning:
             agro_management_inputs,
             partitioning_config,
             external_states,
-            device="cpu",
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -289,14 +278,13 @@ class TestPartitioning:
         crop_model_params_provider.set_override("FRTB", [[0.0, 0.3, 2.0, 0.1]] * 4, check=False)
         crop_model_params_provider.set_override("FLTB", [[0.0, 0.3, 2.0, 0.1]] * 2, check=False)
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
                 partitioning_config,
                 external_states,
-                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls[:1])
@@ -382,7 +370,7 @@ class TestDiffPartitioningGradients:
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
-        model = get_test_diff_partitioning(device=device)
+        model = get_test_diff_partitioning()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -406,7 +394,7 @@ class TestDiffPartitioningGradients:
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
-        model = get_test_diff_partitioning(device=device)
+        model = get_test_diff_partitioning()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -432,10 +420,10 @@ class TestDiffPartitioningGradients:
         value, _ = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_partitioning(device=device), param_name, param.data, output_name
+            lambda: get_test_diff_partitioning(), param_name, param.data, output_name
         )
 
-        model = get_test_diff_partitioning(device=device)
+        model = get_test_diff_partitioning()
         output = model({param_name: param})
         loss = output[output_name].sum()
 

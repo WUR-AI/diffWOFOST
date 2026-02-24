@@ -12,63 +12,59 @@ from pcse.base import SimulationObject
 class ComputeConfig:
     """Central configuration for device and dtype settings.
 
-    This class provides a centralized way to control PyTorch device and dtype
-    settings across all simulation objects in diffWOFOST. Instead of setting
-    device and dtype individually for each class, use this central configuration
-    to apply settings globally.
+    This class acts as a factory for default configuration settings that are
+    captured by simulation objects upon initialization. This enables precise
+    control over where (device) and how (dtype) each model computation occurs,
+    allowing for multiple models with different configurations to coexist.
+
+    **Key Concept: Configuration Capture**
+
+    When a simulation object (e.g., `WOFOST_Leaf_Dynamics`) is initialized, it
+    queries `ComputeConfig` for the current device and dtype. The model *captures*
+    and stores these settings for its lifetime. Subsequent changes to
+    `ComputeConfig` will only affect *newly created* objects, leaving existing
+    ones unchanged.
 
     **Default Behavior:**
 
-    - **Device**: Automatically defaults to 'cuda' if available, otherwise 'cpu'
-    - **Dtype**: Defaults to torch.float64
+    - **Device**: Defaults to torch.get_default_device()
+    - **Dtype**: Defaults to torch.get_default_dtype()
 
     **Basic Usage:**
 
         >>> from diffwofost.physical_models.config import ComputeConfig
         >>> import torch
         >>>
-        >>> # Set device to CPU
-        >>> ComputeConfig.set_device('cpu')
-        >>>
-        >>> # Or use a torch.device object
-        >>> ComputeConfig.set_device(torch.device('cuda'))
-        >>>
-        >>> # Set dtype to float32
+        >>> # Configure defaults for new models
+        >>> ComputeConfig.set_device('cuda')
         >>> ComputeConfig.set_dtype(torch.float32)
         >>>
-        >>> # Get current settings
-        >>> device = ComputeConfig.get_device()  # Returns: torch.device('cpu')
-        >>> dtype = ComputeConfig.get_dtype()    # Returns: torch.float32
+        >>> # Get current defaults
+        >>> device = ComputeConfig.get_device()
+        >>> dtype = ComputeConfig.get_dtype()
 
-    **Using with Simulation Objects:**
+    **Creating Models with Different Settings:**
 
-    All simulation objects (e.g., WOFOST_Leaf_Dynamics, WOFOST_Phenology)
-    automatically use the settings from ComputeConfig. No changes needed to
-    instantiation code:
+    Because models capture the configuration at initialization, you can create
+    instances with different settings in the same process:
 
-        >>> from diffwofost.physical_models.config import ComputeConfig
         >>> from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
         >>>
-        >>> # Set global compute settings
+        >>> # Create a model on GPU (float32)
         >>> ComputeConfig.set_device('cuda')
         >>> ComputeConfig.set_dtype(torch.float32)
+        >>> model_gpu = WOFOST_Leaf_Dynamics(...)
         >>>
-        >>> # Instantiate objects - they automatically use global settings
-        >>> leaf_dynamics = WOFOST_Leaf_Dynamics()
-
-    **Switching Between Devices:**
-
-    Useful for switching between GPU training and CPU evaluation:
-
-        >>> # Train on GPU
-        >>> ComputeConfig.set_device('cuda')
-        >>> ComputeConfig.set_dtype(torch.float32)
-        >>> # ... run training ...
-        >>>
-        >>> # Evaluate on CPU
+        >>> # Create a model on CPU (float64)
         >>> ComputeConfig.set_device('cpu')
         >>> ComputeConfig.set_dtype(torch.float64)
-        >>> # ... run evaluation ...
+        >>> model_cpu = WOFOST_Leaf_Dynamics(...)
+        >>>
+        >>> # model_gpu remains on cuda, model_cpu stays on cpu.
+
+    Setting the model properties like model.device = torch.device("cpu") or
+    model.dtype = torch.float64 returns `AttributeError`. Always use
+    ComputeConfig.set_device(...) and ComputeConfig.set_dtype(...).
 
     **Resetting to Defaults:**
 
@@ -83,9 +79,9 @@ class ComputeConfig:
     def _initialize_defaults(cls):
         """Initialize default device and dtype if not already set."""
         if cls._device is None:
-            cls._device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            cls._device = torch.get_default_device()
         if cls._dtype is None:
-            cls._dtype = torch.float64
+            cls._dtype = torch.get_default_dtype()
 
     @classmethod
     def get_device(cls) -> torch.device:
