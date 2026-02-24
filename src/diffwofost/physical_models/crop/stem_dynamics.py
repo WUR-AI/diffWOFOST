@@ -1,19 +1,18 @@
 import datetime
 import torch
-from pcse.base import ParamTemplate
-from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
+from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorRatesTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_params_shape
 
 
 class WOFOST_Stem_Dynamics(SimulationObject):
@@ -97,8 +96,6 @@ class WOFOST_Stem_Dynamics(SimulationObject):
 
     """  # noqa: E501
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -109,66 +106,28 @@ class WOFOST_Stem_Dynamics(SimulationObject):
         """Get dtype from ComputeConfig."""
         return ComputeConfig.get_dtype()
 
-    class Parameters(ParamTemplate):
+    class Parameters(TensorParamTemplate):
         RDRSTB = AfgenTrait()
         SSATB = AfgenTrait()
-        TDWI = Any()
+        TDWI = Tensor(-99.0)
 
-        def __init__(self, parvalues):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
+    class StateVariables(TensorStatesTemplate):
+        WST = Tensor(-99.0)
+        DWST = Tensor(-99.0)
+        TWST = Tensor(-99.0)
+        SAI = Tensor(-99.0)  # Stem Area Index
 
-            # Set default values
-            self.TDWI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(parvalues)
-
-    class StateVariables(StatesTemplate):
-        WST = Any()
-        DWST = Any()
-        TWST = Any()
-        SAI = Any()  # Stem Area Index
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            if "WST" not in kwargs:
-                self.WST = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "DWST" not in kwargs:
-                self.DWST = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "TWST" not in kwargs:
-                self.TWST = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "SAI" not in kwargs:
-                self.SAI = torch.tensor(-99.0, dtype=dtype, device=device)
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish, **kwargs)
-
-    class RateVariables(RatesTemplate):
-        GRST = Any()
-        DRST = Any()
-        GWST = Any()
-
-        def __init__(self, kiosk, publish=None):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.GRST = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DRST = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GWST = torch.tensor(0.0, dtype=dtype, device=device)
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish)
+    class RateVariables(TensorRatesTemplate):
+        GRST = Tensor(0.0)
+        DRST = Tensor(0.0)
+        GWST = Tensor(0.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | torch.Size | None = None,
     ) -> None:
         """Initialize the model.
 
@@ -180,6 +139,7 @@ class WOFOST_Stem_Dynamics(SimulationObject):
             parvalues (ParameterProvider): A dictionary-like container holding
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues)
@@ -187,20 +147,19 @@ class WOFOST_Stem_Dynamics(SimulationObject):
 
         # INITIAL STATES
         params = self.params
-        self.params_shape = _get_params_shape(params)
-        shape = self.params_shape
+        shape = params.shape
 
         # Set initial stem biomass
-        TDWI = _broadcast_to(params.TDWI, shape, dtype=self.dtype, device=self.device)
-        FS = _broadcast_to(self.kiosk["FS"], shape, dtype=self.dtype, device=self.device)
-        FR = _broadcast_to(self.kiosk["FR"], shape, dtype=self.dtype, device=self.device)
+        TDWI = params.TDWI
+        FS = self.kiosk["FS"]
+        FR = self.kiosk["FR"]
         WST = (TDWI * (1 - FR)) * FS
         DWST = torch.zeros(shape, dtype=self.dtype, device=self.device)
         TWST = WST + DWST
 
         # Initial Stem Area Index
-        DVS = _broadcast_to(self.kiosk["DVS"], shape, dtype=self.dtype, device=self.device)
-        SSATB = params.SSATB.to(device=self.device, dtype=self.dtype)
+        DVS = self.kiosk["DVS"]
+        SSATB = params.SSATB
         SAI = WST * SSATB(DVS)
 
         self.states = self.StateVariables(
@@ -224,12 +183,12 @@ class WOFOST_Stem_Dynamics(SimulationObject):
 
         # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
         # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
-        DVS = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
-        dvs_mask = (DVS >= 0).to(dtype=self.dtype)
+        DVS = k["DVS"]
+        dvs_mask = DVS >= 0
 
-        FS = _broadcast_to(k["FS"], self.params_shape, dtype=self.dtype, device=self.device)
-        ADMI = _broadcast_to(k["ADMI"], self.params_shape, dtype=self.dtype, device=self.device)
-        RDRSTB = p.RDRSTB.to(device=self.device, dtype=self.dtype)
+        FS = k["FS"]
+        ADMI = k["ADMI"]
+        RDRSTB = p.RDRSTB
 
         # Growth/death rate stems
         r.GRST = dvs_mask * ADMI * FS
@@ -239,7 +198,7 @@ class WOFOST_Stem_Dynamics(SimulationObject):
         REALLOC_ST = torch.zeros_like(r.GRST)
         if "REALLOC_ST" in k:
             REALLOC_ST = _broadcast_to(
-                k["REALLOC_ST"], self.params_shape, dtype=self.dtype, device=self.device
+                k["REALLOC_ST"], p.shape, dtype=self.dtype, device=self.device
             )
 
         r.GWST = r.GRST - r.DRST - REALLOC_ST
@@ -262,10 +221,8 @@ class WOFOST_Stem_Dynamics(SimulationObject):
         s.TWST = s.WST + s.DWST
 
         # Calculate Stem Area Index (SAI)
-        DVS = _broadcast_to(
-            self.kiosk["DVS"], self.params_shape, dtype=self.dtype, device=self.device
-        )
-        SSATB = p.SSATB.to(device=self.device, dtype=self.dtype)
+        DVS = self.kiosk["DVS"]
+        SSATB = p.SSATB
         s.SAI = s.WST * SSATB(DVS)
 
     @prepare_states
@@ -282,15 +239,15 @@ class WOFOST_Stem_Dynamics(SimulationObject):
         p = self.params
         k = self.kiosk
 
-        oWST = s.WST.clone() if isinstance(s.WST, torch.Tensor) else s.WST
-        oTWST = s.TWST.clone() if isinstance(s.TWST, torch.Tensor) else s.TWST
-        oSAI = s.SAI.clone() if isinstance(s.SAI, torch.Tensor) else s.SAI
+        oWST = s.WST.clone()
+        oTWST = s.TWST.clone()
+        oSAI = s.SAI.clone()
 
         s.WST = nWST
         s.TWST = s.DWST + nWST
 
-        DVS = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
-        SSATB = p.SSATB.to(device=self.device, dtype=self.dtype)
+        DVS = k["DVS"]
+        SSATB = p.SSATB
         s.SAI = s.WST * SSATB(DVS)
 
         increments = {"WST": s.WST - oWST, "SAI": s.SAI - oSAI, "TWST": s.TWST - oTWST}

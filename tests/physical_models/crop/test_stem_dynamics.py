@@ -125,7 +125,6 @@ class DiffStemDynamics(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -162,7 +161,6 @@ class TestStemDynamics:
             agro_management_inputs,
             stem_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -189,7 +187,7 @@ class TestStemDynamics:
         if param == "TEMP":
             # Vectorize weather variable
             for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
         else:
             # Broadcast all parameters to match the batch size of 10
             # This ensures compatibility for all parameters including table traits
@@ -215,7 +213,6 @@ class TestStemDynamics:
                 agro_management_inputs,
                 stem_dynamics_config,
                 external_states,
-                device=device,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -226,7 +223,6 @@ class TestStemDynamics:
                 agro_management_inputs,
                 stem_dynamics_config,
                 external_states,
-                device=device,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -297,7 +293,6 @@ class TestStemDynamics:
             agro_management_inputs,
             stem_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -334,7 +329,6 @@ class TestStemDynamics:
             agro_management_inputs,
             stem_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -366,7 +360,7 @@ class TestStemDynamics:
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
+            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -374,7 +368,6 @@ class TestStemDynamics:
             agro_management_inputs,
             stem_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -405,14 +398,13 @@ class TestStemDynamics:
             "RDRSTB", crop_model_params_provider["RDRSTB"].repeat(5, 1), check=False
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises((AssertionError, ValueError)):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
                 stem_dynamics_config,
                 external_states,
-                device="cpu",
             )
 
     def test_stem_dynamics_with_incompatible_weather_parameter_vectors(self):
@@ -433,14 +425,13 @@ class TestStemDynamics:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
-        with pytest.raises(AssertionError):
+        with pytest.raises((AssertionError, ValueError)):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
                 stem_dynamics_config,
                 external_states,
-                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
