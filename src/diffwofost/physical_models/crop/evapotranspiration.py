@@ -519,6 +519,14 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
     Layer-specific soil parameters (SMW, SMFCF, SM0, CRAIRC, Thickness) are
     taken from `soil_profile` entries.
+    **Soil parameters**
+
+    | Name     | Description                                            | Type | Unit |
+    |----------|--------------------------------------------------------|------|------|
+    | SMW      | Volumetric soil moisture content at wilting  point     | S    | -    |
+    | SMFCF    | Volumetric soil moisture content at field capacity     | S    | -    |
+    | SM0      | Soil porosity                                          | S    | -    |
+    | CRAIRC   | Critical air content for root aeration                 | S    | -    |
 
     **State variables**
 
