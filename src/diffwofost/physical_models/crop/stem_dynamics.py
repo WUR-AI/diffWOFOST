@@ -142,24 +142,20 @@ class WOFOST_Stem_Dynamics(SimulationObject):
             shape (tuple | torch.Size | None): Target shape for the state and rate variables.
         """
         self.kiosk = kiosk
-        self.params = self.Parameters(parvalues)
-        self.rates = self.RateVariables(kiosk, publish=["DRST", "GRST"])
-
-        # INITIAL STATES
-        params = self.params
-        shape = params.shape
+        self.params = self.Parameters(parvalues, shape=shape)
+        self.rates = self.RateVariables(kiosk, publish=["DRST", "GRST"], shape=shape)
 
         # Set initial stem biomass
-        TDWI = params.TDWI
+        TDWI = self.params.TDWI
         FS = self.kiosk["FS"]
         FR = self.kiosk["FR"]
         WST = (TDWI * (1 - FR)) * FS
-        DWST = torch.zeros(shape, dtype=self.dtype, device=self.device)
+        DWST = torch.zeros(self.params.shape, dtype=self.dtype, device=self.device)
         TWST = WST + DWST
 
         # Initial Stem Area Index
         DVS = self.kiosk["DVS"]
-        SSATB = params.SSATB
+        SSATB = self.params.SSATB
         SAI = WST * SSATB(DVS)
 
         self.states = self.StateVariables(

@@ -14,7 +14,7 @@ from .. import phy_data_folder
 
 stem_dynamics_config = Configuration(
     CROP=WOFOST_Stem_Dynamics,
-    OUTPUT_VARS=["SAI", "TWST"],
+    OUTPUT_VARS=["SAI", "TWST", "WST"],
 )
 
 # [!] Notice that the stem module does not have dedicated test data.
@@ -129,7 +129,7 @@ class DiffStemDynamics(torch.nn.Module):
         engine.run_till_terminate()
         results = engine.get_output()
 
-        return {var: torch.stack([item[var] for item in results]) for var in ["SAI", "TWST"]}
+        return {var: torch.stack([item[var] for item in results]) for var in ["SAI", "TWST", "WST"]}
 
 
 class TestStemDynamics:
@@ -468,7 +468,7 @@ class TestDiffStemDynamicsGradients:
 
     # Define parameters and outputs
     param_names = ["TDWI", "RDRSTB", "SSATB"]
-    output_names = ["SAI", "TWST"]
+    output_names = ["SAI", "TWST", "WST"]
 
     # Define parameter configurations (value, dtype)
     param_configs = {
@@ -501,8 +501,8 @@ class TestDiffStemDynamicsGradients:
     # Define which parameter-output pairs should have gradients
     # Format: {param_name: [list of outputs that should have gradients]}
     gradient_mapping = {
-        "TDWI": ["SAI", "TWST"],
-        "RDRSTB": ["TWST", "SAI"],
+        "TDWI": ["SAI", "TWST", "WST"],
+        "RDRSTB": ["TWST", "SAI", "WST"],
         "SSATB": ["SAI"],
     }
 
