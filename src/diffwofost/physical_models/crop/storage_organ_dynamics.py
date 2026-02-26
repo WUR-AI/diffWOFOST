@@ -80,8 +80,6 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
     | WSO    | TDWI                      |
     """
 
-    params_shape = None  # Shape of the parameters tensors
-
     @property
     def device(self):
         """Get device from ComputeConfig."""
