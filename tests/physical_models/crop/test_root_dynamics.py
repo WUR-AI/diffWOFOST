@@ -19,12 +19,12 @@ root_dynamics_config = Configuration(
 )
 
 
-def get_test_diff_root_model(device: str = "cpu"):
+def get_test_diff_root_model():
     test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        prepare_engine_input(test_data, crop_model_params, device=device)
+        prepare_engine_input(test_data, crop_model_params)
     )
     return DiffRootDynamics(
         copy.deepcopy(crop_model_params_provider),
@@ -32,7 +32,6 @@ def get_test_diff_root_model(device: str = "cpu"):
         agro_management_inputs,
         root_dynamics_config,
         copy.deepcopy(external_states),
-        device=device,
     )
 
 
@@ -44,7 +43,6 @@ class DiffRootDynamics(torch.nn.Module):
         agro_management_inputs,
         config,
         external_states,
-        device: str = "cpu",
     ):
         super().__init__()
         self.crop_model_params_provider = crop_model_params_provider
@@ -52,7 +50,6 @@ class DiffRootDynamics(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
-        self.device = device
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
@@ -65,7 +62,6 @@ class DiffRootDynamics(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -103,7 +99,6 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -151,7 +146,6 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -212,7 +206,6 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -261,7 +254,6 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -304,7 +296,6 @@ class TestRootDynamics:
             agro_management_inputs,
             root_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -345,14 +336,13 @@ class TestRootDynamics:
             "RRI", crop_model_params_provider["RRI"].repeat(5), check=False
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
                 root_dynamics_config,
                 external_states,
-                device=device,
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
@@ -443,7 +433,7 @@ class TestDiffRootDynamicsGradients:
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
         """Test cases where parameters should not have gradients for specific outputs."""
-        model = get_test_diff_root_model(device=device)
+        model = get_test_diff_root_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -476,7 +466,7 @@ class TestDiffRootDynamicsGradients:
     @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
         """Test that forward and backward gradients match for parameter-output pairs."""
-        model = get_test_diff_root_model(device=device)
+        model = get_test_diff_root_model()
         value, dtype = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
         output = model({param_name: param})
@@ -506,10 +496,10 @@ class TestDiffRootDynamicsGradients:
         value, _ = self.param_configs[config_type][param_name]
         param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
         numerical_grad = calculate_numerical_grad(
-            lambda: get_test_diff_root_model(device=device), param_name, param.data, output_name
+            lambda: get_test_diff_root_model(), param_name, param.data, output_name
         )
 
-        model = get_test_diff_root_model(device=device)
+        model = get_test_diff_root_model()
         output = model({param_name: param})
         loss = output[output_name].sum()
 

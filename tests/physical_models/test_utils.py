@@ -10,6 +10,7 @@ from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import get_test_data
 from . import phy_data_folder
 
+ComputeConfig.set_dtype(torch.float64)
 DTYPE = ComputeConfig.get_dtype()
 
 
@@ -189,6 +190,9 @@ class TestAfgenTrait:
 
     def test_default_value(self):
         """Test that the default value is set correctly."""
+        # Ensure default_value matches current config
+        AfgenTrait.default_value = Afgen([0, 0, 1, 1])
+
         trait = AfgenTrait()
         assert isinstance(trait.default_value, Afgen)
 
@@ -277,7 +281,7 @@ class TestAfgenEdgeCases:
 
         # Keep this example deterministic across environments.
         old_device = ComputeConfig.get_device()
-        old_dtype = ComputeConfig.get_dtype()
+        old_dtype = DTYPE
         ComputeConfig.set_device("cpu")
         ComputeConfig.set_dtype(torch.float64)
         try:

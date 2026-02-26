@@ -19,6 +19,10 @@ hide:
 ::: diffwofost.physical_models.crop.storage_organ_dynamics.WOFOST_Storage_Organ_Dynamics
 
 
+::: diffwofost.physical_models.crop.respiration.WOFOST_Maintenance_Respiration
+
+::: diffwofost.physical_models.crop.evapotranspiration.Evapotranspiration
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration
@@ -28,3 +32,15 @@ hide:
 ::: diffwofost.physical_models.engine.Engine
 
 ::: diffwofost.physical_models.utils.EngineTestHelper
+
+## **Other classes (for developers)**
+
+::: diffwofost.physical_models.base.states_rates.TensorStatesTemplate
+
+::: diffwofost.physical_models.base.states_rates.TensorRatesTemplate
+
+::: diffwofost.physical_models.base.states_rates.TensorParamTemplate
+
+::: diffwofost.physical_models.base.states_rates.TensorContainer
+
+::: diffwofost.physical_models.traitlets.Tensor
