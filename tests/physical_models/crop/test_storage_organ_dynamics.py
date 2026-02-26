@@ -22,7 +22,7 @@ storage_dynamics_config = Configuration(
 # but not the correctness of its results (except when used within Wofost72_PP).
 
 
-def _prepare_common_storage_inputs(test_data_url, device, meteo_range_checks=True):
+def _prepare_common_storage_inputs(test_data_url, meteo_range_checks=True):
     # prepare model input
     test_data = get_test_data(test_data_url)
     crop_model_params = ["TDWI", "SPA"]
@@ -31,9 +31,7 @@ def _prepare_common_storage_inputs(test_data_url, device, meteo_range_checks=Tru
         weather_data_provider,
         agro_management_inputs,
         external_states,
-    ) = prepare_engine_input(
-        test_data, crop_model_params, meteo_range_checks=meteo_range_checks, device=device
-    )
+    ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=meteo_range_checks)
 
     # Patch missing states
     for state in external_states:
@@ -51,12 +49,12 @@ def _prepare_common_storage_inputs(test_data_url, device, meteo_range_checks=Tru
     if "SPA" not in crop_model_params_provider:
         crop_model_params_provider.set_override(
             "SPA",
-            torch.tensor(0.01, dtype=torch.float64, device=device),
+            torch.tensor(0.01, dtype=torch.float64),
             check=False,
         )
     if "TDWI" not in crop_model_params_provider:
         crop_model_params_provider.set_override(
-            "TDWI", torch.tensor(20.0, dtype=torch.float64, device=device), check=False
+            "TDWI", torch.tensor(20.0, dtype=torch.float64), check=False
         )
 
     return (
@@ -79,7 +77,7 @@ def get_test_diff_storage_model(device: str = "cpu"):
         weather_data_provider,
         agro_management_inputs,
         external_states,
-    ) = _prepare_common_storage_inputs(test_data_url, device=device)
+    ) = _prepare_common_storage_inputs(test_data_url)
 
     return DiffStorageDynamics(
         copy.deepcopy(crop_model_params_provider),
@@ -120,7 +118,6 @@ class DiffStorageDynamics(torch.nn.Module):
             self.agro_management_inputs,
             self.config,
             self.external_states,
-            device=self.device,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -152,7 +149,7 @@ class TestStorageOrganDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = _prepare_common_storage_inputs(test_data_url, device=device)
+        ) = _prepare_common_storage_inputs(test_data_url)
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -160,7 +157,6 @@ class TestStorageOrganDynamics:
             agro_management_inputs,
             storage_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -181,13 +177,13 @@ class TestStorageOrganDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = _prepare_common_storage_inputs(test_data_url, device=device, meteo_range_checks=False)
+        ) = _prepare_common_storage_inputs(test_data_url, meteo_range_checks=False)
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
             # Vectorize weather variable
             for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
         else:
             # Broadcast all parameters to match the batch size of 10
             for p_name in ["TDWI", "SPA"]:
@@ -212,7 +208,6 @@ class TestStorageOrganDynamics:
                 agro_management_inputs,
                 storage_dynamics_config,
                 external_states,
-                device=device,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -223,7 +218,6 @@ class TestStorageOrganDynamics:
                 agro_management_inputs,
                 storage_dynamics_config,
                 external_states,
-                device=device,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -250,7 +244,7 @@ class TestStorageOrganDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = _prepare_common_storage_inputs(test_data_url, device=device)
+        ) = _prepare_common_storage_inputs(test_data_url)
 
         # Setting a vector with multiple values for the selected parameter
         test_value = crop_model_params_provider[param]
@@ -282,7 +276,6 @@ class TestStorageOrganDynamics:
             agro_management_inputs,
             storage_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -302,7 +295,7 @@ class TestStorageOrganDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = _prepare_common_storage_inputs(test_data_url, device=device)
+        ) = _prepare_common_storage_inputs(test_data_url)
 
         # Setting a vector (with one value) for the TDWI and SPA parameters
         for param in ("TDWI", "SPA"):
@@ -319,7 +312,6 @@ class TestStorageOrganDynamics:
             agro_management_inputs,
             storage_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -339,7 +331,7 @@ class TestStorageOrganDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = _prepare_common_storage_inputs(test_data_url, device=device, meteo_range_checks=False)
+        ) = _prepare_common_storage_inputs(test_data_url, meteo_range_checks=False)
 
         # Setting an array with arbitrary shape (and one value)
         for param in ("TDWI", "SPA"):
@@ -347,7 +339,7 @@ class TestStorageOrganDynamics:
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
+            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -355,7 +347,6 @@ class TestStorageOrganDynamics:
             agro_management_inputs,
             storage_dynamics_config,
             external_states,
-            device=device,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -375,7 +366,7 @@ class TestStorageOrganDynamics:
             weather_data_provider,
             agro_management_inputs,
             external_states,
-        ) = _prepare_common_storage_inputs(test_data_url, device="cpu")
+        ) = _prepare_common_storage_inputs(test_data_url)
 
         # Setting a vector (with one value) for the TDWI and SPA parameters,
         # but with different lengths
@@ -386,14 +377,13 @@ class TestStorageOrganDynamics:
             "SPA", crop_model_params_provider["SPA"].repeat(5), check=False
         )
 
-        with pytest.raises(AssertionError):
+        with pytest.raises(ValueError):
             EngineTestHelper(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
                 storage_dynamics_config,
                 external_states,
-                device="cpu",
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)

@@ -1,18 +1,16 @@
 import datetime
 import torch
-from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
-from pcse.base import StatesTemplate
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
-from pcse.traitlets import Any
+from diffwofost.physical_models.base import TensorParamTemplate
+from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
-from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_params_shape
+from diffwofost.physical_models.traitlets import Tensor
 
 
 class WOFOST_Storage_Organ_Dynamics(SimulationObject):
@@ -94,91 +92,43 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         """Get dtype from ComputeConfig."""
         return ComputeConfig.get_dtype()
 
-    class Parameters(ParamTemplate):
-        SPA = Any()
-        TDWI = Any()
+    class Parameters(TensorParamTemplate):
+        SPA = Tensor(-99.0)
+        TDWI = Tensor(-99.0)
 
-        def __init__(self, parvalues):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.SPA = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            self.TDWI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(parvalues)
-
-    class StateVariables(StatesTemplate):
-        WSO = Any()  # Weight living storage organs
-        DWSO = Any()  # Weight dead storage organs
-        TWSO = Any()  # Total weight storage organs
-        PAI = Any()  # Pod Area Index
-
-        def __init__(self, kiosk, publish=None, **kwargs):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            if "WSO" not in kwargs:
-                self.WSO = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "DWSO" not in kwargs:
-                self.DWSO = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "TWSO" not in kwargs:
-                self.TWSO = [torch.tensor(-99.0, dtype=dtype, device=device)]
-            if "PAI" not in kwargs:
-                self.PAI = [torch.tensor(-99.0, dtype=dtype, device=device)]
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish, **kwargs)
+    class StateVariables(TensorStatesTemplate):
+        WSO = Tensor(-99.0)  # Weight living storage organs
+        DWSO = Tensor(-99.0)  # Weight dead storage organs
+        TWSO = Tensor(-99.0)  # Total weight storage organs
+        PAI = Tensor(-99.0)  # Pod Area Index
 
     class RateVariables(RatesTemplate):
-        GRSO = Any()
-        DRSO = Any()
-        GWSO = Any()
-
-        def __init__(self, kiosk, publish=None):
-            # Get dtype and device from ComputeConfig
-            dtype = ComputeConfig.get_dtype()
-            device = ComputeConfig.get_device()
-
-            # Set default values
-            self.GRSO = torch.tensor(0.0, dtype=dtype, device=device)
-            self.DRSO = torch.tensor(0.0, dtype=dtype, device=device)
-            self.GWSO = torch.tensor(0.0, dtype=dtype, device=device)
-
-            # Call parent init
-            super().__init__(kiosk, publish=publish)
+        GRSO = Tensor(0.0)
+        DRSO = Tensor(0.0)
+        GWSO = Tensor(0.0)
 
     def initialize(
-        self, day: datetime.date, kiosk: VariableKiosk, parvalues: ParameterProvider
+        self,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | torch.Size | None = None,
     ) -> None:
-        """Initialize the storage organ dynamics model.
-
-        :param day: start date of the simulation
-        :param kiosk: variable kiosk of this PCSE  instance
-        :param parvalues: `ParameterProvider` object providing parameters as
-                key/value pairs
-        """
+        """Initialize the storage organ dynamics model."""
         self.kiosk = kiosk
-        self.params = self.Parameters(parvalues)
+        self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, publish=["GRSO"])
 
-        # INITIAL STATES
-        params = self.params
-        self.params_shape = _get_params_shape(params)
-        shape = self.params_shape
+        self._drso_zeros = torch.zeros(self.params.shape, dtype=self.dtype, device=self.device)
 
         # Initial storage organ biomass
-        TDWI = _broadcast_to(params.TDWI, shape, dtype=self.dtype, device=self.device)
-        SPA = _broadcast_to(params.SPA, shape, dtype=self.dtype, device=self.device)
-        FO = _broadcast_to(self.kiosk["FO"], shape, dtype=self.dtype, device=self.device)
-        FR = _broadcast_to(self.kiosk["FR"], shape, dtype=self.dtype, device=self.device)
+        TDWI = self.params.TDWI
+        SPA = self.params.SPA
+        FO = self.kiosk["FO"]
+        FR = self.kiosk["FR"]
 
         WSO = (TDWI * (1 - FR)) * FO
-        DWSO = torch.zeros(shape, dtype=self.dtype, device=self.device)
+        DWSO = self._drso_zeros
         TWSO = WSO + DWSO
         # Initial Pod Area Index
         PAI = WSO * SPA
@@ -199,15 +149,13 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         rates = self.rates
         k = self.kiosk
 
-        FO = _broadcast_to(k["FO"], self.params_shape, dtype=self.dtype, device=self.device)
-        ADMI = _broadcast_to(k["ADMI"], self.params_shape, dtype=self.dtype, device=self.device)
-        REALLOC_SO = _broadcast_to(
-            k.get("REALLOC_SO", 0.0), self.params_shape, dtype=self.dtype, device=self.device
-        )
+        FO = k["FO"]
+        ADMI = k["ADMI"]
+        REALLOC_SO = k.get("REALLOC_SO", self._drso_zeros)
 
         # Growth/death rate organs
         rates.GRSO = ADMI * FO
-        rates.DRSO = torch.zeros(self.params_shape, dtype=self.dtype, device=self.device)
+        rates.DRSO = self._drso_zeros
         rates.GWSO = rates.GRSO - rates.DRSO + REALLOC_SO
 
     @prepare_states
@@ -222,7 +170,7 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         rates = self.rates
         states = self.states
 
-        SPA = _broadcast_to(params.SPA, self.params_shape, dtype=self.dtype, device=self.device)
+        SPA = params.SPA
 
         # Stem biomass (living, dead, total)
         states.WSO = states.WSO + rates.GWSO
