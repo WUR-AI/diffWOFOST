@@ -123,7 +123,7 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
                 all parameter sets (crop, soil, site) as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
             shape (tuple | torch.Size | None): Target shape for the state and rate variables.
-       """
+        """
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, publish=["GRSO"])
@@ -178,7 +178,6 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         params = self.params
         rates = self.rates
         states = self.states
-
 
         # Stem biomass (living, dead, total)
         states.WSO = states.WSO + rates.GWSO
