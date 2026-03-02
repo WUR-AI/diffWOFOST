@@ -186,4 +186,4 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         states.TWSO = states.WSO + states.DWSO
 
         # Calculate Pod Area Index (SAI)
-        states.PAI = states.WSO * SPA
+        states.PAI = states.WSO * params.SPA
