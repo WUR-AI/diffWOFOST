@@ -179,7 +179,6 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         rates = self.rates
         states = self.states
 
-        SPA = params.SPA
 
         # Stem biomass (living, dead, total)
         states.WSO = states.WSO + rates.GWSO
