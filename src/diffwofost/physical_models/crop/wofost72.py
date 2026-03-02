@@ -6,7 +6,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.crop.storage_organ_dynamics import WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics
 from pcse.decorators import prepare_rates
 from pcse.decorators import prepare_states
 from pcse.traitlets import Instance
@@ -24,6 +23,7 @@ from .phenology import DVS_Phenology as Phenology
 from .respiration import WOFOST_Maintenance_Respiration as MaintenanceRespiration
 from .root_dynamics import WOFOST_Root_Dynamics as Root_Dynamics
 from .stem_dynamics import WOFOST_Stem_Dynamics as Stem_Dynamics
+from .storage_organ_dynamics import WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics
 
 
 class Wofost72(SimulationObject):
