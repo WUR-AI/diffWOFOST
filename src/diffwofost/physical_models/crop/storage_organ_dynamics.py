@@ -112,7 +112,18 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         parvalues: ParameterProvider,
         shape: tuple | torch.Size | None = None,
     ) -> None:
-        """Initialize the storage organ dynamics model."""
+        """Initialize the storage organ dynamics model.
+
+        Args:
+            day (datetime.date): The starting date of the simulation.
+            kiosk (VariableKiosk): A container for registering and publishing
+                (internal and external) state variables. See PCSE documentation for
+                details.
+            parvalues (ParameterProvider): A dictionary-like container holding
+                all parameter sets (crop, soil, site) as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+            shape (tuple | torch.Size | None): Target shape for the state and rate variables.
+       """
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, publish=["GRSO"])
