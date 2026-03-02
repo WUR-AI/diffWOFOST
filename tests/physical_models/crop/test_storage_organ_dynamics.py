@@ -141,7 +141,7 @@ class TestStorageOrganDynamics:
     ]
 
     @pytest.mark.parametrize("test_data_url", storage_dynamics_data_urls)
-    def test_storage_dynamics_with_testengine(self, test_data_url, device):
+    def test_storage_dynamics_with_testengine(self, test_data_url):
         """EngineTestHelper and not Engine because it allows to specify `external_states`."""
         (
             test_data,
