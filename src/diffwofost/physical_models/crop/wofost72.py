@@ -237,8 +237,6 @@ class Wofost72(SimulationObject):
 
         # if before emergence there is no need to continue
         # because only the phenology is running.
-        # STAGE == 0 means "emerging"; check directly on the tensor to avoid
-        # a GPU→CPU sync from get_variable() / .item().
         if torch.all(self.pheno.states.STAGE == 0):
             return
 
