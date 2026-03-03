@@ -137,7 +137,7 @@ class TestLeafDynamics:
         if param == "TEMP":
             # Vectorize weather variable
             for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+                wdc.TEMP = torch.ones(10, device=device, dtype=torch.float64) * wdc.TEMP
         elif param in ["KDIFTB", "SLATB"]:
             # AfgenTrait parameters need to have shape (N, M)
             repeated = crop_model_params_provider[param].repeat(10, 1)

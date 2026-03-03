@@ -420,7 +420,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
+            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,

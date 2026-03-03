@@ -251,9 +251,9 @@ class TestAssimilation:
 
         # Make weather drivers match (30, 5) so _get_drv validates/broadcasts.
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.IRRAD = torch.ones((30, 5), dtype=torch.float64) * wdc.IRRAD
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
-            wdc.TMIN = torch.ones((30, 5), dtype=torch.float64) * wdc.TMIN
+            wdc.IRRAD = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.IRRAD
+            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
+            wdc.TMIN = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TMIN
 
         engine = EngineTestHelper(
             crop_model_params_provider,
