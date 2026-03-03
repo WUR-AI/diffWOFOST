@@ -56,8 +56,6 @@ def device(request):
     device_name = request.param
     if device_name == "cuda" and not torch.cuda.is_available():
         pytest.skip("CUDA not available")
-    elif device_name == "cuda":
-        pytest.skip("CUDA not available")
 
     # Set the global ComputeConfig to use the specified device
     ComputeConfig.set_device(device_name)

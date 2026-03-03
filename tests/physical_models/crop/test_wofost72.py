@@ -896,8 +896,7 @@ class TestDiffWofost72Gradients:
                 no_gradient_params.append((param_name, output_name))
 
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
-    # @pytest.mark.parametrize("config_type", ["single", "tensor"])
-    @pytest.mark.parametrize("config_type", ["single"])
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_no_gradients(self, param_name, output_name, config_type, device):
         """Test cases where parameters should not have gradients for specific outputs."""
         model = get_test_diff_wofost72_model()
@@ -922,8 +921,7 @@ class TestDiffWofost72Gradients:
             )
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
-    # @pytest.mark.parametrize("config_type", ["single", "tensor"])
-    @pytest.mark.parametrize("config_type", ["single"])
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
         """Test that forward and backward gradients match for parameter-output pairs."""
         model = get_test_diff_wofost72_model()
@@ -950,8 +948,7 @@ class TestDiffWofost72Gradients:
         )
 
     @pytest.mark.parametrize("param_name,output_name", gradient_params)
-    # @pytest.mark.parametrize("config_type", ["single", "tensor"])
-    @pytest.mark.parametrize("config_type", ["single"])
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
     def test_gradients_numerical(self, param_name, output_name, config_type, device):
         """Test that analytical gradients match numerical gradients."""
         value, _ = self.param_configs[config_type][param_name]
