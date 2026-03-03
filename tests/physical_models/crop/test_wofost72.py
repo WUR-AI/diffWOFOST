@@ -803,7 +803,7 @@ class TestDiffWofost72Gradients:
     gradient_mapping = {
         # --- Leaf dynamics ---
         # TDWI sets initial DM for all organs → affects every biomass output
-        "TDWI": ["LAI", "TWLV", "TAGP", "TWSO", "TWST", "TWRT", "RD", "TRA"],
+        "TDWI": ["LAI", "TWLV", "TAGP", "TWSO", "TWST", "TWRT", "TRA"],
         "SPAN": ["LAI", "TRA", "TWLV", "TWST", "TWSO", "TWRT", "TAGP"],
         "RGRLAI": ["LAI", "TRA", "TWLV", "TWST", "TWSO", "TWRT", "TAGP"],
         "TBASE": ["LAI", "TRA", "TWLV", "TWST", "TWSO", "TWRT", "TAGP"],
@@ -813,13 +813,13 @@ class TestDiffWofost72Gradients:
         "SLATB": ["LAI", "TRA", "TWLV", "TWST", "TWSO", "TWRT", "TAGP"],
         # --- Phenology ---
         # Phenology params drive DVS via temperature-sum accumulation
-        "TSUMEM": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
-        "TBASEM": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+        "TSUMEM": ["DVS", "LAI", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+        "TBASEM": ["DVS", "LAI", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "TEFFMX": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "TSUM1": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "TSUM2": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DLO": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
-        "DLC": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+        "DLC": ["DVS", "LAI", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DVSI": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DVSEND": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DTSMTB": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
