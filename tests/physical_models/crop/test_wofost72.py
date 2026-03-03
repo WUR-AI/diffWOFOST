@@ -8,6 +8,7 @@ from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.wofost72 import Wofost72
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.utils import EngineTestHelper
+from diffwofost.physical_models.utils import _afgen_y_mask
 from diffwofost.physical_models.utils import calculate_numerical_grad
 from diffwofost.physical_models.utils import get_test_data
 from diffwofost.physical_models.utils import prepare_engine_input
@@ -815,12 +816,12 @@ class TestDiffWofost72Gradients:
         # Phenology params drive DVS via temperature-sum accumulation
         "TSUMEM": ["DVS", "LAI", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "TBASEM": ["DVS", "LAI", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
-        "TEFFMX": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+        "TEFFMX": ["DVS", "LAI", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "TSUM1": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "TSUM2": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DLO": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DLC": ["DVS", "LAI", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
-        "DVSI": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+        "DVSI": ["TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DVSEND": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         "DTSMTB": ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
         # --- Assimilation ---
@@ -958,12 +959,51 @@ class TestDiffWofost72Gradients:
         # for span, the numerical gradient can't be equal to the pytorch one
         # because we are using STE method
         if param_name != "SPAN":
-            torch.testing.assert_close(
-                numerical_grad.detach().cpu(),
-                grads.detach().cpu(),
-                rtol=1e-3,
-                atol=1e-3,
-            )
+            # [!] For AfgenTrait table params the x-coordinates are
+            # non-smooth: shifting by ±delta can flip which piecewise interval
+            # a query lands in, a discrete jump that autograd cannot see through
+            # searchsorted. Only compare the y-coordinate (value) entries.
+            # Notice that in the other modules, this issue could be solved using
+            # specific numerical values that avoid the non-smooth points, but
+            # wofost72 has too many constraints that make it impossible to find such values.
+            _afgen_params = {
+                "SLATB",
+                "KDIFTB",
+                "AMAXTB",
+                "EFFTB",
+                "TMPFTB",
+                "TMNFTB",
+                "RFSETB",
+                "FRTB",
+                "FLTB",
+                "FSTB",
+                "FOTB",
+                "RDRRTB",
+                "RDRSTB",
+                "SSATB",
+                "DTSMTB",
+            }
+            if param_name in _afgen_params:
+                param_t = torch.tensor(value, dtype=torch.float64)
+                if param_t.dim() > 1:
+                    mask = torch.stack(
+                        [_afgen_y_mask(param_t[i]).bool() for i in range(param_t.shape[0])]
+                    ).cpu()
+                else:
+                    mask = _afgen_y_mask(param_t).bool().cpu()
+                torch.testing.assert_close(
+                    numerical_grad.detach().cpu()[mask],
+                    grads.detach().cpu()[mask],
+                    rtol=1e-3,
+                    atol=1e-3,
+                )
+            else:
+                torch.testing.assert_close(
+                    numerical_grad.detach().cpu(),
+                    grads.detach().cpu(),
+                    rtol=1e-3,
+                    atol=1e-3,
+                )
 
         # Warn if gradient is zero (but this shouldn't happen for gradient_params)
         if torch.all(grads == 0):

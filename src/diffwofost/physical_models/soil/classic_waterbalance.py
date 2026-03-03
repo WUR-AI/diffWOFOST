@@ -8,8 +8,6 @@ parameters) by using diffWOFOST's Tensor templates.
 
 import torch
 from pcse.base import SimulationObject
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
@@ -62,7 +60,6 @@ class WaterbalancePP(SimulationObject):
             shape=shape,
         )
 
-    @prepare_rates
     def calc_rates(self, day, drv):
         """Calculate soil evaporation and transpiration rates."""
         r = self.rates
@@ -94,7 +91,6 @@ class WaterbalancePP(SimulationObject):
         # Hold rainfall amount to keep track of soil surface wetness and reset self.DSLR if needed
         self.RAINold = torch.as_tensor(drv.RAIN)
 
-    @prepare_states
     def integrate(self, day, delt=1.0):
         """Integrate state variables over one time step."""
         # Keep soil moisture on field capacity

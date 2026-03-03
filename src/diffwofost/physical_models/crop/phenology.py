@@ -11,8 +11,6 @@ import torch
 from pcse import exceptions as exc
 from pcse import signals
 from pcse.base import SimulationObject
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from pcse.traitlets import Enum
 from pcse.traitlets import Instance
 from pcse.util import daylength
@@ -165,7 +163,6 @@ class Vernalisation(SimulationObject):
             self.params.shape, dtype=torch.bool, device=self.device
         )
 
-    @prepare_rates
     def calc_rates(self, day, drv):
         """Calculate vernalisation rates.
 
@@ -214,7 +211,6 @@ class Vernalisation(SimulationObject):
         if torch.any(past_threshold_mask):
             self._force_vernalisation = self._force_vernalisation | past_threshold_mask
 
-    @prepare_states
     def integrate(self, day, delt=1.0):
         """Advance vernalisation state.
 
@@ -477,7 +473,6 @@ class DVS_Phenology(SimulationObject):
 
         return DVS, DOS, DOE, STAGE
 
-    @prepare_rates
     def calc_rates(self, day, drv):
         """Compute daily phenological development rates.
 
@@ -565,7 +560,6 @@ class DVS_Phenology(SimulationObject):
         msg = "Finished rate calculation for %s"
         self.logger.debug(msg % day)
 
-    @prepare_states
     def integrate(self, day, delt=1.0):
         """Integrate phenology states and manage stage transitions.
 

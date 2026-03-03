@@ -6,8 +6,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from pcse.traitlets import Instance
 from pcse.traitlets import Unicode
 from diffwofost.physical_models.base import TensorParamTemplate
@@ -221,7 +219,6 @@ class Wofost72(SimulationObject):
             )
             raise exc.CarbonBalanceError(msg)
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
         """Calculate the rates of change of the state variables.
 
@@ -287,7 +284,6 @@ class Wofost72(SimulationObject):
         self.so_dynamics.calc_rates(day, drv)
         self.lv_dynamics.calc_rates(day, drv)
 
-    @prepare_states
     def integrate(self, day: datetime.date, delt=1.0) -> None:
         """Integrate the state variables using the rates of change.
 
@@ -334,7 +330,6 @@ class Wofost72(SimulationObject):
         states.CTRAT = states.CTRAT + self.kiosk.TRA
         states.CEVST = states.CEVST + self.kiosk.EVS
 
-    @prepare_states
     def finalize(self, day: datetime.date) -> None:
         """Finalize the crop simulation by computing the Harvest Index."""
         # Calculate Harvest Index
