@@ -219,7 +219,18 @@ def prepare_engine_input(
     # scalar floats.
     if not meteo_range_checks:
         for (_, _), wdc in weather_data_provider.store.items():
-            for varname in ("IRRAD", "TMIN", "TMAX", "VAP", "RAIN", "WIND", "E0", "ES0", "ET0"):
+            for varname in (
+                "IRRAD",
+                "TMIN",
+                "TMAX",
+                "TEMP",
+                "VAP",
+                "RAIN",
+                "WIND",
+                "E0",
+                "ES0",
+                "ET0",
+            ):
                 if hasattr(wdc, varname):
                     value = getattr(wdc, varname)
                     if not isinstance(value, torch.Tensor):

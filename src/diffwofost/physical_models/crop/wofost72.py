@@ -27,8 +27,7 @@ from .storage_organ_dynamics import WOFOST_Storage_Organ_Dynamics as Storage_Org
 
 
 class Wofost72(SimulationObject):
-    """Top level object organizing the different components of the WOFOST crop
-    simulation.
+    """Top level object organizing the different components of WOFOST.
 
     The CropSimulation object organizes the different processes of the crop
     simulation. Moreover, it contains the parameters, rate and state variables
@@ -151,7 +150,9 @@ class Wofost72(SimulationObject):
         parvalues: ParameterProvider,
         shape: tuple | torch.Size | None = None,
     ) -> None:
-        """:param day: start date of the simulation
+        """Initialize the crop simulation.
+
+        :param day: start date of the simulation
         :param kiosk: variable kiosk of this PCSE  instance
         :param parvalues: `ParameterProvider` object providing parameters as
                 key/value pairs
@@ -208,19 +209,15 @@ class Wofost72(SimulationObject):
             / (torch.clamp(GASS, min=0.0001))
         )
         if torch.any(torch.abs(checksum) >= 0.0001):
-            msg = "Carbon flows not balanced on day %s\n" % day
-            msg += "Checksum: %f, GASS: %f, MRES: %f\n" % (
-                checksum.mean().item(),
-                GASS.mean().item(),
-                MRES.mean().item(),
+            msg = f"Carbon flows not balanced on day {day}\n"
+            msg += (
+                f"Checksum: {checksum.mean().item():f}, GASS: {GASS.mean().item():f},"
+                f" MRES: {MRES.mean().item():f}\n"
             )
-            msg += "FR,L,S,O: %5.3f,%5.3f,%5.3f,%5.3f, DMI: %f, CVF: %f\n" % (
-                FR.mean().item(),
-                FL.mean().item(),
-                FS.mean().item(),
-                FO.mean().item(),
-                DMI.mean().item(),
-                CVF.mean().item(),
+            msg += (
+                f"FR,L,S,O: {FR.mean().item():5.3f},{FL.mean().item():5.3f},"
+                f"{FS.mean().item():5.3f},{FO.mean().item():5.3f},"
+                f" DMI: {DMI.mean().item():f}, CVF: {CVF.mean().item():f}\n"
             )
             raise exc.CarbonBalanceError(msg)
 
@@ -244,8 +241,7 @@ class Wofost72(SimulationObject):
 
         # if before emergence there is no need to continue
         # because only the phenology is running.
-        # STAGE == 0 corresponds to "emerging" in the tensor encoding.
-        if torch.all(crop_stage == 0):
+        if torch.all(torch.as_tensor(crop_stage == "emerging")):
             return
 
         # Potential assimilation
@@ -310,8 +306,7 @@ class Wofost72(SimulationObject):
         # because only the phenology is running.
         # Just run a touch() to to ensure that all state variables are available
         # in the kiosk
-        # STAGE == 0 corresponds to "emerging" in the tensor encoding.
-        if torch.all(crop_stage == 0):
+        if torch.all(torch.as_tensor(crop_stage == "emerging")):
             self.touch()
             return
 
@@ -337,6 +332,7 @@ class Wofost72(SimulationObject):
 
     @prepare_states
     def finalize(self, day: datetime.date) -> None:
+        """Finalize the crop simulation by computing the Harvest Index."""
         # Calculate Harvest Index
         TAGP = self.states.TAGP
         if torch.any(TAGP <= 0):
@@ -349,8 +345,6 @@ class Wofost72(SimulationObject):
         SimulationObject.finalize(self, day)
 
     def _on_CROP_FINISH(self, day, finish_type=None):
-        """Handler for setting day of finish (DOF) and reason for
-        crop finishing (FINISH).
-        """
+        """Handler for setting day of finish (DOF) and reason for crop finishing (FINISH)."""
         self._for_finalize["DOF"] = day
         self._for_finalize["FINISH_TYPE"] = finish_type
