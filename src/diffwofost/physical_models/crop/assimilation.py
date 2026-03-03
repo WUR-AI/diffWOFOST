@@ -28,6 +28,29 @@ def _as_python_float(x) -> float:
     return float(x)
 
 
+# ---------------------------------------------------------------------------
+# Module-level cache: avoids recreating small constant tensors on every call.
+# Keyed by (torch.dtype, str(device)) so different dtype/device combos each
+# get their own set of pre-allocated tensors.
+# ---------------------------------------------------------------------------
+_TENSOR_CONSTANTS: dict = {}
+
+
+def _get_tensor_constants(dtype: torch.dtype, device) -> dict:
+    """Return cached constant tensors for *dtype* / *device*."""
+    key = (dtype, str(device))
+    if key not in _TENSOR_CONSTANTS:
+        _TENSOR_CONSTANTS[key] = {
+            "xgauss": torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=dtype, device=device),
+            "wgauss": torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=dtype, device=device),
+            "pi": torch.tensor(torch.pi, dtype=dtype, device=device),
+            "scv": torch.tensor(0.2, dtype=dtype, device=device),
+            "one": torch.tensor(1.0, dtype=dtype, device=device),
+            "two": torch.tensor(2.0, dtype=dtype, device=device),
+        }
+    return _TENSOR_CONSTANTS[key]
+
+
 def totass7(
     DAYL: torch.Tensor,
     AMAX: torch.Tensor,
@@ -70,9 +93,10 @@ def totass7(
     COSLD   R4  Amplitude of sine of solar height             -      I
     DTGA    R4  Daily total gross assimilation           kg CO2/ha/d O
     """
-    xgauss = torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=dtype, device=device)
-    wgauss = torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=dtype, device=device)
-    pi = torch.tensor(torch.pi, dtype=dtype, device=device)
+    consts = _get_tensor_constants(dtype, device)
+    xgauss = consts["xgauss"]
+    wgauss = consts["wgauss"]
+    pi = consts["pi"]
 
     # Only compute where it can be non-zero.
     mask = (AMAX > 0) & (LAI > 0) & (DAYL > 0)
@@ -123,11 +147,11 @@ def assim7(
     Subroutines and functions called: none.
     Called by routine TOTASS.
     """
-    xgauss = torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=AMAX.dtype, device=AMAX.device)
-    wgauss = torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=AMAX.dtype, device=AMAX.device)
-
-    scv = torch.tensor(0.2, dtype=AMAX.dtype, device=AMAX.device)
-    one = torch.tensor(1.0, dtype=AMAX.dtype, device=AMAX.device)
+    consts = _get_tensor_constants(AMAX.dtype, AMAX.device)
+    xgauss = consts["xgauss"]
+    wgauss = consts["wgauss"]
+    scv = consts["scv"]
+    one = consts["one"]
 
     # Prevent division by zero in extinction coefficient calculations
     sinb_safe = torch.where(SINB > epsilon, SINB, torch.ones_like(SINB))
@@ -140,7 +164,7 @@ def assim7(
 
     # Integration over LAI (depth)
     fgros = torch.zeros_like(AMAX)
-    amax_denom = torch.maximum(torch.tensor(2.0, dtype=AMAX.dtype, device=AMAX.device), AMAX)
+    amax_denom = torch.maximum(consts["two"], AMAX)
 
     for i in range(3):
         laic = LAI * xgauss[i]
@@ -270,6 +294,10 @@ class WOFOST72_Assimilation(SimulationObject):
         self._tmn_window_mask = deque(maxlen=7)
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
+        # Cache for astro() results keyed by (day, lat).  astro() only depends
+        # on day and latitude so the same result can be reused across batch
+        # elements (which share the same weather driver).
+        self._astro_cache: dict = {}
 
     @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
@@ -298,10 +326,15 @@ class WOFOST72_Assimilation(SimulationObject):
         mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
         tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
 
-        # Astronomical variables (computed with PCSE util; then broadcast to tensors)
+        # Astronomical variables (computed with PCSE util; then broadcast to tensors).
+        # Cache by (day, lat) because astro() only depends on these two values
+        # and the call involves CPU-side scalar work.
         lat = _as_python_float(drv.LAT)
-        irrad_for_astro = _as_python_float(drv.IRRAD)
-        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(day, lat, irrad_for_astro)
+        astro_key = (day, lat)
+        if astro_key not in self._astro_cache:
+            irrad_for_astro = _as_python_float(drv.IRRAD)
+            self._astro_cache[astro_key] = astro(day, lat, irrad_for_astro)
+        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = self._astro_cache[astro_key]
 
         dayl_t = _broadcast_to(dayl, self.params.shape, dtype=self.dtype, device=self.device)
         sinld_t = _broadcast_to(sinld, self.params.shape, dtype=self.dtype, device=self.device)

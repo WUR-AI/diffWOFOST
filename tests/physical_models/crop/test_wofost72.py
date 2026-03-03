@@ -612,7 +612,7 @@ class TestDiffWofost72Gradients:
             "RML": (0.03, torch.float64),
             "RMS": (0.02, torch.float64),
             "RMO": (0.01, torch.float64),
-            "RFSETB": ([[0.0, 1.0, 2.0, 0.75]], torch.float64),
+            "RFSETB": ([[-1.0, 1.0, 3.0, 0.75]], torch.float64),
             # Evapotranspiration
             "CFET": (1.0, torch.float64),
             "DEPNR": (2.0, torch.float64),
@@ -722,7 +722,7 @@ class TestDiffWofost72Gradients:
             "RMS": ([0.01, 0.02, 0.03], torch.float64),
             "RMO": ([0.005, 0.01, 0.02], torch.float64),
             "RFSETB": (
-                [[0.0, 1.0, 2.0, 0.70], [0.0, 1.0, 2.0, 0.75], [0.0, 1.0, 2.0, 0.80]],
+                [[-1.0, 1.0, 3.0, 0.70], [-1.0, 1.0, 3.0, 0.75], [-1.0, 1.0, 3.0, 0.80]],
                 torch.float64,
             ),
             # Evapotranspiration
@@ -957,7 +957,7 @@ class TestDiffWofost72Gradients:
 
         # for span, the numerical gradient can't be equal to the pytorch one
         # because we are using STE method
-        if (param_name, output_name) not in {("SPAN", "LAI")}:
+        if param_name != "SPAN":
             torch.testing.assert_close(
                 numerical_grad.detach().cpu(),
                 grads.detach().cpu(),

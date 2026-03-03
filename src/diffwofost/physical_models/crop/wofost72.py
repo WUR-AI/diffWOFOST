@@ -237,11 +237,12 @@ class Wofost72(SimulationObject):
 
         # Phenology
         self.pheno.calc_rates(day, drv)
-        crop_stage = self.pheno.get_variable("STAGE")
 
         # if before emergence there is no need to continue
         # because only the phenology is running.
-        if torch.all(torch.as_tensor(crop_stage == "emerging")):
+        # STAGE == 0 means "emerging"; check directly on the tensor to avoid
+        # a GPU→CPU sync from get_variable() / .item().
+        if torch.all(self.pheno.states.STAGE == 0):
             return
 
         # Potential assimilation
@@ -267,7 +268,8 @@ class Wofost72(SimulationObject):
             (pf.FL / p.CVL + pf.FS / p.CVS + pf.FO / p.CVO) * (1.0 - pf.FR) + pf.FR / p.CVR
         )
         r.DMI = CVF * r.ASRC
-        self._check_carbon_balance(day, r.DMI, r.GASS, r.MRES, CVF, pf)
+        if ComputeConfig.get_check_carbon_balance():
+            self._check_carbon_balance(day, r.DMI, r.GASS, r.MRES, CVF, pf)
 
         # distribution over plant organ
 
@@ -296,8 +298,10 @@ class Wofost72(SimulationObject):
         rates = self.rates
         states = self.states
 
-        # crop stage before integration
-        crop_stage = self.pheno.get_variable("STAGE")
+        # Capture stage *before* integration (phenology will advance it).
+        # STAGE == 0 means "emerging"; read directly from the tensor to avoid
+        # a GPU→CPU sync from get_variable() / .item().
+        crop_stage_before = self.pheno.states.STAGE.clone()
 
         # Phenology
         self.pheno.integrate(day, delt)
@@ -306,7 +310,7 @@ class Wofost72(SimulationObject):
         # because only the phenology is running.
         # Just run a touch() to to ensure that all state variables are available
         # in the kiosk
-        if torch.all(torch.as_tensor(crop_stage == "emerging")):
+        if torch.all(crop_stage_before == 0):
             self.touch()
             return
 
