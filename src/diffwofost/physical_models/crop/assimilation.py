@@ -99,22 +99,44 @@ def totass7(
     # Only compute where it can be non-zero.
     mask = (AMAX > 0) & (LAI > 0) & (DAYL > 0)
 
-    dtga = torch.zeros_like(AMAX)
     # Prevent division by zero in par calculation
     dsinbe_safe = torch.where(DSINBE > epsilon, DSINBE, torch.ones_like(DSINBE))
 
+    # Vectorized 3-point Gaussian time quadrature: compute sinb, par, pardif,
+    # pardir for all three quadrature points simultaneously via a leading
+    # quadrature dimension of size 3, replacing the Python for-loop with a
+    # single torch.cos call on a (3, *B) tensor.
+    ndim = DAYL.dim()
+    if ndim > 0:
+        xg_v = xgauss.view(3, *([1] * ndim))  # (3, 1, .., 1)
+        DAYL_q = DAYL.unsqueeze(0)  # (1, *B)
+        SINLD_q = SINLD.unsqueeze(0) if SINLD.dim() > 0 else SINLD
+        COSLD_q = COSLD.unsqueeze(0) if COSLD.dim() > 0 else COSLD
+        AVRAD_q = AVRAD.unsqueeze(0) if AVRAD.dim() > 0 else AVRAD
+        DIFPP_q = DIFPP.unsqueeze(0) if DIFPP.dim() > 0 else DIFPP
+        dsinbe_q = dsinbe_safe.unsqueeze(0) if dsinbe_safe.dim() > 0 else dsinbe_safe
+    else:
+        xg_v = xgauss  # (3,)
+        DAYL_q = DAYL
+        SINLD_q = SINLD
+        COSLD_q = COSLD
+        AVRAD_q = AVRAD
+        DIFPP_q = DIFPP
+        dsinbe_q = dsinbe_safe
+
+    hour = 12.0 + 0.5 * DAYL_q * xg_v  # (3, *B)
+    sinb = torch.maximum(
+        torch.zeros_like(hour),
+        SINLD_q + COSLD_q * torch.cos(2.0 * pi * (hour + 12.0) / 24.0),
+    )  # (3, *B) – one cos call
+    par = 0.5 * AVRAD_q * sinb * (1.0 + 0.4 * sinb) / dsinbe_q  # (3, *B)
+    pardif = torch.minimum(par, sinb * DIFPP_q)  # (3, *B)
+    pardir = par - pardif  # (3, *B)
+
+    # Call assim7 for each quadrature slice (sinb[i] etc. are already (*B))
+    dtga = torch.zeros_like(AMAX)
     for i in range(3):
-        hour = 12.0 + 0.5 * DAYL * xgauss[i]
-        sinb = torch.maximum(
-            torch.zeros_like(DAYL),
-            SINLD + COSLD * torch.cos(2.0 * pi * (hour + 12.0) / 24.0),
-        )
-
-        par = 0.5 * AVRAD * sinb * (1.0 + 0.4 * sinb) / dsinbe_safe
-        pardif = torch.minimum(par, sinb * DIFPP)
-        pardir = par - pardif
-
-        fgros = assim7(AMAX, EFF, LAI, KDIF, sinb, pardir, pardif, epsilon=epsilon)
+        fgros = assim7(AMAX, EFF, LAI, KDIF, sinb[i], pardir[i], pardif[i], epsilon=epsilon)
         dtga = dtga + fgros * wgauss[i]
 
     dtga = dtga * DAYL
@@ -154,44 +176,78 @@ def assim7(
     # Prevent division by zero in extinction coefficient calculations
     sinb_safe = torch.where(SINB > epsilon, SINB, torch.ones_like(SINB))
 
-    # Extinction coefficients
+    # Extinction coefficients (loop-invariant: do not depend on laic)
     refh = (one - torch.sqrt(one - scv)) / (one + torch.sqrt(one - scv))
     refs = refh * 2.0 / (one + 1.6 * sinb_safe)
     kdirbl = (0.5 / sinb_safe) * KDIF / (0.8 * torch.sqrt(one - scv))
     kdir_t = kdirbl * torch.sqrt(one - scv)
-
-    # Integration over LAI (depth)
-    fgros = torch.zeros_like(AMAX)
     amax_denom = torch.maximum(consts["two"], AMAX)
 
-    for i in range(3):
-        laic = LAI * xgauss[i]
+    # vispp, exp_term, eff_vispp_safe are also loop-invariant (no laic dependence)
+    vispp = (one - scv) * PARDIR / sinb_safe
+    exp_term = one - torch.exp(-vispp * EFF / amax_denom)
+    eff_vispp = EFF * vispp
+    eff_vispp_safe = torch.where(
+        torch.abs(eff_vispp) > epsilon, eff_vispp, torch.ones_like(eff_vispp)
+    )
 
-        visdf = (one - refs) * PARDIF * KDIF * torch.exp(-KDIF * laic)
-        vist = (one - refs) * PARDIR * kdir_t * torch.exp(-kdir_t * laic)
-        visd = (one - scv) * PARDIR * kdirbl * torch.exp(-kdirbl * laic)
+    # Vectorized 3-point Gaussian LAI quadrature
+    ndim = LAI.dim()
+    if ndim > 0:
+        xg_v = xgauss.view(3, *([1] * ndim))  # (3, 1, .., 1)
+        wg_v = wgauss.view(3, *([1] * ndim))  # (3, 1, .., 1)
+        laic = LAI.unsqueeze(0) * xg_v  # (3, *B)
+        # Unsqueeze all (*B) tensors to (1, *B) so they broadcast with (3, *B)
+        refs_b = refs.unsqueeze(0)
+        PARDIF_b = PARDIF.unsqueeze(0)
+        KDIF_b = KDIF.unsqueeze(0)
+        PARDIR_b = PARDIR.unsqueeze(0)
+        kdir_t_b = kdir_t.unsqueeze(0)
+        kdirbl_b = kdirbl.unsqueeze(0)
+        AMAX_b = AMAX.unsqueeze(0)
+        EFF_b = EFF.unsqueeze(0)
+        amax_denom_b = amax_denom.unsqueeze(0)
+        exp_term_b = exp_term.unsqueeze(0)
+        eff_vispp_safe_b = eff_vispp_safe.unsqueeze(0)
+        vispp_b = vispp.unsqueeze(0)
+    else:
+        # Scalar inputs: laic is (3,); skip unsqueezes (broadcasting handles it)
+        xg_v = xgauss  # (3,)
+        wg_v = wgauss  # (3,)
+        laic = LAI * xgauss  # (3,)
+        refs_b = refs
+        PARDIF_b = PARDIF
+        KDIF_b = KDIF
+        PARDIR_b = PARDIR
+        kdir_t_b = kdir_t
+        kdirbl_b = kdirbl
+        AMAX_b = AMAX
+        EFF_b = EFF
+        amax_denom_b = amax_denom
+        exp_term_b = exp_term
+        eff_vispp_safe_b = eff_vispp_safe
+        vispp_b = vispp
 
-        visshd = visdf + vist - visd
-        fgrsh = AMAX * (one - torch.exp(-visshd * EFF / amax_denom))
+    # exp(-kdirbl * laic) is shared between visd and fslla – compute once
+    exp_kdirbl_laic = torch.exp(-kdirbl_b * laic)  # (3, *B)
 
-        vispp = (one - scv) * PARDIR / sinb_safe
+    visdf = (one - refs_b) * PARDIF_b * KDIF_b * torch.exp(-KDIF_b * laic)  # (3, *B)
+    vist = (one - refs_b) * PARDIR_b * kdir_t_b * torch.exp(-kdir_t_b * laic)  # (3, *B)
+    visd = (one - scv) * PARDIR_b * kdirbl_b * exp_kdirbl_laic  # (3, *B)
 
-        exp_term = one - torch.exp(-vispp * EFF / amax_denom)
-        # Prevent division by zero in sunlit leaf calculation
-        eff_vispp = EFF * vispp
-        eff_vispp_safe = torch.where(
-            torch.abs(eff_vispp) > epsilon, eff_vispp, torch.ones_like(eff_vispp)
-        )
-        fgrsun_formula = AMAX * (one - (AMAX - fgrsh) * exp_term / eff_vispp_safe)
-        fgrsun = torch.where(vispp <= 0.0, fgrsh, fgrsun_formula)
+    visshd = visdf + vist - visd
+    fgrsh = AMAX_b * (one - torch.exp(-visshd * EFF_b / amax_denom_b))  # (3, *B)
 
-        fslla = torch.exp(-kdirbl * laic)
-        fgl = fslla * fgrsun + (one - fslla) * fgrsh
+    # Prevent division by zero in sunlit leaf calculation
+    fgrsun_formula = AMAX_b * (one - (AMAX_b - fgrsh) * exp_term_b / eff_vispp_safe_b)
+    fgrsun = torch.where(vispp_b <= 0.0, fgrsh, fgrsun_formula)
 
-        fgros = fgros + fgl * wgauss[i]
+    fslla = exp_kdirbl_laic  # reuse shared exponential
+    fgl = fslla * fgrsun + (one - fslla) * fgrsh
 
-    fgros = fgros * LAI
-    return fgros
+    # Weighted sum over the quadrature dimension (leading dim 0) → (*B)
+    fgros = (fgl * wg_v).sum(0)
+    return fgros * LAI
 
 
 class WOFOST72_Assimilation(SimulationObject):
