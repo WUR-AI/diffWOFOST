@@ -67,6 +67,7 @@ class DiffAssimilation(torch.nn.Module):
         return {"PGASS": torch.stack([item["PGASS"] for item in results])}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestAssimilation:
     assimilation_data_urls = [
         f"{phy_data_folder}/test_assimilation_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -251,9 +252,9 @@ class TestAssimilation:
 
         # Make weather drivers match (30, 5) so _get_drv validates/broadcasts.
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.IRRAD = torch.ones((30, 5), dtype=torch.float64) * wdc.IRRAD
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
-            wdc.TMIN = torch.ones((30, 5), dtype=torch.float64) * wdc.TMIN
+            wdc.IRRAD = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.IRRAD
+            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
+            wdc.TMIN = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TMIN
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -356,6 +357,7 @@ class TestAssimilation:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffAssimilationGradients:
     """Parametrized tests for gradient calculations in assimilation."""
 

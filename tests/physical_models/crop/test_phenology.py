@@ -102,6 +102,7 @@ class DiffPhenologyDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["DVS", "TSUM"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestPhenologyDynamics:
     phenology_data_urls = [
         f"{phy_data_folder}/test_phenology_wofost72_{i:02d}.yaml"
@@ -420,7 +421,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
+            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -562,6 +563,7 @@ class TestPhenologyDynamics:
                 assert_reference_match(reference, model_day, expected_precision)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffPhenologyDynamicsGradients:
     """Parametrized tests for gradient calculations in phenology dynamics."""
 

@@ -14,6 +14,7 @@ ComputeConfig.set_dtype(torch.float64)
 DTYPE = ComputeConfig.get_dtype()
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestAfgen:
     """Tests for the Afgen class."""
 
@@ -185,6 +186,7 @@ class TestAfgen:
             assert out_cuda.device.type == "cuda"
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestAfgenTrait:
     """Tests for the AfgenTrait class."""
 
@@ -245,6 +247,7 @@ class TestAfgenTrait:
         assert isinstance(validated, Afgen)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestAfgenEdgeCases:
     """Test edge cases and special scenarios for Afgen."""
 
@@ -405,6 +408,7 @@ class TestAfgenEdgeCases:
         assert torch.isclose(results[2], torch.tensor(8.0, dtype=DTYPE))
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestAfgenBatched:
     """Tests for batched Afgen functionality with multidimensional tensors."""
 
@@ -703,6 +707,7 @@ class TestAfgenBatched:
         assert torch.isclose(x2.grad, torch.tensor(2.0, dtype=DTYPE), atol=1e-5)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestGetDrvParam:
     """Tests for _get_drv function."""
 

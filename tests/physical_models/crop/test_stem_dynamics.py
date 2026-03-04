@@ -132,6 +132,7 @@ class DiffStemDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["SAI", "TWST", "WST"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestStemDynamics:
     # [!] The stem module does not have dedicated test data.
     # We reuse the partitioning test data as they contain relevant parameters and states.
@@ -463,6 +464,7 @@ class TestStemDynamics:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffStemDynamicsGradients:
     """Parametrized tests for gradient calculations in stem dynamics."""
 

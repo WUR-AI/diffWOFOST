@@ -68,6 +68,7 @@ class DiffLeafDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["LAI", "TWLV"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestLeafDynamics:
     leafdynamics_data_urls = [
         f"{phy_data_folder}/test_leafdynamics_wofost72_{i:02d}.yaml"
@@ -137,7 +138,7 @@ class TestLeafDynamics:
         if param == "TEMP":
             # Vectorize weather variable
             for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+                wdc.TEMP = torch.ones(10, device=device, dtype=torch.float64) * wdc.TEMP
         elif param in ["KDIFTB", "SLATB"]:
             # AfgenTrait parameters need to have shape (N, M)
             repeated = crop_model_params_provider[param].repeat(10, 1)
@@ -472,6 +473,7 @@ class TestLeafDynamics:
             )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffLeafDynamicsGradients:
     """Parametrized tests for gradient calculations in leaf dynamics."""
 

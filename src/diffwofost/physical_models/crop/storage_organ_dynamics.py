@@ -5,8 +5,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
@@ -146,7 +144,6 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
             kiosk, publish=["TWSO", "WSO", "PAI"], WSO=WSO, DWSO=DWSO, TWSO=TWSO, PAI=PAI
         )
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
         """Calculate the rates of change of the state variables.
 
@@ -167,7 +164,6 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
         rates.DRSO = self._drso_zeros
         rates.GWSO = rates.GRSO - rates.DRSO + REALLOC_SO
 
-    @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """Integrate the state variables.
 

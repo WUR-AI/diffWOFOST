@@ -4,8 +4,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
@@ -162,7 +160,6 @@ class WOFOST_Stem_Dynamics(SimulationObject):
             kiosk, publish=["TWST", "WST", "SAI"], WST=WST, DWST=DWST, TWST=TWST, SAI=SAI
         )
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
         """Calculate the rates of change of the state variables.
 
@@ -199,7 +196,6 @@ class WOFOST_Stem_Dynamics(SimulationObject):
 
         r.GWST = r.GRST - r.DRST - REALLOC_ST
 
-    @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """Integrate the state variables using the rates of change.
 
@@ -221,7 +217,6 @@ class WOFOST_Stem_Dynamics(SimulationObject):
         SSATB = p.SSATB
         s.SAI = s.WST * SSATB(DVS)
 
-    @prepare_states
     def _set_variable_WST(self, nWST):
         """Set the WST state variable and update dependent variables.
 

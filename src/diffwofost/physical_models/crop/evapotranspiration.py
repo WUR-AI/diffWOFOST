@@ -4,8 +4,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from pcse.traitlets import Any
 from pcse.traitlets import Bool
 from pcse.traitlets import Instance
@@ -104,7 +102,6 @@ class EvapotranspirationWrapper(SimulationObject):
         else:
             self.etmodule = Evapotranspiration(day, kiosk, parvalues, shape=shape)
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
         """Delegate rate calculation to the selected evapotranspiration module.
 
@@ -120,7 +117,6 @@ class EvapotranspirationWrapper(SimulationObject):
         """Callable interface for rate calculation."""
         return self.calc_rates(day, drv)
 
-    @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """Delegate state integration to the selected evapotranspiration module.
 
@@ -130,7 +126,6 @@ class EvapotranspirationWrapper(SimulationObject):
         """
         return self.etmodule.integrate(day, delt)
 
-    @prepare_states
     def finalize(self, day: datetime.date) -> None:
         """Delegate finalization to the selected evapotranspiration module."""
         self.etmodule.finalize(day)
@@ -199,7 +194,6 @@ class _BaseEvapotranspiration(SimulationObject):
         """Callable interface for rate calculation."""
         return self.calc_rates(day, drv)
 
-    @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """Accumulate stress-day counters for water and oxygen stress."""
         rfws_stress = (self.rates.RFWS < 1.0).to(dtype=self.dtype)
@@ -207,7 +201,6 @@ class _BaseEvapotranspiration(SimulationObject):
         self._IDWST = self._IDWST + rfws_stress
         self._IDOST = self._IDOST + rfos_stress
 
-    @prepare_states
     def finalize(self, day: datetime.date) -> None:
         """Finalize the evapotranspiration simulation."""
         self.states.IDWST = self._IDWST
@@ -222,7 +215,6 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         """Return CO2 reduction factor for TRAMX (no CO2 effect in base implementation)."""
         return torch.ones_like(et0)
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
         p = self.params
         r = self.rates
@@ -650,7 +642,6 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             co2 = self.params.CO2
         return self.params.CO2TRATB(co2)
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None):
         """Calculate daily evapotranspiration rates per soil layer with CO2 effects.
 
@@ -799,7 +790,6 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         """Callable interface for rate calculation."""
         return self.calc_rates(day, drv)
 
-    @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """Accumulate stress-day counters based on any layer experiencing stress."""
         rfws_stress = (self.rates.RFWS < 1.0).any(dim=0).to(dtype=self.dtype)
