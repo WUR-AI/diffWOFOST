@@ -69,6 +69,7 @@ class DiffRootDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["RD", "TWRT"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestRootDynamics:
     rootdynamics_data_urls = [
         f"{phy_data_folder}/test_rootdynamics_wofost72_{i:02d}.yaml"
@@ -374,6 +375,7 @@ class TestRootDynamics:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffRootDynamicsGradients:
     """Parametrized tests for gradient calculations in root dynamics."""
 

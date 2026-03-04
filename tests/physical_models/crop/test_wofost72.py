@@ -23,6 +23,10 @@ wofost72_config = Configuration(
 # All output variables used in the differentiable model for gradient tests (mirrors OUTPUT_VARS)
 GRAD_OUTPUT_VARS = ["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"]
 
+# Parameters that are *directly* manipulated in wofost72.py
+# When --full_wofost72_test is not supplied only these are tested
+WOFOST72_DIRECT_PARAMS = frozenset({"CVL", "CVO", "CVR", "CVS"})
+
 
 _wofost72_template_inputs = None
 
@@ -148,6 +152,7 @@ class DiffWofost72(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in GRAD_OUTPUT_VARS}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestWofost72:
     wofost72_data_urls = [
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml"
@@ -517,6 +522,7 @@ class TestWofost72:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffWofost72Gradients:
     """Parametrized tests for gradient calculations in Wofost72.
 
@@ -894,6 +900,22 @@ class TestDiffWofost72Gradients:
                 gradient_params.append((param_name, output_name))
             else:
                 no_gradient_params.append((param_name, output_name))
+
+    # Fixture that restricts tests to WOFOST72_DIRECT_PARAMS unless the
+    # --full_wofost72_test CLI flag is passed.
+    @pytest.fixture(autouse=True)
+    def skip_unless_full_test(self, request):
+        """Skip tests for non-direct wofost72 parameters unless --full_wofost72_test is set."""
+        if request.config.getoption("--full_wofost72_test", default=False):
+            return  # run everything
+        if not hasattr(request.node, "callspec"):
+            return  # no parametrize → nothing to filter
+        param_name = request.node.callspec.params.get("param_name")
+        if param_name is not None and param_name not in WOFOST72_DIRECT_PARAMS:
+            pytest.skip(
+                f"Skipping '{param_name}': not a wofost72-direct parameter. "
+                "Pass --full_wofost72_test to run the complete suite."
+            )
 
     @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
     @pytest.mark.parametrize("config_type", ["single", "tensor"])

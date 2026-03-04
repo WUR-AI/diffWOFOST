@@ -75,6 +75,7 @@ class DiffWaterbalancePP(torch.nn.Module):
         }
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestWaterbalancePP:
     waterbalance_data_urls = [
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml"
@@ -312,6 +313,7 @@ class TestWaterbalancePP:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffWaterbalancePPGradients:
     """Gradient tests for WaterbalancePP."""
 

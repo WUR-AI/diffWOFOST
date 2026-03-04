@@ -70,6 +70,7 @@ class DiffRespiration(torch.nn.Module):
         return {"PMRES": torch.stack([item["PMRES"] for item in results])}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestRespiration:
     respiration_data_urls = [
         f"{phy_data_folder}/test_respiration_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -377,6 +378,7 @@ class TestRespiration:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffRespirationGradients:
     """Parametrized tests for gradient calculations in maintenance respiration."""
 

@@ -68,6 +68,7 @@ class DiffLeafDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["LAI", "TWLV"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestLeafDynamics:
     leafdynamics_data_urls = [
         f"{phy_data_folder}/test_leafdynamics_wofost72_{i:02d}.yaml"
@@ -472,6 +473,7 @@ class TestLeafDynamics:
             )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffLeafDynamicsGradients:
     """Parametrized tests for gradient calculations in leaf dynamics."""
 

@@ -128,6 +128,7 @@ class DiffStorageDynamics(torch.nn.Module):
         }
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestStorageOrganDynamics:
     # [!] The storage module does not have dedicated test data.
     # We reuse the partitioning test data as they contain relevant parameters and states.
@@ -415,6 +416,7 @@ class TestStorageOrganDynamics:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffStorageDynamicsGradients:
     """Parametrized tests for gradient calculations in storage organ dynamics."""
 

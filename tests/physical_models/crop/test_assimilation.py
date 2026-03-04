@@ -67,6 +67,7 @@ class DiffAssimilation(torch.nn.Module):
         return {"PGASS": torch.stack([item["PGASS"] for item in results])}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestAssimilation:
     assimilation_data_urls = [
         f"{phy_data_folder}/test_assimilation_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -356,6 +357,7 @@ class TestAssimilation:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffAssimilationGradients:
     """Parametrized tests for gradient calculations in assimilation."""
 

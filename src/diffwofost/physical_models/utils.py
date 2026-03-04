@@ -273,29 +273,25 @@ def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     delta = 1e-6
 
     # Parameters like RDRRTB are batched tables, so we need to compute
-    # the gradient for each table element separately
-    # So, we flatten the parameter for easier indexing
-    param_flat = param_value.reshape(-1)
+    # the gradient for each table element separately.
+    # Flatten for easier indexing; clone once so we can restore in-place.
+    param_flat = param_value.detach().reshape(-1).clone()
     grad_flat = torch.zeros_like(param_flat)
 
-    for i in range(param_flat.numel()):
-        p_plus = param_flat.clone()
-        p_plus[i] += delta
-        p_minus = param_flat.clone()
-        p_minus[i] -= delta
+    with torch.no_grad():
+        for i in range(param_flat.numel()):
+            orig = param_flat[i].item()
 
-        p_plus = p_plus.view_as(param_value)
-        p_minus = p_minus.view_as(param_value)
+            param_flat[i] = orig + delta
+            model = get_model_fn()
+            loss_plus = model({param_name: param_flat.view_as(param_value)})[out_name].sum()
 
-        model = get_model_fn()
-        out_plus = model({param_name: p_plus})[out_name]
-        loss_plus = out_plus.sum()
+            param_flat[i] = orig - delta
+            model = get_model_fn()
+            loss_minus = model({param_name: param_flat.view_as(param_value)})[out_name].sum()
 
-        model = get_model_fn()
-        out_minus = model({param_name: p_minus})[out_name]
-        loss_minus = out_minus.sum()
-
-        grad_flat[i] = (loss_plus - loss_minus) / (2 * delta)
+            grad_flat[i] = (loss_plus - loss_minus) / (2 * delta)
+            param_flat[i] = orig  # restore for next iteration
 
     return grad_flat.view_as(param_value)
 

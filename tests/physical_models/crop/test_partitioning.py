@@ -76,6 +76,7 @@ class DiffPartitioning(torch.nn.Module):
         return output_dict
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestPartitioning:
     data_urls = [f"{phy_data_folder}/test_partitioning_wofost72_{i:02d}.yaml" for i in range(1, 45)]
 
@@ -316,6 +317,7 @@ class TestPartitioning:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffPartitioningGradients:
     """Gradient tests mirroring leaf dynamics test structure."""
 

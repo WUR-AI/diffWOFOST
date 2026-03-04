@@ -145,6 +145,7 @@ class DiffEvapotranspiration(torch.nn.Module):
         }
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestEvapotranspiration:
     transpiration_data_urls = [
         f"{phy_data_folder}/test_transpiration_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -628,6 +629,7 @@ def _minimal_parvalues(device: str, *, include_co2: bool = False, include_layers
     return ParameterProvider(cropdata=pars)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestEvapotranspirationVariants:
     def test_wrapper_selects_base(self, device):
         parvalues = _minimal_parvalues(device)
@@ -680,6 +682,7 @@ class TestEvapotranspirationVariants:
         assert torch.all(tramx_co2 <= tramx_base)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffEvapotranspirationGradients:
     param_names = ["CFET", "DEPNR", "KDIFTB", "SMW", "SMFCF", "SM0", "CRAIRC"]
     output_names = ["EVWMX", "EVSMX", "TRAMX", "TRA", "RFTRA"]
