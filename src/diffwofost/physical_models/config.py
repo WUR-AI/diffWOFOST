@@ -74,25 +74,6 @@ class ComputeConfig:
 
     _device: torch.device = None
     _dtype: torch.dtype = None
-    _check_carbon_balance: bool = True
-
-    @classmethod
-    def get_check_carbon_balance(cls) -> bool:
-        """Return whether the carbon balance check is active."""
-        return cls._check_carbon_balance
-
-    @classmethod
-    def set_check_carbon_balance(cls, value: bool) -> None:
-        """Enable or disable the per-timestep carbon balance check.
-
-        Disabling it eliminates a GPU→CPU sync every timestep, which
-        significantly improves throughput during training/optimization.
-        Re-enable it for debugging.
-
-        Args:
-            value (bool): True to enable (default), False to disable.
-        """
-        cls._check_carbon_balance = value
 
     @classmethod
     def _initialize_defaults(cls):

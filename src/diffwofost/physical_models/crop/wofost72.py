@@ -200,6 +200,9 @@ class Wofost72(SimulationObject):
 
     @staticmethod
     def _check_carbon_balance(day, DMI, GASS, MRES, CVF, pf):
+        """Check that carbon flows are balanced on the current day."""
+        # [!] This check runs every day and can be costly on GPU, so we can think about removing it
+        # and sanitize the parameters instead.
         (FR, FL, FS, FO) = pf
         checksum = (
             (GASS - MRES - (FR + (FL + FS + FO) * (1.0 - FR)) * DMI / CVF)
@@ -263,8 +266,7 @@ class Wofost72(SimulationObject):
             (pf.FL / p.CVL + pf.FS / p.CVS + pf.FO / p.CVO) * (1.0 - pf.FR) + pf.FR / p.CVR
         )
         r.DMI = CVF * r.ASRC
-        if ComputeConfig.get_check_carbon_balance():
-            self._check_carbon_balance(day, r.DMI, r.GASS, r.MRES, CVF, pf)
+        self._check_carbon_balance(day, r.DMI, r.GASS, r.MRES, CVF, pf)
 
         # distribution over plant organ
 
