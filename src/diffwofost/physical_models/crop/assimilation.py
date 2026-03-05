@@ -7,7 +7,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.util import astro
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
@@ -15,16 +14,7 @@ from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
-
-
-def _as_python_float(x) -> float:
-    if isinstance(x, torch.Tensor):
-        x_cpu = x.detach().cpu()
-        if x_cpu.numel() != 1:
-            x_cpu = x_cpu.reshape(-1)[0]
-        return float(x_cpu.item())
-    return float(x)
-
+from diffwofost.physical_models.utils import astro
 
 # ---------------------------------------------------------------------------
 # Module-level cache: avoids recreating small constant tensors on every call.
@@ -348,10 +338,6 @@ class WOFOST72_Assimilation(SimulationObject):
         self._tmn_window_mask = deque(maxlen=7)
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
-        # Cache for astro() results keyed by (day, lat).  astro() only depends
-        # on day and latitude so the same result can be reused across batch
-        # elements (which share the same weather driver).
-        self._astro_cache: dict = {}
 
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
         """Compute the potential gross assimilation rate (PGASS)."""
@@ -379,15 +365,12 @@ class WOFOST72_Assimilation(SimulationObject):
         mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
         tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
 
-        # Astronomical variables (computed with PCSE util; then broadcast to tensors).
-        # Cache by (day, lat) because astro() only depends on these two values
-        # and the call involves CPU-side scalar work.
-        lat = _as_python_float(drv.LAT)
-        astro_key = (day, lat)
-        if astro_key not in self._astro_cache:
-            irrad_for_astro = _as_python_float(drv.IRRAD)
-            self._astro_cache[astro_key] = astro(day, lat, irrad_for_astro)
-        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = self._astro_cache[astro_key]
+        # Astronomical variables computed via vectorized torch astro routine.
+        # latitude and radiation are passed directly – they may be scalars or
+        # tensors; the function returns torch.Tensor results in all cases.
+        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(
+            day, drv.LAT, drv.IRRAD, dtype=self.dtype, device=self.device
+        )
 
         dayl_t = _broadcast_to(dayl, self.params.shape, dtype=self.dtype, device=self.device)
         sinld_t = _broadcast_to(sinld, self.params.shape, dtype=self.dtype, device=self.device)
