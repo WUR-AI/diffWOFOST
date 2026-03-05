@@ -13,7 +13,6 @@ from pcse import signals
 from pcse.base import SimulationObject
 from pcse.traitlets import Enum
 from pcse.traitlets import Instance
-from pcse.util import daylength
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
@@ -24,6 +23,7 @@ from diffwofost.physical_models.utils import _broadcast_to
 from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import _restore_state
 from diffwofost.physical_models.utils import _snapshot_state
+from diffwofost.physical_models.utils import daylength
 
 
 class Vernalisation(SimulationObject):
@@ -501,7 +501,8 @@ class DVS_Phenology(SimulationObject):
         s = self.states
 
         # Day length sensitivity
-        DAYLP = daylength(day, drv.LAT)
+        # daylength returns a Tensor directly; broadcast to parameter shape.
+        DAYLP = daylength(day, drv.LAT, dtype=self.dtype, device=self.device)
         DAYLP_t = _broadcast_to(DAYLP, p.shape, dtype=self.dtype, device=self.device)
         # Compute DVRED conditionally based on IDSL >= 1
         safe_den = p.DLO - p.DLC
