@@ -413,6 +413,7 @@ class DVS_Phenology(SimulationObject):
         self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
 
+        # see issue #60
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
 
         # Define initial states
