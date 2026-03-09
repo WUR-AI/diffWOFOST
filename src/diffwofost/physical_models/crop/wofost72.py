@@ -240,6 +240,7 @@ class Wofost72(SimulationObject):
 
         # if before emergence there is no need to continue
         # because only the phenology is running.
+        # TODO: revisit this when fixing #60
         if torch.all(self.pheno.states.STAGE == 0):
             return
 
