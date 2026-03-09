@@ -413,6 +413,7 @@ class DVS_Phenology(SimulationObject):
         self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
 
+        # see issue #60
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
 
         # Define initial states
@@ -653,7 +654,7 @@ class DVS_Phenology(SimulationObject):
 
         # Send crop_finish signal if maturity reached for one.
         # assumption is that all elements mature simultaneously
-        # TODO: revisit this when fixing engine for agromanager
+        # TODO: revisit this when fixing engine for agromanager, see issue #60
         if torch.any(should_mature) and p.CROP_END_TYPE in ["maturity", "earliest"]:
             self._send_signal(
                 signal=signals.crop_finish,
@@ -665,6 +666,7 @@ class DVS_Phenology(SimulationObject):
         msg = "Finished state integration for %s"
         self.logger.debug(msg % day)
 
+    # TODO: revisit this when fixing engine for agromanager, see issue #60
     def _on_CROP_FINISH(self, day, finish_type=None):
         """Handle external crop finish signal to set harvest date.
 
@@ -684,42 +686,3 @@ class DVS_Phenology(SimulationObject):
             self._for_finalize["DOH"] = torch.full(
                 self.params.shape, day.toordinal(), dtype=self.dtype, device=self.device
             )
-
-    def get_variable(self, varname):
-        # TODO: should be removed while fixing #49. this is needed because
-        # conditions are applied on STAGE in pcse.crop.wofost72.py
-        """Return the value of the specified state or rate variable.
-
-        :param varname: Name of the variable.
-
-        Note that the `get_variable()` will searches for `varname` exactly
-        as specified (case sensitive).
-        """
-        if varname == "STAGE":
-            # Return string representation of current stage
-            stage_map = {
-                0: "emerging",
-                1: "vegetative",
-                2: "reproductive",
-                3: "mature",
-            }
-            stage_value = self.states.STAGE
-            if stage_value.dim() != 0:
-                stage_id = stage_value.flatten()[0].item()
-            else:
-                stage_id = stage_value.item()
-            return stage_map[stage_id]
-
-        # Search for variable in the current object, then traverse the hierarchy
-        value = None
-        if hasattr(self.states, varname):
-            value = getattr(self.states, varname)
-        elif hasattr(self.rates, varname):
-            value = getattr(self.rates, varname)
-        # Query individual sub-SimObject for existence of variable v
-        else:
-            for simobj in self.subSimObjects:
-                value = simobj.get_variable(varname)
-                if value is not None:
-                    break
-        return value

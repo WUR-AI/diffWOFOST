@@ -18,7 +18,7 @@ partitioning_config = Configuration(CROP=DVS_Partitioning, OUTPUT_VARS=["FR", "F
 
 def get_test_diff_partitioning():
     """Build a small wrapper module for differentiable tests."""
-    test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
     (
@@ -127,7 +127,7 @@ class TestPartitioning:
 
     @pytest.mark.parametrize("param", ["FRTB", "FLTB", "FSTB", "FOTB"])
     def test_partitioning_with_one_parameter_vector(self, param, device):
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -157,7 +157,7 @@ class TestPartitioning:
                 assert torch.all(torch.isfinite(day[key]))
 
     def test_partitioning_with_different_parameter_values(self, device):
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -191,7 +191,7 @@ class TestPartitioning:
                 assert torch.all(torch.isfinite(day[key]))
 
     def test_partitioning_with_multiple_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -223,7 +223,7 @@ class TestPartitioning:
                 assert torch.all(torch.isfinite(day[key]))
 
     def test_partitioning_with_multiple_parameter_arrays(self):
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (
@@ -266,7 +266,7 @@ class TestPartitioning:
             )  # check the output shapes
 
     def test_partitioning_with_incompatible_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (

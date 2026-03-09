@@ -19,7 +19,7 @@ def pytest_addoption(parser):
         "--fast",
         action="store_true",
         default=False,
-        help="Run a reduced test suite: only the first 5 data files per model, "
+        help="Run a reduced test suite: only data files 05, 06, 10, 17, 20, 30, 44 per model, "
         "skip CUDA tests, and skip tensor-mode gradient tests.",
     )
 
@@ -62,14 +62,15 @@ def download_file(file_name, local_test_dir=LOCAL_TEST_DIR, base_url=BASE_PCSE_U
 def download_test_files(request):
     """Download all required test files before running tests.
 
-    When --fast is active only the first 5 files per model are downloaded.
+    When --fast is active only the files for indices 05, 06, 10, 17, 20, 30, 44
+    per model are downloaded.
     """
     fast = request.config.getoption("--fast", default=False)
-    n_files = 5 if fast else 44
+    fast_indices = [5, 6, 10, 17, 20, 30, 44]
+    all_indices = range(1, 45)
+    indices = fast_indices if fast else all_indices
     file_names = [
-        f"test_{model_name}_wofost72_{i:02d}.yaml"
-        for model_name in model_names
-        for i in range(1, n_files + 1)
+        f"test_{model_name}_wofost72_{i:02d}.yaml" for model_name in model_names for i in indices
     ]
     for file_name in file_names:
         download_file(file_name)
@@ -109,8 +110,8 @@ def fast_mode(request):
     When active this fixture skips the current test if any of the following
     applies to its parametrize arguments:
 
-    1. ``test_data_url`` refers to a data-file index greater than 5
-       (only the first five files are exercised).
+    1. ``test_data_url`` refers to a data-file index not in {05, 06, 10, 17, 20, 30, 44}
+       (those indices cover different crops and agro-management configurations).
     2. ``device`` is ``"cuda"`` (GPU tests are skipped even when a GPU is
        available).
     3. ``config_type`` is ``"tensor"`` (tensor-mode gradient tests are
@@ -132,9 +133,10 @@ def fast_mode(request):
     if params.get("config_type") == "tensor":
         pytest.skip("--fast: skipping tensor-mode gradient tests")
 
-    # 1. Limit data files to the first 5.
+    # 1. Limit data files to indices 05, 06, 10, 20, 30, 44.
+    fast_indices = {5, 6, 10, 17, 20, 30, 44}
     test_data_url = params.get("test_data_url")
     if test_data_url is not None:
         match = re.search(r"_(\d+)\.yaml$", str(test_data_url))
-        if match and int(match.group(1)) > 5:
+        if match and int(match.group(1)) not in fast_indices:
             pytest.skip(f"--fast: skipping data file index {match.group(1)}")

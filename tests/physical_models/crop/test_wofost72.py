@@ -36,7 +36,7 @@ def get_test_diff_wofost72_model():
     # times across different tests, which can be time-consuming.
     global _wofost72_template_inputs
     if _wofost72_template_inputs is None:
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         _wofost72_template_inputs = _build_wofost72_template_inputs(test_data)
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -203,7 +203,7 @@ class TestWofost72:
     )
     def test_wofost72_with_one_parameter_vector(self, param, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -288,7 +288,7 @@ class TestWofost72:
     )
     def test_wofost72_with_different_parameter_values(self, param, delta, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -339,7 +339,7 @@ class TestWofost72:
 
     def test_wofost72_with_multiple_parameter_vectors(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -382,7 +382,7 @@ class TestWofost72:
 
     def test_wofost72_with_multiple_parameter_arrays(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -436,7 +436,7 @@ class TestWofost72:
 
     def test_wofost72_with_incompatible_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -466,7 +466,7 @@ class TestWofost72:
 
     def test_wofost72_with_incompatible_weather_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (

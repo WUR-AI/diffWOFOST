@@ -24,7 +24,7 @@ waterbalance_config = Configuration(
 
 def get_test_diff_waterbalance_model(device: str = "cpu"):
     """Return a fresh DiffWaterbalancePP model ready to be called."""
-    test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["SMFCF"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -141,7 +141,7 @@ class TestWaterbalancePP:
 
     def test_waterbalance_with_one_parameter_vector(self, device):
         """SMFCF as a 1-D vector → SM is broadcast to the same shape."""
-        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SMFCF"]
         (
@@ -180,7 +180,7 @@ class TestWaterbalancePP:
     @pytest.mark.parametrize("delta", [-0.02, 0.02])
     def test_waterbalance_with_different_smfcf_values(self, delta, device):
         """Batch of 3 SMFCF values → SM equals each value independently."""
-        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SMFCF"]
         (
@@ -219,7 +219,7 @@ class TestWaterbalancePP:
 
     def test_waterbalance_with_multiple_parameter_vectors(self, device):
         """SMFCF repeated 10× → EVS and internal SM broadcast correctly."""
-        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SMFCF"]
         (
@@ -253,7 +253,7 @@ class TestWaterbalancePP:
 
     def test_waterbalance_with_multiple_parameter_arrays(self, device):
         """2-D SMFCF of shape (30, 5) → SM and EVS outputs carry the same shape."""
-        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_potentialproduction_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SMFCF"]
         (

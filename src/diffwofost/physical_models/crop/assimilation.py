@@ -39,6 +39,29 @@ def _get_tensor_constants(dtype: torch.dtype, device) -> dict:
     return _TENSOR_CONSTANTS[key]
 
 
+# ---------------------------------------------------------------------------
+# Module-level cache: avoids recreating small constant tensors on every call.
+# Keyed by (torch.dtype, str(device)) so different dtype/device combos each
+# get their own set of pre-allocated tensors.
+# ---------------------------------------------------------------------------
+_TENSOR_CONSTANTS: dict = {}
+
+
+def _get_tensor_constants(dtype: torch.dtype, device) -> dict:
+    """Return cached constant tensors for *dtype* / *device*."""
+    key = (dtype, str(device))
+    if key not in _TENSOR_CONSTANTS:
+        _TENSOR_CONSTANTS[key] = {
+            "xgauss": torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=dtype, device=device),
+            "wgauss": torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=dtype, device=device),
+            "pi": torch.tensor(torch.pi, dtype=dtype, device=device),
+            "scv": torch.tensor(0.2, dtype=dtype, device=device),
+            "one": torch.tensor(1.0, dtype=dtype, device=device),
+            "two": torch.tensor(2.0, dtype=dtype, device=device),
+        }
+    return _TENSOR_CONSTANTS[key]
+
+
 def totass7(
     DAYL: torch.Tensor,
     AMAX: torch.Tensor,
@@ -338,6 +361,10 @@ class WOFOST72_Assimilation(SimulationObject):
         self._tmn_window_mask = deque(maxlen=7)
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
+        # Cache for astro() results keyed by (day, lat).  astro() only depends
+        # on day and latitude so the same result can be reused across batch
+        # elements (which share the same weather driver).
+        self._astro_cache: dict = {}
 
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
         """Compute the potential gross assimilation rate (PGASS)."""
