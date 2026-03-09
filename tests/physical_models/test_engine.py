@@ -15,7 +15,7 @@ config = Configuration(
 @pytest.mark.usefixtures("fast_mode")
 class TestEngine:
     def test_engine(self):
-        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "TSUMEM",

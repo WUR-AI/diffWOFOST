@@ -713,7 +713,7 @@ class TestGetDrvParam:
 
     def test_float_broadcast(self):
         expected_shape = (3, 2)
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
         wdc = provider(provider.first_date)
@@ -724,7 +724,7 @@ class TestGetDrvParam:
 
     def test_scalar_broadcast(self):
         expected_shape = (3, 2)
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         provider = WeatherDataProviderTestHelper(test_data["WeatherVariables"])
         wdc = provider(provider.first_date)

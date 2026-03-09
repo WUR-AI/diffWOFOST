@@ -76,7 +76,7 @@ def _prepare_common_stem_inputs(test_data_url, device, meteo_range_checks=True):
 def get_test_diff_stem_model(device: str = "cpu"):
     # [!] The stem module does not have dedicated test data.
     # We reuse the partitioning test data as they contain relevant parameters and states.
-    test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
 
     (
         _,
@@ -175,7 +175,7 @@ class TestStemDynamics:
     @pytest.mark.parametrize("param", ["TDWI", "RDRSTB", "SSATB", "TEMP"])
     def test_stem_dynamics_with_one_parameter_vector(self, param, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -244,7 +244,7 @@ class TestStemDynamics:
     )
     def test_stem_dynamics_with_different_parameter_values(self, param, delta, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -306,7 +306,7 @@ class TestStemDynamics:
 
     def test_stem_dynamics_with_multiple_parameter_vectors(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -342,7 +342,7 @@ class TestStemDynamics:
 
     def test_stem_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -381,7 +381,7 @@ class TestStemDynamics:
 
     def test_stem_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             _,
             crop_model_params_provider,
@@ -410,7 +410,7 @@ class TestStemDynamics:
 
     def test_stem_dynamics_with_incompatible_weather_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             _,
             crop_model_params_provider,

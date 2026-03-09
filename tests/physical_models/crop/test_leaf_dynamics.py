@@ -19,7 +19,7 @@ leaf_dynamics_config = Configuration(
 
 
 def get_test_diff_leaf_model():
-    test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -124,7 +124,7 @@ class TestLeafDynamics:
     )
     def test_leaf_dynamics_with_one_parameter_vector(self, param, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -204,7 +204,7 @@ class TestLeafDynamics:
     )
     def test_leaf_dynamics_with_different_parameter_values(self, param, delta, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -255,7 +255,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_multiple_parameter_vectors(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -298,7 +298,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -347,7 +347,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -377,7 +377,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_incompatible_weather_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
