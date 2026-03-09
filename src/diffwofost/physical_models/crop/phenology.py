@@ -653,7 +653,7 @@ class DVS_Phenology(SimulationObject):
 
         # Send crop_finish signal if maturity reached for one.
         # assumption is that all elements mature simultaneously
-        # TODO: revisit this when fixing engine for agromanager
+        # TODO: revisit this when fixing engine for agromanager, see issue #60
         if torch.any(should_mature) and p.CROP_END_TYPE in ["maturity", "earliest"]:
             self._send_signal(
                 signal=signals.crop_finish,
