@@ -307,6 +307,7 @@ class Wofost72(SimulationObject):
         # because only the phenology is running.
         # Just run a touch() to to ensure that all state variables are available
         # in the kiosk
+        # TODO: revisit this when fixing #60
         if torch.all(crop_stage_before == 0):
             self.touch()
             return
