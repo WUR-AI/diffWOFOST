@@ -35,8 +35,8 @@ class WaterbalancePP(SimulationObject):
         EVST = Tensor(-99.0)
 
     class RateVariables(TensorRatesTemplate):
-        EVS = Tensor(-99.0)
-        WTRA = Tensor(-99.0)
+        EVS = Tensor(0.0)
+        WTRA = Tensor(0.0)
 
     def initialize(self, day, kiosk, parvalues, shape: tuple | torch.Size | None = None):
         """Initialize the potential-production waterbalance.
