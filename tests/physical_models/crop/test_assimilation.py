@@ -19,7 +19,7 @@ assimilation_config = Configuration(
 
 
 def get_test_diff_assimilation_model():
-    test_data_url = f"{phy_data_folder}/test_assimilation_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_assimilation_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -67,6 +67,7 @@ class DiffAssimilation(torch.nn.Module):
         return {"PGASS": torch.stack([item["PGASS"] for item in results])}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestAssimilation:
     assimilation_data_urls = [
         f"{phy_data_folder}/test_assimilation_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -113,7 +114,7 @@ class TestAssimilation:
 
     @pytest.mark.parametrize("param", ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"])
     def test_assimilation_with_one_parameter_vector(self, param, device):
-        test_data_url = phy_data_folder / "test_assimilation_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_assimilation_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
         (
@@ -160,7 +161,7 @@ class TestAssimilation:
         ],
     )
     def test_assimilation_with_different_parameter_values(self, param, delta, device):
-        test_data_url = phy_data_folder / "test_assimilation_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_assimilation_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
         (
@@ -199,7 +200,7 @@ class TestAssimilation:
             )
 
     def test_assimilation_with_multiple_parameter_vectors(self, device):
-        test_data_url = phy_data_folder / "test_assimilation_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_assimilation_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
         (
@@ -235,7 +236,7 @@ class TestAssimilation:
             )
 
     def test_assimilation_with_multiple_parameter_arrays(self, device):
-        test_data_url = phy_data_folder / "test_assimilation_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_assimilation_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
         (
@@ -251,9 +252,9 @@ class TestAssimilation:
 
         # Make weather drivers match (30, 5) so _get_drv validates/broadcasts.
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.IRRAD = torch.ones((30, 5), dtype=torch.float64) * wdc.IRRAD
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
-            wdc.TMIN = torch.ones((30, 5), dtype=torch.float64) * wdc.TMIN
+            wdc.IRRAD = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.IRRAD
+            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
+            wdc.TMIN = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TMIN
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -277,7 +278,7 @@ class TestAssimilation:
             assert all(model[var].shape == (30, 5) for var in expected_precision.keys())
 
     def test_assimilation_with_incompatible_parameter_vectors(self):
-        test_data_url = phy_data_folder / "test_assimilation_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_assimilation_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
         (
@@ -304,7 +305,7 @@ class TestAssimilation:
             )
 
     def test_assimilation_with_incompatible_weather_parameter_vectors(self):
-        test_data_url = phy_data_folder / "test_assimilation_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_assimilation_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
         (
@@ -356,6 +357,7 @@ class TestAssimilation:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffAssimilationGradients:
     """Parametrized tests for gradient calculations in assimilation."""
 

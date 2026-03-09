@@ -7,8 +7,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from pcse.util import astro
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
@@ -26,6 +24,29 @@ def _as_python_float(x) -> float:
             x_cpu = x_cpu.reshape(-1)[0]
         return float(x_cpu.item())
     return float(x)
+
+
+# ---------------------------------------------------------------------------
+# Module-level cache: avoids recreating small constant tensors on every call.
+# Keyed by (torch.dtype, str(device)) so different dtype/device combos each
+# get their own set of pre-allocated tensors.
+# ---------------------------------------------------------------------------
+_TENSOR_CONSTANTS: dict = {}
+
+
+def _get_tensor_constants(dtype: torch.dtype, device) -> dict:
+    """Return cached constant tensors for *dtype* / *device*."""
+    key = (dtype, str(device))
+    if key not in _TENSOR_CONSTANTS:
+        _TENSOR_CONSTANTS[key] = {
+            "xgauss": torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=dtype, device=device),
+            "wgauss": torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=dtype, device=device),
+            "pi": torch.tensor(torch.pi, dtype=dtype, device=device),
+            "scv": torch.tensor(0.2, dtype=dtype, device=device),
+            "one": torch.tensor(1.0, dtype=dtype, device=device),
+            "two": torch.tensor(2.0, dtype=dtype, device=device),
+        }
+    return _TENSOR_CONSTANTS[key]
 
 
 def totass7(
@@ -70,29 +91,52 @@ def totass7(
     COSLD   R4  Amplitude of sine of solar height             -      I
     DTGA    R4  Daily total gross assimilation           kg CO2/ha/d O
     """
-    xgauss = torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=dtype, device=device)
-    wgauss = torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=dtype, device=device)
-    pi = torch.tensor(torch.pi, dtype=dtype, device=device)
+    consts = _get_tensor_constants(dtype, device)
+    xgauss = consts["xgauss"]
+    wgauss = consts["wgauss"]
+    pi = consts["pi"]
 
     # Only compute where it can be non-zero.
     mask = (AMAX > 0) & (LAI > 0) & (DAYL > 0)
 
-    dtga = torch.zeros_like(AMAX)
     # Prevent division by zero in par calculation
     dsinbe_safe = torch.where(DSINBE > epsilon, DSINBE, torch.ones_like(DSINBE))
 
+    # Vectorized 3-point Gaussian time quadrature: compute sinb, par, pardif,
+    # pardir for all three quadrature points simultaneously via a leading
+    # quadrature dimension of size 3, replacing the Python for-loop with a
+    # single torch.cos call on a (3, *B) tensor.
+    ndim = DAYL.dim()
+    if ndim > 0:
+        xg_v = xgauss.view(3, *([1] * ndim))  # (3, 1, .., 1)
+        DAYL_q = DAYL.unsqueeze(0)  # (1, *B)
+        SINLD_q = SINLD.unsqueeze(0) if SINLD.dim() > 0 else SINLD
+        COSLD_q = COSLD.unsqueeze(0) if COSLD.dim() > 0 else COSLD
+        AVRAD_q = AVRAD.unsqueeze(0) if AVRAD.dim() > 0 else AVRAD
+        DIFPP_q = DIFPP.unsqueeze(0) if DIFPP.dim() > 0 else DIFPP
+        dsinbe_q = dsinbe_safe.unsqueeze(0) if dsinbe_safe.dim() > 0 else dsinbe_safe
+    else:
+        xg_v = xgauss  # (3,)
+        DAYL_q = DAYL
+        SINLD_q = SINLD
+        COSLD_q = COSLD
+        AVRAD_q = AVRAD
+        DIFPP_q = DIFPP
+        dsinbe_q = dsinbe_safe
+
+    hour = 12.0 + 0.5 * DAYL_q * xg_v  # (3, *B)
+    sinb = torch.maximum(
+        torch.zeros_like(hour),
+        SINLD_q + COSLD_q * torch.cos(2.0 * pi * (hour + 12.0) / 24.0),
+    )  # (3, *B) – one cos call
+    par = 0.5 * AVRAD_q * sinb * (1.0 + 0.4 * sinb) / dsinbe_q  # (3, *B)
+    pardif = torch.minimum(par, sinb * DIFPP_q)  # (3, *B)
+    pardir = par - pardif  # (3, *B)
+
+    # Call assim7 for each quadrature slice (sinb[i] etc. are already (*B))
+    dtga = torch.zeros_like(AMAX)
     for i in range(3):
-        hour = 12.0 + 0.5 * DAYL * xgauss[i]
-        sinb = torch.maximum(
-            torch.zeros_like(DAYL),
-            SINLD + COSLD * torch.cos(2.0 * pi * (hour + 12.0) / 24.0),
-        )
-
-        par = 0.5 * AVRAD * sinb * (1.0 + 0.4 * sinb) / dsinbe_safe
-        pardif = torch.minimum(par, sinb * DIFPP)
-        pardir = par - pardif
-
-        fgros = assim7(AMAX, EFF, LAI, KDIF, sinb, pardir, pardif, epsilon=epsilon)
+        fgros = assim7(AMAX, EFF, LAI, KDIF, sinb[i], pardir[i], pardif[i], epsilon=epsilon)
         dtga = dtga + fgros * wgauss[i]
 
     dtga = dtga * DAYL
@@ -123,53 +167,87 @@ def assim7(
     Subroutines and functions called: none.
     Called by routine TOTASS.
     """
-    xgauss = torch.tensor([0.1127017, 0.5000000, 0.8872983], dtype=AMAX.dtype, device=AMAX.device)
-    wgauss = torch.tensor([0.2777778, 0.4444444, 0.2777778], dtype=AMAX.dtype, device=AMAX.device)
-
-    scv = torch.tensor(0.2, dtype=AMAX.dtype, device=AMAX.device)
-    one = torch.tensor(1.0, dtype=AMAX.dtype, device=AMAX.device)
+    consts = _get_tensor_constants(AMAX.dtype, AMAX.device)
+    xgauss = consts["xgauss"]
+    wgauss = consts["wgauss"]
+    scv = consts["scv"]
+    one = consts["one"]
 
     # Prevent division by zero in extinction coefficient calculations
     sinb_safe = torch.where(SINB > epsilon, SINB, torch.ones_like(SINB))
 
-    # Extinction coefficients
+    # Extinction coefficients (loop-invariant: do not depend on laic)
     refh = (one - torch.sqrt(one - scv)) / (one + torch.sqrt(one - scv))
     refs = refh * 2.0 / (one + 1.6 * sinb_safe)
     kdirbl = (0.5 / sinb_safe) * KDIF / (0.8 * torch.sqrt(one - scv))
     kdir_t = kdirbl * torch.sqrt(one - scv)
+    amax_denom = torch.maximum(consts["two"], AMAX)
 
-    # Integration over LAI (depth)
-    fgros = torch.zeros_like(AMAX)
-    amax_denom = torch.maximum(torch.tensor(2.0, dtype=AMAX.dtype, device=AMAX.device), AMAX)
+    # vispp, exp_term, eff_vispp_safe are also loop-invariant (no laic dependence)
+    vispp = (one - scv) * PARDIR / sinb_safe
+    exp_term = one - torch.exp(-vispp * EFF / amax_denom)
+    eff_vispp = EFF * vispp
+    eff_vispp_safe = torch.where(
+        torch.abs(eff_vispp) > epsilon, eff_vispp, torch.ones_like(eff_vispp)
+    )
 
-    for i in range(3):
-        laic = LAI * xgauss[i]
+    # Vectorized 3-point Gaussian LAI quadrature
+    ndim = LAI.dim()
+    if ndim > 0:
+        xg_v = xgauss.view(3, *([1] * ndim))  # (3, 1, .., 1)
+        wg_v = wgauss.view(3, *([1] * ndim))  # (3, 1, .., 1)
+        laic = LAI.unsqueeze(0) * xg_v  # (3, *B)
+        # Unsqueeze all (*B) tensors to (1, *B) so they broadcast with (3, *B)
+        refs_b = refs.unsqueeze(0)
+        PARDIF_b = PARDIF.unsqueeze(0)
+        KDIF_b = KDIF.unsqueeze(0)
+        PARDIR_b = PARDIR.unsqueeze(0)
+        kdir_t_b = kdir_t.unsqueeze(0)
+        kdirbl_b = kdirbl.unsqueeze(0)
+        AMAX_b = AMAX.unsqueeze(0)
+        EFF_b = EFF.unsqueeze(0)
+        amax_denom_b = amax_denom.unsqueeze(0)
+        exp_term_b = exp_term.unsqueeze(0)
+        eff_vispp_safe_b = eff_vispp_safe.unsqueeze(0)
+        vispp_b = vispp.unsqueeze(0)
+    else:
+        # Scalar inputs: laic is (3,); skip unsqueezes (broadcasting handles it)
+        xg_v = xgauss  # (3,)
+        wg_v = wgauss  # (3,)
+        laic = LAI * xgauss  # (3,)
+        refs_b = refs
+        PARDIF_b = PARDIF
+        KDIF_b = KDIF
+        PARDIR_b = PARDIR
+        kdir_t_b = kdir_t
+        kdirbl_b = kdirbl
+        AMAX_b = AMAX
+        EFF_b = EFF
+        amax_denom_b = amax_denom
+        exp_term_b = exp_term
+        eff_vispp_safe_b = eff_vispp_safe
+        vispp_b = vispp
 
-        visdf = (one - refs) * PARDIF * KDIF * torch.exp(-KDIF * laic)
-        vist = (one - refs) * PARDIR * kdir_t * torch.exp(-kdir_t * laic)
-        visd = (one - scv) * PARDIR * kdirbl * torch.exp(-kdirbl * laic)
+    # exp(-kdirbl * laic) is shared between visd and fslla – compute once
+    exp_kdirbl_laic = torch.exp(-kdirbl_b * laic)  # (3, *B)
 
-        visshd = visdf + vist - visd
-        fgrsh = AMAX * (one - torch.exp(-visshd * EFF / amax_denom))
+    visdf = (one - refs_b) * PARDIF_b * KDIF_b * torch.exp(-KDIF_b * laic)  # (3, *B)
+    vist = (one - refs_b) * PARDIR_b * kdir_t_b * torch.exp(-kdir_t_b * laic)  # (3, *B)
+    visd = (one - scv) * PARDIR_b * kdirbl_b * exp_kdirbl_laic  # (3, *B)
 
-        vispp = (one - scv) * PARDIR / sinb_safe
+    visshd = visdf + vist - visd
+    fgrsh = AMAX_b * (one - torch.exp(-visshd * EFF_b / amax_denom_b))  # (3, *B)
 
-        exp_term = one - torch.exp(-vispp * EFF / amax_denom)
-        # Prevent division by zero in sunlit leaf calculation
-        eff_vispp = EFF * vispp
-        eff_vispp_safe = torch.where(
-            torch.abs(eff_vispp) > epsilon, eff_vispp, torch.ones_like(eff_vispp)
-        )
-        fgrsun_formula = AMAX * (one - (AMAX - fgrsh) * exp_term / eff_vispp_safe)
-        fgrsun = torch.where(vispp <= 0.0, fgrsh, fgrsun_formula)
+    # Prevent division by zero in sunlit leaf calculation
+    fgrsun_formula = AMAX_b * (one - (AMAX_b - fgrsh) * exp_term_b / eff_vispp_safe_b)
+    fgrsun = torch.where(vispp_b <= 0.0, fgrsh, fgrsun_formula)
 
-        fslla = torch.exp(-kdirbl * laic)
-        fgl = fslla * fgrsun + (one - fslla) * fgrsh
+    fslla = exp_kdirbl_laic  # reuse shared exponential
+    fgl = fslla * fgrsun + (one - fslla) * fgrsh
 
-        fgros = fgros + fgl * wgauss[i]
-
-    fgros = fgros * LAI
-    return fgros
+    # Weighted sum over the quadrature dimension (leading dim 0) → (*B)
+    fgros = (fgl * wg_v).sum(0)
+    return fgros * LAI
 
 
 class WOFOST72_Assimilation(SimulationObject):
@@ -270,8 +348,11 @@ class WOFOST72_Assimilation(SimulationObject):
         self._tmn_window_mask = deque(maxlen=7)
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
+        # Cache for astro() results keyed by (day, lat).  astro() only depends
+        # on day and latitude so the same result can be reused across batch
+        # elements (which share the same weather driver).
+        self._astro_cache: dict = {}
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
         """Compute the potential gross assimilation rate (PGASS)."""
         p = self.params
@@ -298,10 +379,15 @@ class WOFOST72_Assimilation(SimulationObject):
         mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
         tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
 
-        # Astronomical variables (computed with PCSE util; then broadcast to tensors)
+        # Astronomical variables (computed with PCSE util; then broadcast to tensors).
+        # Cache by (day, lat) because astro() only depends on these two values
+        # and the call involves CPU-side scalar work.
         lat = _as_python_float(drv.LAT)
-        irrad_for_astro = _as_python_float(drv.IRRAD)
-        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(day, lat, irrad_for_astro)
+        astro_key = (day, lat)
+        if astro_key not in self._astro_cache:
+            irrad_for_astro = _as_python_float(drv.IRRAD)
+            self._astro_cache[astro_key] = astro(day, lat, irrad_for_astro)
+        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = self._astro_cache[astro_key]
 
         dayl_t = _broadcast_to(dayl, self.params.shape, dtype=self.dtype, device=self.device)
         sinld_t = _broadcast_to(sinld, self.params.shape, dtype=self.dtype, device=self.device)
@@ -345,7 +431,6 @@ class WOFOST72_Assimilation(SimulationObject):
         """Calculate and return the potential gross assimilation rate (PGASS)."""
         return self.calc_rates(day, drv)
 
-    @prepare_states
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """No state variables to integrate for this module."""
         return

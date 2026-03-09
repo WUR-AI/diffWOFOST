@@ -69,7 +69,7 @@ def _prepare_common_storage_inputs(test_data_url, meteo_range_checks=True):
 def get_test_diff_storage_model(device: str = "cpu"):
     # [!] The storage organ module does not have dedicated test data.
     # We reuse the partitioning test data as they contain relevant parameters and states.
-    test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
 
     (
         _,
@@ -128,6 +128,7 @@ class DiffStorageDynamics(torch.nn.Module):
         }
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestStorageOrganDynamics:
     # [!] The storage module does not have dedicated test data.
     # We reuse the partitioning test data as they contain relevant parameters and states.
@@ -170,7 +171,7 @@ class TestStorageOrganDynamics:
     @pytest.mark.parametrize("param", ["TDWI", "SPA", "TEMP"])
     def test_storage_dynamics_with_one_parameter_vector(self, param, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -237,7 +238,7 @@ class TestStorageOrganDynamics:
     )
     def test_storage_dynamics_with_different_parameter_values(self, param, delta, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -288,7 +289,7 @@ class TestStorageOrganDynamics:
 
     def test_storage_dynamics_with_multiple_parameter_vectors(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -324,7 +325,7 @@ class TestStorageOrganDynamics:
 
     def test_storage_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             test_data,
             crop_model_params_provider,
@@ -359,7 +360,7 @@ class TestStorageOrganDynamics:
 
     def test_storage_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
         (
             _,
             crop_model_params_provider,
@@ -415,6 +416,7 @@ class TestStorageOrganDynamics:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffStorageDynamicsGradients:
     """Parametrized tests for gradient calculations in storage organ dynamics."""
 

@@ -6,6 +6,8 @@ hide:
 
 ## **Crop modules**
 
+::: diffwofost.physical_models.crop.wofost72.Wofost72
+
 ::: diffwofost.physical_models.crop.phenology.DVS_Phenology
 
 ::: diffwofost.physical_models.crop.partitioning.DVS_Partitioning
@@ -17,7 +19,6 @@ hide:
 ::: diffwofost.physical_models.crop.root_dynamics.WOFOST_Root_Dynamics
 
 ::: diffwofost.physical_models.crop.storage_organ_dynamics.WOFOST_Storage_Organ_Dynamics
-
 
 ::: diffwofost.physical_models.crop.respiration.WOFOST_Maintenance_Respiration
 

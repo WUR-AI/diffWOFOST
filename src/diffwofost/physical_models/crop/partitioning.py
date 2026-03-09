@@ -3,7 +3,6 @@ from warnings import warn
 import torch
 from pcse import exceptions as exc
 from pcse.base import SimulationObject
-from pcse.decorators import prepare_states
 from pcse.traitlets import Instance
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
@@ -203,7 +202,6 @@ class DVS_Partitioning(_BaseDVSPartitioning):
         """
         self._initialize_from_tables(kiosk, parvalues, shape=shape)
 
-    @prepare_states
     def integrate(self, day, delt=1.0):
         """Update partitioning factors based on development stage (DVS)."""
         self._update_from_tables()
@@ -306,7 +304,6 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
         FRTMOD = torch.max(torch.ones_like(RFTRA), 1.0 / (RFTRA + 0.5))
         return torch.min(torch.full_like(FRTMOD, 0.6), (self.params.FRTB(DVS) * FRTMOD))
 
-    @prepare_states
     def integrate(self, day, delt=1.0):
         """Update partitioning factors based on DVS and water/oxygen stress."""
         DVS = _broadcast_to(self.kiosk["DVS"], self.params.shape)

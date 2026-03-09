@@ -6,7 +6,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.decorators import prepare_rates
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
@@ -113,7 +112,6 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date, drv: WeatherDataContainer):
         """Calculate maintenance respiration rates.
 

@@ -8,6 +8,7 @@ from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestTensorParamTemplate:
     class Params(TensorParamTemplate):
         A = Tensor(0)
@@ -59,6 +60,7 @@ class TestTensorParamTemplate:
         assert p.shape == (2,)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestTensorRatesTemplate:
     class Rates(TensorRatesTemplate):
         A = Tensor(0)
@@ -92,6 +94,7 @@ class TestTensorRatesTemplate:
         assert k.A == 1.0
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestTensorStatesTemplate:
     class States(TensorStatesTemplate):
         A = Tensor(0)

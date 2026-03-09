@@ -19,7 +19,7 @@ leaf_dynamics_config = Configuration(
 
 
 def get_test_diff_leaf_model():
-    test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -68,6 +68,7 @@ class DiffLeafDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["LAI", "TWLV"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestLeafDynamics:
     leafdynamics_data_urls = [
         f"{phy_data_folder}/test_leafdynamics_wofost72_{i:02d}.yaml"
@@ -123,7 +124,7 @@ class TestLeafDynamics:
     )
     def test_leaf_dynamics_with_one_parameter_vector(self, param, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -137,7 +138,7 @@ class TestLeafDynamics:
         if param == "TEMP":
             # Vectorize weather variable
             for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+                wdc.TEMP = torch.ones(10, device=device, dtype=torch.float64) * wdc.TEMP
         elif param in ["KDIFTB", "SLATB"]:
             # AfgenTrait parameters need to have shape (N, M)
             repeated = crop_model_params_provider[param].repeat(10, 1)
@@ -203,7 +204,7 @@ class TestLeafDynamics:
     )
     def test_leaf_dynamics_with_different_parameter_values(self, param, delta, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -254,7 +255,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_multiple_parameter_vectors(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -297,7 +298,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -346,7 +347,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_incompatible_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -376,7 +377,7 @@ class TestLeafDynamics:
 
     def test_leaf_dynamics_with_incompatible_weather_parameter_vectors(self):
         # prepare model input
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
         (
@@ -472,6 +473,7 @@ class TestLeafDynamics:
             )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffLeafDynamicsGradients:
     """Parametrized tests for gradient calculations in leaf dynamics."""
 

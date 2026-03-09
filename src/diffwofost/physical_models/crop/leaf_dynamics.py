@@ -6,8 +6,6 @@ from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
@@ -250,7 +248,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         total_LAI = self.states.LASUM + SAI + PAI
         return total_LAI
 
-    @prepare_rates
     def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
         """Calculate the rates of change for the leaf dynamics.
 
@@ -372,7 +369,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             self._zero,
         )
 
-    @prepare_states
     def integrate(self, day: datetime.date, delt=1.0) -> None:
         """Integrate the leaf dynamics state variables.
 

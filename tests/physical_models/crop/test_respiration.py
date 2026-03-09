@@ -19,7 +19,7 @@ respiration_config = Configuration(
 
 
 def get_test_diff_respiration_model():
-    test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_respiration_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
     (
@@ -70,6 +70,7 @@ class DiffRespiration(torch.nn.Module):
         return {"PMRES": torch.stack([item["PMRES"] for item in results])}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestRespiration:
     respiration_data_urls = [
         f"{phy_data_folder}/test_respiration_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -117,7 +118,7 @@ class TestRespiration:
 
     @pytest.mark.parametrize("param", ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB", "TEMP"])
     def test_respiration_with_one_parameter_vector(self, param, device):
-        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
         (
@@ -129,7 +130,7 @@ class TestRespiration:
 
         if param == "TEMP":
             for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64) * wdc.TEMP
+                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
             with pytest.raises(ValueError):
                 engine = EngineTestHelper(
                     crop_model_params_provider,
@@ -180,7 +181,7 @@ class TestRespiration:
         ],
     )
     def test_respiration_with_different_parameter_values(self, param, delta, device):
-        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
         (
@@ -216,7 +217,7 @@ class TestRespiration:
             )
 
     def test_respiration_with_multiple_parameter_vectors(self, device):
-        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
         (
@@ -254,7 +255,7 @@ class TestRespiration:
             )
 
     def test_respiration_with_multiple_parameter_arrays(self, device):
-        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
         (
@@ -272,7 +273,7 @@ class TestRespiration:
         )
 
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
+            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -296,7 +297,7 @@ class TestRespiration:
             assert all(model[var].shape == (30, 5) for var in expected_precision.keys())
 
     def test_respiration_with_incompatible_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
         (
@@ -323,7 +324,7 @@ class TestRespiration:
             )
 
     def test_respiration_with_incompatible_weather_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_respiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
         (
@@ -377,6 +378,7 @@ class TestRespiration:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffRespirationGradients:
     """Parametrized tests for gradient calculations in maintenance respiration."""
 

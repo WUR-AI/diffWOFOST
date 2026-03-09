@@ -1,0 +1,24 @@
+name: Full test suite
+
+on:
+  workflow_dispatch:
+
+jobs:
+  full-test:
+    name: Full WOFOST72 test suite 
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set up Python 3.13
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+          cache: 'pip'
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install .[dev]
+      - name: Run full unit tests
+        run: |
+          python -c "import pcse"
+          pytest --full_wofost72_test -v -n auto

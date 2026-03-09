@@ -1,3 +1,4 @@
+import pytest
 import torch
 from pcse.agromanager import AgroManager
 from pcse.crop.phenology import DVS_Phenology
@@ -8,6 +9,7 @@ from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from . import phy_data_folder
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestConfiguration:
     def test_basic_config_requires_only_crop_model(self):
         config = Configuration(CROP=WOFOST_Leaf_Dynamics)
@@ -58,6 +60,7 @@ class TestConfiguration:
         assert config.TERMINAL_OUTPUT_VARS == ["DVS"]
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestComputeConfig:
     def test_default_device(self):
         ComputeConfig.reset_to_defaults()

@@ -80,7 +80,7 @@ def _augment_params_for_variant(crop_model_params_provider, variant: str, device
 
 
 def get_test_diff_evapotranspiration_model(device: str = "cpu"):
-    test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = [
         "CFET",
@@ -145,6 +145,7 @@ class DiffEvapotranspiration(torch.nn.Module):
         }
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestEvapotranspiration:
     transpiration_data_urls = [
         f"{phy_data_folder}/test_transpiration_wofost72_{i:02d}.yaml" for i in range(1, 45)
@@ -245,7 +246,7 @@ class TestEvapotranspiration:
         ],
     )
     def test_evapotranspiration_with_one_parameter_vector(self, param, device):
-        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "CFET",
@@ -320,7 +321,7 @@ class TestEvapotranspiration:
         ],
     )
     def test_evapotranspiration_with_different_parameter_values(self, param, delta, device):
-        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "CFET",
@@ -375,7 +376,7 @@ class TestEvapotranspiration:
             )
 
     def test_evapotranspiration_with_multiple_parameter_vectors(self, device):
-        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "CFET",
@@ -424,7 +425,7 @@ class TestEvapotranspiration:
             )
 
     def test_evapotranspiration_with_multiple_parameter_arrays(self, device):
-        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "CFET",
@@ -481,7 +482,7 @@ class TestEvapotranspiration:
             assert all(model[var].shape == batch_shape for var in expected_precision.keys())
 
     def test_evapotranspiration_with_incompatible_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "CFET",
@@ -518,7 +519,7 @@ class TestEvapotranspiration:
             )
 
     def test_evapotranspiration_with_incompatible_weather_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_transpiration_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "CFET",
@@ -628,6 +629,7 @@ def _minimal_parvalues(device: str, *, include_co2: bool = False, include_layers
     return ParameterProvider(cropdata=pars)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestEvapotranspirationVariants:
     def test_wrapper_selects_base(self, device):
         parvalues = _minimal_parvalues(device)
@@ -680,6 +682,7 @@ class TestEvapotranspirationVariants:
         assert torch.all(tramx_co2 <= tramx_base)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffEvapotranspirationGradients:
     param_names = ["CFET", "DEPNR", "KDIFTB", "SMW", "SMFCF", "SM0", "CRAIRC"]
     output_names = ["EVWMX", "EVSMX", "TRAMX", "TRA", "RFTRA"]

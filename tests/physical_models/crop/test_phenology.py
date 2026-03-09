@@ -18,6 +18,29 @@ phenology_config = Configuration(
 )
 
 
+class DVS_PhenologyForPCSE(DVS_Phenology):
+    """DVS_Phenology subclass that adds a get_variable() override required by
+    PCSE's wofost72, which calls self.pheno.get_variable("STAGE") and expects
+    a string result.  Only used in tests that patch pcse.crop.wofost72.Phenology.
+    """
+
+    def get_variable(self, varname):
+        if varname == "STAGE":
+            stage_map = {
+                0: "emerging",
+                1: "vegetative",
+                2: "reproductive",
+                3: "mature",
+            }
+            stage_value = self.states.STAGE
+            if stage_value.dim() != 0:
+                stage_id = stage_value.flatten()[0].item()
+            else:
+                stage_id = stage_value.item()
+            return stage_map[stage_id]
+        return super().get_variable(varname)
+
+
 def assert_reference_match(reference, model, expected_precision):
     assert reference["DAY"] == model["day"]
     for var, precision in expected_precision.items():
@@ -39,7 +62,7 @@ def assert_reference_match(reference, model, expected_precision):
 
 
 def get_test_diff_phenology_model():
-    test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     # Phenology-related crop model parameters
     crop_model_params = [
@@ -102,6 +125,7 @@ class DiffPhenologyDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["DVS", "TSUM"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestPhenologyDynamics:
     phenology_data_urls = [
         f"{phy_data_folder}/test_phenology_wofost72_{i:02d}.yaml"
@@ -420,7 +444,7 @@ class TestPhenologyDynamics:
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
+            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -442,7 +466,7 @@ class TestPhenologyDynamics:
             )
 
     def test_phenology_with_incompatible_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "TSUMEM",
@@ -483,7 +507,7 @@ class TestPhenologyDynamics:
             )
 
     def test_phenology_with_incompatible_weather_parameter_vectors(self):
-        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = [
             "TSUMEM",
@@ -550,7 +574,7 @@ class TestPhenologyDynamics:
         monkeypatch.setattr(DVS_Phenology, "device", "cpu")
         monkeypatch.setattr(DVS_Phenology, "dtype", torch.float64)
 
-        with patch("pcse.crop.wofost72.Phenology", DVS_Phenology):
+        with patch("pcse.crop.wofost72.Phenology", DVS_PhenologyForPCSE):
             model = Wofost72_PP(
                 crop_model_params_provider, weather_data_provider, agro_management_inputs
             )
@@ -562,6 +586,7 @@ class TestPhenologyDynamics:
                 assert_reference_match(reference, model_day, expected_precision)
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffPhenologyDynamicsGradients:
     """Parametrized tests for gradient calculations in phenology dynamics."""
 

@@ -20,7 +20,7 @@ root_dynamics_config = Configuration(
 
 
 def get_test_diff_root_model():
-    test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_01.yaml"
+    test_data_url = f"{phy_data_folder}/test_rootdynamics_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
     crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
@@ -69,6 +69,7 @@ class DiffRootDynamics(torch.nn.Module):
         return {var: torch.stack([item[var] for item in results]) for var in ["RD", "TWRT"]}
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestRootDynamics:
     rootdynamics_data_urls = [
         f"{phy_data_folder}/test_rootdynamics_wofost72_{i:02d}.yaml"
@@ -121,7 +122,7 @@ class TestRootDynamics:
     @pytest.mark.parametrize("param", ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"])
     def test_root_dynamics_with_one_parameter_vector(self, param, device):
         # prepare model input
-        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
@@ -179,7 +180,7 @@ class TestRootDynamics:
     )
     def test_root_dynamics_with_different_parameter_values(self, param, delta, device):
         # prepare model input
-        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
@@ -228,7 +229,7 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_multiple_parameter_vectors(self, device):
         # prepare model input
-        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
@@ -272,7 +273,7 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_multiple_parameter_arrays(self, device):
         # prepare model input
-        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
@@ -317,7 +318,7 @@ class TestRootDynamics:
 
     def test_root_dynamics_with_incompatible_parameter_vectors(self, device):
         # prepare model input
-        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_01.yaml"
+        test_data_url = phy_data_folder / "test_rootdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (
@@ -374,6 +375,7 @@ class TestRootDynamics:
                 )
 
 
+@pytest.mark.usefixtures("fast_mode")
 class TestDiffRootDynamicsGradients:
     """Parametrized tests for gradient calculations in root dynamics."""
 

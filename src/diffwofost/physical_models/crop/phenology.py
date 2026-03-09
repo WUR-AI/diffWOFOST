@@ -11,8 +11,6 @@ import torch
 from pcse import exceptions as exc
 from pcse import signals
 from pcse.base import SimulationObject
-from pcse.decorators import prepare_rates
-from pcse.decorators import prepare_states
 from pcse.traitlets import Enum
 from pcse.traitlets import Instance
 from pcse.util import daylength
@@ -165,7 +163,6 @@ class Vernalisation(SimulationObject):
             self.params.shape, dtype=torch.bool, device=self.device
         )
 
-    @prepare_rates
     def calc_rates(self, day, drv):
         """Calculate vernalisation rates.
 
@@ -214,7 +211,6 @@ class Vernalisation(SimulationObject):
         if torch.any(past_threshold_mask):
             self._force_vernalisation = self._force_vernalisation | past_threshold_mask
 
-    @prepare_states
     def integrate(self, day, delt=1.0):
         """Advance vernalisation state.
 
@@ -417,6 +413,7 @@ class DVS_Phenology(SimulationObject):
         self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
 
+        # see issue #60
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
 
         # Define initial states
@@ -477,7 +474,6 @@ class DVS_Phenology(SimulationObject):
 
         return DVS, DOS, DOE, STAGE
 
-    @prepare_rates
     def calc_rates(self, day, drv):
         """Compute daily phenological development rates.
 
@@ -534,49 +530,37 @@ class DVS_Phenology(SimulationObject):
         r.DTSUM = self._zeros
         r.DVR = self._zeros
 
-        # Compute rates for emerging stage (STAGE == 0)
+        # Emerging stage (STAGE == 0)
         is_emerging = s.STAGE == 0
-        if torch.any(is_emerging):
-            temp_diff = TEMP - p.TBASEM
-            # Ensure the maximum effective temperature difference is non-negative
-            max_diff = torch.clamp(p.TEFFMX - p.TBASEM, min=0.0)
-            dtsume_emerging = torch.clamp(temp_diff, min=0.0)
-            dtsume_emerging = torch.minimum(dtsume_emerging, max_diff)
-            safe_den = p.TSUMEM
-            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
-            dvr_emerging = 0.1 * dtsume_emerging / safe_den
+        temp_diff = TEMP - p.TBASEM
+        max_diff = torch.clamp(p.TEFFMX - p.TBASEM, min=0.0)
+        dtsume_emerging = torch.minimum(torch.clamp(temp_diff, min=0.0), max_diff)
+        safe_den_em = p.TSUMEM.sign() * torch.maximum(torch.abs(p.TSUMEM), self._epsilon)
+        dvr_emerging = 0.1 * dtsume_emerging / safe_den_em
+        r.DTSUME = torch.where(is_emerging, dtsume_emerging, r.DTSUME)
+        r.DVR = torch.where(is_emerging, dvr_emerging, r.DVR)
 
-            r.DTSUME = torch.where(is_emerging, dtsume_emerging, r.DTSUME)
-            r.DVR = torch.where(is_emerging, dvr_emerging, r.DVR)
-
-        # Compute rates for vegetative stage (STAGE == 1)
+        # Vegetative stage (STAGE == 1)
         is_vegetative = s.STAGE == 1
-        if torch.any(is_vegetative):
-            dtsum_vegetative = p.DTSMTB(TEMP) * VERNFAC * DVRED
-            safe_den = p.TSUM1
-            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
-            dvr_vegetative = dtsum_vegetative / safe_den
+        dtsum_vegetative = p.DTSMTB(TEMP) * VERNFAC * DVRED
+        safe_den_v1 = p.TSUM1.sign() * torch.maximum(torch.abs(p.TSUM1), self._epsilon)
+        dvr_vegetative = dtsum_vegetative / safe_den_v1
+        r.DTSUM = torch.where(is_vegetative, dtsum_vegetative, r.DTSUM)
+        r.DVR = torch.where(is_vegetative, dvr_vegetative, r.DVR)
 
-            r.DTSUM = torch.where(is_vegetative, dtsum_vegetative, r.DTSUM)
-            r.DVR = torch.where(is_vegetative, dvr_vegetative, r.DVR)
-
-        # Compute rates for reproductive stage (STAGE == 2)
+        # Reproductive stage (STAGE == 2)
         is_reproductive = s.STAGE == 2
-        if torch.any(is_reproductive):
-            dtsum_reproductive = p.DTSMTB(TEMP)
-            safe_den = p.TSUM2
-            safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
-            dvr_reproductive = dtsum_reproductive / safe_den
+        dtsum_reproductive = p.DTSMTB(TEMP)
+        safe_den_v2 = p.TSUM2.sign() * torch.maximum(torch.abs(p.TSUM2), self._epsilon)
+        dvr_reproductive = dtsum_reproductive / safe_den_v2
+        r.DTSUM = torch.where(is_reproductive, dtsum_reproductive, r.DTSUM)
+        r.DVR = torch.where(is_reproductive, dvr_reproductive, r.DVR)
 
-            r.DTSUM = torch.where(is_reproductive, dtsum_reproductive, r.DTSUM)
-            r.DVR = torch.where(is_reproductive, dvr_reproductive, r.DVR)
-
-        # Mature stage (STAGE == 3) keeps zeros (already initialized)
+        # Mature stage (STAGE == 3) keeps zeros (already initialised)
 
         msg = "Finished rate calculation for %s"
         self.logger.debug(msg % day)
 
-    @prepare_states
     def integrate(self, day, delt=1.0):
         """Integrate phenology states and manage stage transitions.
 
@@ -669,7 +653,7 @@ class DVS_Phenology(SimulationObject):
 
         # Send crop_finish signal if maturity reached for one.
         # assumption is that all elements mature simultaneously
-        # TODO: revisit this when fixing engine for agromanager
+        # TODO: revisit this when fixing engine for agromanager, see issue #60
         if torch.any(should_mature) and p.CROP_END_TYPE in ["maturity", "earliest"]:
             self._send_signal(
                 signal=signals.crop_finish,
@@ -681,6 +665,7 @@ class DVS_Phenology(SimulationObject):
         msg = "Finished state integration for %s"
         self.logger.debug(msg % day)
 
+    # TODO: revisit this when fixing engine for agromanager, see issue #60
     def _on_CROP_FINISH(self, day, finish_type=None):
         """Handle external crop finish signal to set harvest date.
 
@@ -700,42 +685,3 @@ class DVS_Phenology(SimulationObject):
             self._for_finalize["DOH"] = torch.full(
                 self.params.shape, day.toordinal(), dtype=self.dtype, device=self.device
             )
-
-    def get_variable(self, varname):
-        # TODO: should be removed while fixing #49. this is needed because
-        # conditions are applied on STAGE in pcse.crop.wofost72.py
-        """Return the value of the specified state or rate variable.
-
-        :param varname: Name of the variable.
-
-        Note that the `get_variable()` will searches for `varname` exactly
-        as specified (case sensitive).
-        """
-        if varname == "STAGE":
-            # Return string representation of current stage
-            stage_map = {
-                0: "emerging",
-                1: "vegetative",
-                2: "reproductive",
-                3: "mature",
-            }
-            stage_value = self.states.STAGE
-            if stage_value.dim() != 0:
-                stage_id = stage_value.flatten()[0].item()
-            else:
-                stage_id = stage_value.item()
-            return stage_map[stage_id]
-
-        # Search for variable in the current object, then traverse the hierarchy
-        value = None
-        if hasattr(self.states, varname):
-            value = getattr(self.states, varname)
-        elif hasattr(self.rates, varname):
-            value = getattr(self.rates, varname)
-        # Query individual sub-SimObject for existence of variable v
-        else:
-            for simobj in self.subSimObjects:
-                value = simobj.get_variable(varname)
-                if value is not None:
-                    break
-        return value
