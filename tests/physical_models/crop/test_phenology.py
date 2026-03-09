@@ -18,6 +18,29 @@ phenology_config = Configuration(
 )
 
 
+class DVS_PhenologyForPCSE(DVS_Phenology):
+    """DVS_Phenology subclass that adds a get_variable() override required by
+    PCSE's wofost72, which calls self.pheno.get_variable("STAGE") and expects
+    a string result.  Only used in tests that patch pcse.crop.wofost72.Phenology.
+    """
+
+    def get_variable(self, varname):
+        if varname == "STAGE":
+            stage_map = {
+                0: "emerging",
+                1: "vegetative",
+                2: "reproductive",
+                3: "mature",
+            }
+            stage_value = self.states.STAGE
+            if stage_value.dim() != 0:
+                stage_id = stage_value.flatten()[0].item()
+            else:
+                stage_id = stage_value.item()
+            return stage_map[stage_id]
+        return super().get_variable(varname)
+
+
 def assert_reference_match(reference, model, expected_precision):
     assert reference["DAY"] == model["day"]
     for var, precision in expected_precision.items():
@@ -551,7 +574,7 @@ class TestPhenologyDynamics:
         monkeypatch.setattr(DVS_Phenology, "device", "cpu")
         monkeypatch.setattr(DVS_Phenology, "dtype", torch.float64)
 
-        with patch("pcse.crop.wofost72.Phenology", DVS_Phenology):
+        with patch("pcse.crop.wofost72.Phenology", DVS_PhenologyForPCSE):
             model = Wofost72_PP(
                 crop_model_params_provider, weather_data_provider, agro_management_inputs
             )
