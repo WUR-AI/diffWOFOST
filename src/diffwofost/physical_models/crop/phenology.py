@@ -665,6 +665,7 @@ class DVS_Phenology(SimulationObject):
         msg = "Finished state integration for %s"
         self.logger.debug(msg % day)
 
+    # TODO: revisit this when fixing engine for agromanager, see issue #60
     def _on_CROP_FINISH(self, day, finish_type=None):
         """Handle external crop finish signal to set harvest date.
 
