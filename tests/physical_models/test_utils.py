@@ -838,6 +838,38 @@ class TestDaylength:
         assert torch.isclose(result_summer, torch.tensor(12.0, dtype=DTYPE), atol=1.0)
         assert torch.isclose(result_winter, torch.tensor(12.0, dtype=DTYPE), atol=1.0)
 
+    def test_default_dtype_device(self):
+        """daylength uses ComputeConfig defaults when dtype/device are omitted."""
+        result = daylength(_SUMMER_DAY, _MID_LAT)
+        assert isinstance(result, torch.Tensor)
+        assert result.dtype == ComputeConfig.get_dtype()
+        assert result.device == ComputeConfig.get_device()
+
+    def test_southern_hemisphere(self):
+        """Southern hemisphere latitude: summer in NH is winter in SH."""
+        south_lat = -_MID_LAT
+        north_summer = daylength(_SUMMER_DAY, _MID_LAT, dtype=DTYPE)
+        south_winter = daylength(_SUMMER_DAY, south_lat, dtype=DTYPE)
+        # In NH summer the southern counterpart has shorter days
+        assert south_winter.item() < north_summer.item()
+        assert 0.0 <= south_winter.item() <= 24.0
+
+    def test_batched_all_branches(self):
+        """A single batched call exercises all three torch.where branches."""
+        # North Pole (AOB > 1) → 24 h, South Pole (AOB < -1) → 0 h, mid-lat → between
+        lats = torch.tensor([90.0, -90.0, _MID_LAT], dtype=DTYPE)
+        result = daylength(_SUMMER_DAY, lats, dtype=DTYPE)
+        assert result.shape == lats.shape
+        assert torch.isclose(result[0], torch.tensor(24.0, dtype=DTYPE))
+        assert torch.isclose(result[1], torch.tensor(0.0, dtype=DTYPE))
+        assert 0.0 < result[2].item() < 24.0
+
+    def test_tensor_latitude_requires_no_grad(self):
+        """daylength with a detached tensor latitude completes without error."""
+        lat = torch.tensor(_MID_LAT, dtype=DTYPE)
+        result = daylength(_SUMMER_DAY, lat, dtype=DTYPE)
+        assert result.item() > 0.0
+
 
 @pytest.mark.usefixtures("fast_mode")
 class TestAstro:
@@ -945,3 +977,71 @@ class TestAstro:
         result = astro(_SUMMER_DAY, _MID_LAT, _IRRAD, dtype=DTYPE)
         dl = daylength(_SUMMER_DAY, _MID_LAT, angle=-4, dtype=DTYPE)
         assert torch.isclose(result.DAYLP, dl, atol=1e-5)
+
+    def test_default_dtype_device(self):
+        """astro uses ComputeConfig defaults when dtype/device are omitted."""
+        result = astro(_SUMMER_DAY, _MID_LAT, _IRRAD)
+        assert isinstance(result.DAYL, torch.Tensor)
+        assert result.DAYL.dtype == ComputeConfig.get_dtype()
+
+    def test_frdif_high_transmission(self):
+        """FRDIF branch: ATMTR > 0.75 → FRDIF = 0.23 (clear sky)."""
+        # Obtain ANGOT first (independent of radiation input)
+        ref = astro(_SUMMER_DAY, _MID_LAT, _IRRAD, dtype=DTYPE)
+        angot = ref.ANGOT
+        # Force ATMTR > 0.75 by using 0.80 * ANGOT as radiation
+        high_rad = 0.80 * angot
+        result = astro(_SUMMER_DAY, _MID_LAT, high_rad, dtype=DTYPE)
+        assert result.ATMTR.item() > 0.75
+        # DIFPP = 0.23 * ATMTR * 0.5 * SC; verify it is a finite positive tensor
+        assert result.DIFPP.item() > 0.0
+        assert torch.isfinite(result.DIFPP)
+
+    def test_frdif_low_transmission(self):
+        """FRDIF branch: 0.07 < ATMTR <= 0.35 → 1 - 2.3*(ATMTR-0.07)² (cloudy)."""
+        ref = astro(_SUMMER_DAY, _MID_LAT, _IRRAD, dtype=DTYPE)
+        angot = ref.ANGOT
+        low_rad = 0.20 * angot
+        result = astro(_SUMMER_DAY, _MID_LAT, low_rad, dtype=DTYPE)
+        assert 0.07 < result.ATMTR.item() <= 0.35
+        assert result.DIFPP.item() > 0.0
+
+    def test_frdif_very_low_transmission(self):
+        """FRDIF branch: ATMTR <= 0.07 → FRDIF = 1.0 (overcast)."""
+        ref = astro(_SUMMER_DAY, _MID_LAT, _IRRAD, dtype=DTYPE)
+        angot = ref.ANGOT
+        very_low_rad = 0.03 * angot
+        result = astro(_SUMMER_DAY, _MID_LAT, very_low_rad, dtype=DTYPE)
+        assert result.ATMTR.item() <= 0.07
+        assert result.DIFPP.item() > 0.0
+
+    def test_southern_hemisphere(self):
+        """Negative latitude is handled correctly for southern hemisphere site."""
+        south_lat = -_MID_LAT
+        result = astro(_SUMMER_DAY, south_lat, _IRRAD, dtype=DTYPE)
+        north_result = astro(_SUMMER_DAY, _MID_LAT, _IRRAD, dtype=DTYPE)
+        # NH summer = SH winter → shorter day in southern hemisphere
+        assert result.DAYL.item() < north_result.DAYL.item()
+        assert 0.0 <= result.DAYL.item() <= 24.0
+
+    def test_batched_radiation(self):
+        """Batched radiation produces outputs with matching shape."""
+        rads = torch.tensor([5e6, 15e6, 25e6], dtype=DTYPE)
+        lats = torch.tensor([_MID_LAT] * 3, dtype=DTYPE)
+        result = astro(_SUMMER_DAY, lats, rads, dtype=DTYPE)
+        assert result.ATMTR.shape == rads.shape
+        # Higher radiation → higher ATMTR (up to 1)
+        assert result.ATMTR[0] < result.ATMTR[1] < result.ATMTR[2]
+
+    def test_dsinbe_positive(self):
+        """DSINBE (effective solar height integral) must be non-negative."""
+        result = self._call()
+        assert result.DSINBE.item() >= 0.0
+
+    def test_polar_dsinb_dsinbe_branch(self):
+        """At the pole in summer AOB > 1 exercises the DSINB/DSINBE AOB > 1 branch."""
+        result = astro(_SUMMER_DAY, 90.0, _IRRAD, dtype=DTYPE)
+        # DAYL == 24 h confirms we hit the polar-day branch
+        assert torch.isclose(result.DAYL, torch.tensor(24.0, dtype=DTYPE))
+        assert result.DSINBE.item() >= 0.0
+        assert result.ANGOT.item() > 0.0
