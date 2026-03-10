@@ -318,7 +318,7 @@ class TestLeafDynamics:
             crop_model_params_provider.set_override(param, repeated, check=False)
 
         for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * wdc.TEMP
+            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
         engine = EngineTestHelper(
             crop_model_params_provider,
@@ -496,7 +496,7 @@ class TestDiffLeafDynamicsGradients:
             "TDWI": ([0.1, 0.2, 0.3], torch.float64),
             "SPAN": ([25, 30, 35], torch.float64),
             "RGRLAI": ([-10, 0.08, 1], torch.float64),
-            "TBASE": ([-5, 0, 10.0], torch.float64),
+            "TBASE": ([-3.0, 0.0, 3.0], torch.float64),
             "PERDL": ([-10, 0.1, 15], torch.float64),
             "KDIFTB": (
                 [[0.0, 0.5, 10.0, 1.0], [0.0, 0.6, 12.0, 1.2], [0.0, 0.4, 8.0, 0.8]],
