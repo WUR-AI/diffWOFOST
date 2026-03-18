@@ -11,6 +11,8 @@ Note that the code here is *not* python2 compatible.
 """
 
 import logging
+import math
+from collections import namedtuple
 from collections.abc import Iterable
 from pathlib import Path
 import torch
@@ -24,6 +26,7 @@ from pcse.engine import BaseEngine
 from pcse.settings import settings
 from pcse.timer import Timer
 from pcse.traitlets import TraitType
+from pcse.util import doy
 from .config import ComputeConfig
 from .config import Configuration
 from .engine import Engine
@@ -294,6 +297,194 @@ def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
             param_flat[i] = orig  # restore for next iteration
 
     return grad_flat.view_as(param_value)
+
+
+def daylength(day, latitude, angle=-4, dtype=None, device=None):
+    """PyTorch-vectorized daylength calculation for a given day, latitude and base angle.
+
+    Derived from the WOFOST routine ASTRO.FOR and simplified to include only
+    daylength calculation. When ``angle == -4`` (the default) the result is
+    identical to the ``DAYLP`` field returned by :func:`astro`.
+
+    Args:
+        day (datetime.date): the day for which to calculate daylength.
+        latitude (float or torch.Tensor): latitude of location (scalar or torch.Tensor)
+        angle (float): The photoperiodic daylength starts/ends when the sun
+            is `angle` degrees under the horizon. Default is -4 degrees.
+        dtype (torch.dtype): torch dtype to use (defaults to ComputeConfig.get_dtype())
+        device (torch.device): torch device to use (defaults to ComputeConfig.get_device())
+
+    Returns:
+        torch.Tensor: daylength for the given day and latitude.
+    """
+    if dtype is None:
+        dtype = ComputeConfig.get_dtype()
+    if device is None:
+        device = ComputeConfig.get_device()
+
+    # Convert latitude to tensor so all ops are vectorized and differentiable.
+    if not isinstance(latitude, torch.Tensor):
+        latitude = torch.tensor(latitude, dtype=dtype, device=device)
+
+    # Check for range of latitude
+    if (latitude.abs() > 90.0).any():
+        msg = "Latitude not between -90 and 90"
+        raise RuntimeError(msg)
+
+    # Calculate day-of-year from date object day
+    IDAY = doy(day)
+
+    # calculate daylength
+    # Declination only depends on IDAY so it stays a Python scalar for efficiency.
+    DEC = -math.asin(
+        math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0)
+    )
+    SINLD = torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
+    COSLD = torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
+    AOB = (-math.sin(angle * math.radians(1.0)) + SINLD) / COSLD
+
+    # daylength — replace scalar if/elif/else with torch.where for batched support
+    aob_clamped = AOB.clamp(-1.0, 1.0)
+    DAYLP_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_clamped) / math.pi)
+    DAYLP = torch.where(
+        AOB > 1.0,
+        torch.full_like(AOB, 24.0),
+        torch.where(AOB < -1.0, torch.zeros_like(AOB), DAYLP_base),
+    )
+
+    return DAYLP
+
+
+# Named tuple for returning results of ASTRO
+astro_nt = namedtuple("AstroResults", "DAYL, DAYLP, SINLD, COSLD, DIFPP, ATMTR, DSINBE, ANGOT")
+
+
+def astro(day, latitude, radiation, dtype=None, device=None):
+    """PyTorch-vectorized version of the ASTRO routine.
+
+    This subroutine calculates astronomic daylength, diurnal radiation
+    characteristics such as the atmospheric transmission, diffuse radiation etc.
+    Inputs `latitude` and `radiation` can be Python scalars or torch.Tensors,
+    enabling fully batched, differentiable computation.
+
+    output is a `namedtuple` in the following order and tags::
+
+        DAYL      Astronomical daylength (base = 0 degrees)     h
+        DAYLP     Astronomical daylength (base =-4 degrees)     h
+        SINLD     Seasonal offset of sine of solar height       -
+        COSLD     Amplitude of sine of solar height             -
+        DIFPP     Diffuse irradiation perpendicular to
+                  direction of light                         J m-2 s-1
+        ATMTR     Daily atmospheric transmission                -
+        DSINBE    Daily total of effective solar height         s
+        ANGOT     Angot radiation at top of atmosphere       J m-2 d-1
+
+    Args:
+        day (datetime.date): the day for which to calculate astronomic daylength.
+        latitude (float or torch.Tensor): latitude of location
+        radiation (float or torch.Tensor): daily global incoming radiation in J/m2/day
+        dtype (torch.dtype): torch dtype to use (defaults to ComputeConfig.get_dtype())
+        device (torch.device): torch device to use (defaults to ComputeConfig.get_device())
+
+    Returns:
+        a named tuple containing the calculated astronomic daylength and related variables.
+    """
+    if dtype is None:
+        dtype = ComputeConfig.get_dtype()
+    if device is None:
+        device = ComputeConfig.get_device()
+
+    # Convert latitude and radiation to tensors so all downstream ops are
+    # fully differentiable and support arbitrary batch shapes.
+    if not isinstance(latitude, torch.Tensor):
+        latitude = torch.tensor(latitude, dtype=dtype, device=device)
+    if not isinstance(radiation, torch.Tensor):
+        radiation = torch.tensor(radiation, dtype=dtype, device=device)
+
+    # Check for range of latitude
+    if (latitude.abs() > 90.0).any():
+        msg = "Latitude not between -90 and 90"
+        raise RuntimeError(msg)
+
+    # Determine day-of-year (IDAY) from day
+    IDAY = doy(day)
+
+    # Declination and solar constant for this day
+    # DEC and SC only depend on IDAY so remain Python scalars for efficiency.
+    DEC = -math.asin(
+        math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0)
+    )
+    SC = 1370.0 * (1.0 + 0.033 * math.cos(2.0 * math.pi * float(IDAY) / 365.0))
+
+    # calculation of daylength from intermediate variables
+    # SINLD, COSLD and AOB
+    SINLD = torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
+    COSLD = torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
+    AOB = SINLD / COSLD
+
+    # For very high latitudes and days in summer and winter a limit is
+    # inserted to avoid math errors when daylength reaches 24 hours in
+    # summer or 0 hours in winter.
+
+    # Calculate solution for base=0 degrees
+    # Clamp AOB to [-1, 1] before asin to guard against floating-point overflow.
+    aob_clamped = AOB.clamp(-1.0, 1.0)
+    sqrt_term = torch.sqrt(torch.clamp(1.0 - aob_clamped**2, min=0.0))
+    DAYL_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_clamped) / math.pi)
+    DAYL = torch.where(
+        AOB > 1.0,
+        torch.full_like(AOB, 24.0),
+        torch.where(AOB < -1.0, torch.zeros_like(AOB), DAYL_base),
+    )
+    # integrals of sine of solar height
+    DSINB = torch.where(
+        AOB.abs() <= 1.0,
+        3600.0 * (DAYL * SINLD + 24.0 * COSLD * sqrt_term / math.pi),
+        3600.0 * (DAYL * SINLD),
+    )
+    DSINBE = torch.where(
+        AOB.abs() <= 1.0,
+        3600.0
+        * (
+            DAYL * (SINLD + 0.4 * (SINLD**2 + COSLD**2 * 0.5))
+            + 12.0 * COSLD * (2.0 + 3.0 * 0.4 * SINLD) * sqrt_term / math.pi
+        ),
+        3600.0 * (DAYL * (SINLD + 0.4 * (SINLD**2 + COSLD**2 * 0.5))),
+    )
+
+    # Calculate solution for base=-4 degrees
+    AOB_CORR = (-math.sin(math.radians(-4.0)) + SINLD) / COSLD
+    aob_corr_clamped = AOB_CORR.clamp(-1.0, 1.0)
+    DAYLP_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_corr_clamped) / math.pi)
+    DAYLP = torch.where(
+        AOB_CORR > 1.0,
+        torch.full_like(AOB_CORR, 24.0),
+        torch.where(AOB_CORR < -1.0, torch.zeros_like(AOB_CORR), DAYLP_base),
+    )
+
+    # extraterrestrial radiation and atmospheric transmission
+    ANGOT = SC * DSINB
+    # Check for DAYL=0 as in that case the angot radiation is 0 as well
+    ATMTR = torch.where(DAYL > 0.0, radiation / ANGOT, torch.zeros_like(radiation))
+
+    # estimate fraction diffuse irradiation
+    FRDIF = torch.where(
+        ATMTR > 0.75,
+        torch.full_like(ATMTR, 0.23),
+        torch.where(
+            (ATMTR <= 0.75) & (ATMTR > 0.35),
+            1.33 - 1.46 * ATMTR,
+            torch.where(
+                (ATMTR <= 0.35) & (ATMTR > 0.07),
+                1.0 - 2.3 * (ATMTR - 0.07) ** 2,
+                torch.ones_like(ATMTR),  # ATMTR <= 0.07
+            ),
+        ),
+    )
+
+    DIFPP = FRDIF * ATMTR * 0.5 * SC
+
+    return astro_nt(DAYL, DAYLP, SINLD, COSLD, DIFPP, ATMTR, DSINBE, ANGOT)
 
 
 class Afgen:
