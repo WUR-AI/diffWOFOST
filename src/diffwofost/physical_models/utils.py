@@ -341,8 +341,6 @@ def daylength(day, latitude, angle=-4, dtype=None, device=None):
 
     # calculate daylength
     # Declination only depends on IDAY so it stays a Python scalar for efficiency.
-    ANGLE = angle
-    LAT = latitude
     DEC = -math.asin(math.sin(23.45 * RAD) * math.cos(2.0 * pi * (float(IDAY) + 10.0) / 365.0))
     SINLD = torch.sin(RAD * LAT) * math.sin(DEC)
     COSLD = torch.cos(RAD * LAT) * math.cos(DEC)
