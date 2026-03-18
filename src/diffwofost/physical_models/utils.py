@@ -463,7 +463,7 @@ def astro(day, latitude, radiation, dtype=None, device=None):
         3600.0
         * (
             DAYL * (SINLD + 0.4 * (SINLD**2 + COSLD**2 * 0.5))
-            + 12.0 * COSLD * (2.0 + 3.0 * 0.4 * SINLD) * sqrt_term / pi
+            + 12.0 * COSLD * (2.0 + 3.0 * 0.4 * SINLD) * sqrt_term / math.pi
         ),
         3600.0 * (DAYL * (SINLD + 0.4 * (SINLD**2 + COSLD**2 * 0.5))),
     )
