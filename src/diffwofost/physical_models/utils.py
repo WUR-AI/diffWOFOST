@@ -416,14 +416,14 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     # calculation of daylength from intermediate variables
     # SINLD, COSLD and AOB
     SINLD = (
-        math.sin(RAD * float(LAT)) * math.sin(DEC)
+        math.sin(math.radians(1.0) * float(latitude)) * math.sin(DEC)
         if LAT.numel() == 1
-        else torch.sin(RAD * LAT) * math.sin(DEC)
+        else torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
     )
     COSLD = (
-        math.cos(RAD * float(LAT)) * math.cos(DEC)
+        math.cos(math.radians(1.0) * float(latitude)) * math.cos(DEC)
         if LAT.numel() == 1
-        else torch.cos(RAD * LAT) * math.cos(DEC)
+        else torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
     )
     # Promote scalars to tensors so all subsequent ops stay in torch
     if not isinstance(SINLD, torch.Tensor):
