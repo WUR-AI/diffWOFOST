@@ -481,7 +481,7 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     # extraterrestrial radiation and atmospheric transmission
     ANGOT = SC * DSINB
     # Check for DAYL=0 as in that case the angot radiation is 0 as well
-    ATMTR = torch.where(DAYL > 0.0, AVRAD / ANGOT, torch.zeros_like(AVRAD))
+    ATMTR = torch.where(DAYL > 0.0, radiation / ANGOT, torch.zeros_like(radiation))
 
     # estimate fraction diffuse irradiation
     FRDIF = torch.where(
