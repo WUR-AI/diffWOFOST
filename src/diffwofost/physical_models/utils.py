@@ -341,14 +341,14 @@ def daylength(day, latitude, angle=-4, dtype=None, device=None):
 
     # calculate daylength
     # Declination only depends on IDAY so it stays a Python scalar for efficiency.
-    DEC = -math.asin(math.sin(23.45 * RAD) * math.cos(2.0 * pi * (float(IDAY) + 10.0) / 365.0))
-    SINLD = torch.sin(RAD * LAT) * math.sin(DEC)
-    COSLD = torch.cos(RAD * LAT) * math.cos(DEC)
-    AOB = (-math.sin(ANGLE * RAD) + SINLD) / COSLD
+    DEC = -math.asin(math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0))
+    SINLD = torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
+    COSLD = torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
+    AOB = (-math.sin(angle * math.radians(1.0)) + SINLD) / COSLD
 
     # daylength — replace scalar if/elif/else with torch.where for batched support
     aob_clamped = AOB.clamp(-1.0, 1.0)
-    DAYLP_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_clamped) / pi)
+    DAYLP_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_clamped) / math.pi)
     DAYLP = torch.where(
         AOB > 1.0,
         torch.full_like(AOB, 24.0),
