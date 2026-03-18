@@ -317,7 +317,6 @@ def daylength(day, latitude, angle=-4, dtype=None, device=None):
     Returns:
         torch.Tensor: daylength for the given day and latitude.
     """
-
     if dtype is None:
         dtype = ComputeConfig.get_dtype()
     if device is None:
@@ -337,7 +336,9 @@ def daylength(day, latitude, angle=-4, dtype=None, device=None):
 
     # calculate daylength
     # Declination only depends on IDAY so it stays a Python scalar for efficiency.
-    DEC = -math.asin(math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0))
+    DEC = -math.asin(
+        math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0)
+    )
     SINLD = torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
     COSLD = torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
     AOB = (-math.sin(angle * math.radians(1.0)) + SINLD) / COSLD
@@ -380,8 +381,8 @@ def astro(day, latitude, radiation, dtype=None, device=None):
 
     Args:
         day (datetime.date): the day for which to calculate astronomic daylength.
-        latitude (float or torch.Tensor): latitude of location 
-        radiation (float or torch.Tensor): daily global incoming radiation in J/m2/day 
+        latitude (float or torch.Tensor): latitude of location
+        radiation (float or torch.Tensor): daily global incoming radiation in J/m2/day
         dtype (torch.dtype): torch dtype to use (defaults to ComputeConfig.get_dtype())
         device (torch.device): torch device to use (defaults to ComputeConfig.get_device())
 
@@ -410,26 +411,15 @@ def astro(day, latitude, radiation, dtype=None, device=None):
 
     # Declination and solar constant for this day
     # DEC and SC only depend on IDAY so remain Python scalars for efficiency.
-    DEC = -math.asin(math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0))
+    DEC = -math.asin(
+        math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0)
+    )
     SC = 1370.0 * (1.0 + 0.033 * math.cos(2.0 * math.pi * float(IDAY) / 365.0))
 
     # calculation of daylength from intermediate variables
     # SINLD, COSLD and AOB
-    SINLD = (
-        math.sin(math.radians(1.0) * float(latitude)) * math.sin(DEC)
-        if LAT.numel() == 1
-        else torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
-    )
-    COSLD = (
-        math.cos(math.radians(1.0) * float(latitude)) * math.cos(DEC)
-        if LAT.numel() == 1
-        else torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
-    )
-    # Promote scalars to tensors so all subsequent ops stay in torch
-    if not isinstance(SINLD, torch.Tensor):
-        SINLD = torch.tensor(SINLD, dtype=dtype, device=device)
-    if not isinstance(COSLD, torch.Tensor):
-        COSLD = torch.tensor(COSLD, dtype=dtype, device=device)
+    SINLD = torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
+    COSLD = torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
     AOB = SINLD / COSLD
 
     # For very high latitudes and days in summer and winter a limit is
@@ -462,8 +452,8 @@ def astro(day, latitude, radiation, dtype=None, device=None):
         3600.0 * (DAYL * (SINLD + 0.4 * (SINLD**2 + COSLD**2 * 0.5))),
     )
 
-    # Calculate solution for base=-4 (ANGLE) degrees
-    AOB_CORR = (-math.sin(ANGLE * RAD) + SINLD) / COSLD
+    # Calculate solution for base=-4 degrees
+    AOB_CORR = (-math.sin(math.radians(-4.0)) + SINLD) / COSLD
     aob_corr_clamped = AOB_CORR.clamp(-1.0, 1.0)
     DAYLP_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_corr_clamped) / math.pi)
     DAYLP = torch.where(

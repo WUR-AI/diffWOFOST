@@ -28,7 +28,8 @@ jobs:
           python -m pip install -e .[dev]
       - name: Run unit tests and store coverage
         run: |
-          coverage run -m pytest --fast -n auto
+          # [!] Note that sonarcloud runs the full test suite
+          coverage run -m pytest -n auto
           coverage report -m
           coverage xml -o coverage.xml
       - name: Make coverage paths relative
