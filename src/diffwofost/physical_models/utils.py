@@ -317,7 +317,6 @@ def daylength(day, latitude, angle=-4, dtype=None, device=None):
     Returns:
         torch.Tensor: daylength for the given day and latitude.
     """
-    # from unum.units import h
 
     if dtype is None:
         dtype = ComputeConfig.get_dtype()
