@@ -302,18 +302,20 @@ def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
 def daylength(day, latitude, angle=-4, dtype=None, device=None):
     """PyTorch-vectorized daylength calculation for a given day, latitude and base angle.
 
-    :param day:         date/datetime object
-    :param latitude:    latitude of location (scalar or torch.Tensor)
-    :param angle:       The photoperiodic daylength starts/ends when the sun
-        is `angle` degrees under the horizon. Default is -4 degrees.
-    :param dtype:       torch dtype to use (defaults to ComputeConfig.get_dtype())
-    :param device:      torch device to use (defaults to ComputeConfig.get_device())
-
     Derived from the WOFOST routine ASTRO.FOR and simplified to include only
     daylength calculation. When ``angle == -4`` (the default) the result is
     identical to the ``DAYLP`` field returned by :func:`astro`.
 
-    Returns a torch.Tensor of the same shape as *latitude*.
+    Args:
+        day (datetime.date): the day for which to calculate daylength.
+        latitude (float or torch.Tensor): latitude of location (scalar or torch.Tensor)
+        angle (float): The photoperiodic daylength starts/ends when the sun
+            is `angle` degrees under the horizon. Default is -4 degrees.
+        dtype (torch.dtype): torch dtype to use (defaults to ComputeConfig.get_dtype())
+        device (torch.device): torch device to use (defaults to ComputeConfig.get_device())
+
+    Returns:
+        torch.Tensor: daylength for the given day and latitude.
     """
     # from unum.units import h
 
