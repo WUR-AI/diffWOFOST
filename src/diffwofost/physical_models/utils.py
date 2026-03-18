@@ -440,7 +440,7 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     # Clamp AOB to [-1, 1] before asin to guard against floating-point overflow.
     aob_clamped = AOB.clamp(-1.0, 1.0)
     sqrt_term = torch.sqrt(torch.clamp(1.0 - aob_clamped**2, min=0.0))
-    DAYL_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_clamped) / pi)
+    DAYL_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_clamped) / math.pi)
     DAYL = torch.where(
         AOB > 1.0,
         torch.full_like(AOB, 24.0),
