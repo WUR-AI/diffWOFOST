@@ -49,7 +49,24 @@ to run all tests with verbose output. To run an individual test file, run:
 pytest -v tests/test_my_module.py
 ```
 
-### Linters
+### Test config and test data
+
+The config file `tests/conftest.py` contains configurations for testing.
+The main configurations are related to:
+
+- the test data, which is downloded from pcse github repository,
+- the device used for testing (`cpu` or `gpu`), and
+- the amount of tests to run (`full_wofost72_test` or `--fast`).
+
+In the github workflow `build.yaml` the tests are run with `--fast` option,
+which runs a subset of the tests on github runner in a pull request or after
+merging to main branch.
+
+In the github workflow `full-test.yaml` the tests are run with
+`full_wofost72_test` option, which might takes a long time to run. So, this
+workflow is only triggered manually when needed, for example before a release.
+
+## Linters
 
 For linting and sorting imports we will use [ruff](https://beta.ruff.rs/docs/).
 Running the linters requires an activated virtual environment with the
