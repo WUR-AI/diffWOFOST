@@ -401,7 +401,6 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     if (latitude.abs() > 90.0).any():
         msg = "Latitude not between -90 and 90"
         raise RuntimeError(msg)
-    LAT = latitude
 
     # Determine day-of-year (IDAY) from day
     IDAY = doy(day)
