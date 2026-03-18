@@ -471,7 +471,7 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     # Calculate solution for base=-4 (ANGLE) degrees
     AOB_CORR = (-math.sin(ANGLE * RAD) + SINLD) / COSLD
     aob_corr_clamped = AOB_CORR.clamp(-1.0, 1.0)
-    DAYLP_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_corr_clamped) / pi)
+    DAYLP_base = 12.0 * (1.0 + 2.0 * torch.asin(aob_corr_clamped) / math.pi)
     DAYLP = torch.where(
         AOB_CORR > 1.0,
         torch.full_like(AOB_CORR, 24.0),
