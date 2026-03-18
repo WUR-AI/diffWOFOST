@@ -405,14 +405,6 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     # Determine day-of-year (IDAY) from day
     IDAY = doy(day)
 
-    # reassign radiation
-    AVRAD = radiation
-
-    # constants
-    RAD = math.radians(1.0)
-    ANGLE = -4.0
-    pi = math.pi
-
     # Declination and solar constant for this day
     # DEC and SC only depend on IDAY so remain Python scalars for efficiency.
     DEC = -math.asin(math.sin(23.45 * RAD) * math.cos(2.0 * pi * (float(IDAY) + 10.0) / 365.0))
