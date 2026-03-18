@@ -449,7 +449,7 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     # integrals of sine of solar height
     DSINB = torch.where(
         AOB.abs() <= 1.0,
-        3600.0 * (DAYL * SINLD + 24.0 * COSLD * sqrt_term / pi),
+        3600.0 * (DAYL * SINLD + 24.0 * COSLD * sqrt_term / math.pi),
         3600.0 * (DAYL * SINLD),
     )
     DSINBE = torch.where(
