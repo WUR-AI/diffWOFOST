@@ -410,7 +410,7 @@ def astro(day, latitude, radiation, dtype=None, device=None):
 
     # Declination and solar constant for this day
     # DEC and SC only depend on IDAY so remain Python scalars for efficiency.
-    DEC = -math.asin(math.sin(23.45 * RAD) * math.cos(2.0 * pi * (float(IDAY) + 10.0) / 365.0))
+    DEC = -math.asin(math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0))
     SC = 1370.0 * (1.0 + 0.033 * math.cos(2.0 * pi * float(IDAY) / 365.0))
 
     # calculation of daylength from intermediate variables
