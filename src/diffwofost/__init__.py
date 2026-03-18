@@ -3,6 +3,7 @@
 import logging
 from diffwofost.physical_models import utils
 from diffwofost.physical_models.crop import assimilation
+from diffwofost.physical_models.crop import evapotranspiration
 from diffwofost.physical_models.crop import leaf_dynamics
 from diffwofost.physical_models.crop import partitioning
 from diffwofost.physical_models.crop import phenology
