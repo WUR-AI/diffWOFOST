@@ -366,12 +366,6 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     Inputs `latitude` and `radiation` can be Python scalars or torch.Tensors,
     enabling fully batched, differentiable computation.
 
-    :param day:         date/datetime object
-    :param latitude:    latitude of location (scalar or Tensor)
-    :param radiation:   daily global incoming radiation in J/m2/day (scalar or Tensor)
-    :param dtype:       torch dtype to use (defaults to ComputeConfig.get_dtype())
-    :param device:      torch device to use (defaults to ComputeConfig.get_device())
-
     output is a `namedtuple` in the following order and tags::
 
         DAYL      Astronomical daylength (base = 0 degrees)     h
@@ -384,6 +378,15 @@ def astro(day, latitude, radiation, dtype=None, device=None):
         DSINBE    Daily total of effective solar height         s
         ANGOT     Angot radiation at top of atmosphere       J m-2 d-1
 
+    Args:
+        day (datetime.date): the day for which to calculate astronomic daylength.
+        latitude (float or torch.Tensor): latitude of location 
+        radiation (float or torch.Tensor): daily global incoming radiation in J/m2/day 
+        dtype (torch.dtype): torch dtype to use (defaults to ComputeConfig.get_dtype())
+        device (torch.device): torch device to use (defaults to ComputeConfig.get_device())
+
+    Returns:
+        a named tuple containing the calculated astronomic daylength and related variables.
     """
     if dtype is None:
         dtype = ComputeConfig.get_dtype()
