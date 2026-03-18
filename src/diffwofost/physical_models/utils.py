@@ -335,10 +335,6 @@ def daylength(day, latitude, angle=-4, dtype=None, device=None):
     # Calculate day-of-year from date object day
     IDAY = doy(day)
 
-    # constants
-    RAD = math.radians(1.0)
-    pi = math.pi
-
     # calculate daylength
     # Declination only depends on IDAY so it stays a Python scalar for efficiency.
     DEC = -math.asin(math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0))
