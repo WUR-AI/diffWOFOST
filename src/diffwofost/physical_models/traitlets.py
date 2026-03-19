@@ -1,7 +1,7 @@
 import torch
 from traitlets_pcse import TraitType
 from traitlets_pcse import Undefined
-from .config import ComputeConfig
+from diffwofost.physical_models.config import ComputeConfig
 
 
 class Tensor(TraitType):

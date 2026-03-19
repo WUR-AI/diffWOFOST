@@ -6,7 +6,7 @@ from pcse.base.variablekiosk import VariableKiosk
 from pcse.engine import Engine
 from pcse.timer import Timer
 from pcse.traitlets import Instance
-from .config import Configuration
+from diffwofost.physical_models.config import Configuration
 
 
 class Engine(Engine):

@@ -1,8 +1,6 @@
 """This file contains code that is required to run the YAML unit tests.
 
 It contains:
-    - VariableKioskTestHelper: A subclass of the VariableKiosk that can use externally
-      forced states/rates
     - EngineTestHelper: engine specifically for running the YAML tests.
     - WeatherDataProviderTestHelper: a weatherdata provides that takes the weather
       inputs from the YAML file.
@@ -19,7 +17,6 @@ import torch
 import yaml
 from pcse import signals
 from pcse.base.parameter_providers import ParameterProvider
-from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
 from pcse.engine import BaseEngine
@@ -27,67 +24,13 @@ from pcse.settings import settings
 from pcse.timer import Timer
 from pcse.traitlets import TraitType
 from pcse.util import doy
-from .config import ComputeConfig
-from .config import Configuration
-from .engine import Engine
-from .engine import _get_params_shape
+from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.engine import Engine
+from diffwofost.physical_models.engine import _get_params_shape
+from diffwofost.physical_models.variablekiosk import VariableKiosk
 
 logging.disable(logging.CRITICAL)
-
-
-class VariableKioskTestHelper(VariableKiosk):
-    """Variable Kiosk for testing purposes which allows to use external states."""
-
-    external_state_list = None
-
-    def __init__(self, external_state_list=None):
-        super().__init__()
-        self.current_externals = {}
-        if external_state_list:
-            self.external_state_list = external_state_list
-
-    def __call__(self, day):
-        """Sets the external state/rate variables for the current day.
-
-        Returns True if the list of external state/rate variables is exhausted,
-        otherwise False.
-        """
-        if self.external_state_list:
-            current_externals = self.external_state_list.pop(0)
-            forcing_day = current_externals.pop("DAY")
-            msg = "Failure updating VariableKiosk with external states: days are not matching!"
-            assert forcing_day == day, msg
-            self.current_externals.clear()
-            self.current_externals.update(current_externals)
-            if len(self.external_state_list) == 0:
-                return True
-
-        return False
-
-    def is_external_state(self, item):
-        """Returns True if the item is an external state."""
-        return item in self.current_externals
-
-    def __getattr__(self, item):
-        """Allow use of attribute notation.
-
-        eg "kiosk.LAI" on published rates or states.
-        """
-        if item in self.current_externals:
-            return self.current_externals[item]
-        else:
-            return dict.__getitem__(self, item)
-
-    def __getitem__(self, item):
-        """Override __getitem__ to first look in external states."""
-        if item in self.current_externals:
-            return self.current_externals[item]
-        else:
-            return dict.__getitem__(self, item)
-
-    def __contains__(self, key):
-        """Override __contains__ to first look in external states."""
-        return key in self.current_externals or dict.__contains__(self, key)
 
 
 class EngineTestHelper(Engine):
@@ -113,7 +56,7 @@ class EngineTestHelper(Engine):
         self._shape = _get_params_shape(self.parameterprovider)
 
         # Variable kiosk for registering and publishing variables
-        self.kiosk = VariableKioskTestHelper(external_states)
+        self.kiosk = VariableKiosk(external_states)
 
         # Placeholder for variables to be saved during a model run
         self._saved_output = list()
@@ -157,7 +100,7 @@ class EngineTestHelper(Engine):
         # Update timer
         self.day, delt = self.timer()
 
-        # When the list of external states is exhausted the VariableKioskTestHelper will
+        # When the list of external states is exhausted the VariableKiosk will
         # return True signalling the end of the test
         stop_test = self.kiosk(self.day)
         if stop_test:

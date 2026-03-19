@@ -2,8 +2,8 @@ from pcse.base import ParamTemplate
 from pcse.base import RatesTemplate
 from pcse.base import StatesTemplate
 from pcse.traitlets import HasTraits
-from ..traitlets import Tensor
-from ..utils import AfgenTrait
+from diffwofost.physical_models.traitlets import Tensor
+from diffwofost.physical_models.utils import AfgenTrait
 
 
 class TensorContainer(HasTraits):

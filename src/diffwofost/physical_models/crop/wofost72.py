@@ -12,16 +12,22 @@ from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.crop.assimilation import WOFOST72_Assimilation as Assimilation
+from diffwofost.physical_models.crop.evapotranspiration import (
+    EvapotranspirationWrapper as Evapotranspiration,
+)
+from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics as Leaf_Dynamics
+from diffwofost.physical_models.crop.partitioning import DVS_Partitioning as Partitioning
+from diffwofost.physical_models.crop.phenology import DVS_Phenology as Phenology
+from diffwofost.physical_models.crop.respiration import (
+    WOFOST_Maintenance_Respiration as MaintenanceRespiration,
+)
+from diffwofost.physical_models.crop.root_dynamics import WOFOST_Root_Dynamics as Root_Dynamics
+from diffwofost.physical_models.crop.stem_dynamics import WOFOST_Stem_Dynamics as Stem_Dynamics
+from diffwofost.physical_models.crop.storage_organ_dynamics import (
+    WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics,
+)
 from diffwofost.physical_models.traitlets import Tensor
-from .assimilation import WOFOST72_Assimilation as Assimilation
-from .evapotranspiration import EvapotranspirationWrapper as Evapotranspiration
-from .leaf_dynamics import WOFOST_Leaf_Dynamics as Leaf_Dynamics
-from .partitioning import DVS_Partitioning as Partitioning
-from .phenology import DVS_Phenology as Phenology
-from .respiration import WOFOST_Maintenance_Respiration as MaintenanceRespiration
-from .root_dynamics import WOFOST_Root_Dynamics as Root_Dynamics
-from .stem_dynamics import WOFOST_Stem_Dynamics as Stem_Dynamics
-from .storage_organ_dynamics import WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics
 
 
 class Wofost72(SimulationObject):
