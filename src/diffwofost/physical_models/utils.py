@@ -103,7 +103,7 @@ class EngineTestHelper(Engine):
         self.kiosk(self.day)
         # When the list of external states is exhausted, send crop_finish to
         # end the test run
-        if self.kiosk.is_exhausted:
+        if self.kiosk.external_states_exhausted:
             self._send_signal(
                 signal=signals.crop_finish, day=self.day, finish_type="maturity", crop_delete=False
             )

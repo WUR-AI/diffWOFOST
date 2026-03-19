@@ -68,26 +68,28 @@ class TestVariableKioskCall:
         assert kiosk(DAY1) is False
 
     def test_call_raises_on_day_mismatch(self):
-        kiosk = VariableKiosk(_make_external_states())
-        wrong_day = datetime.date(1999, 1, 1)
-        with pytest.raises(AssertionError):
-            kiosk(wrong_day)
-
-    def test_is_exhausted_false_before_last_entry(self):
+        """A day not present in the list simply clears externals — no error."""
         kiosk = VariableKiosk(_make_external_states())
         kiosk(DAY1)
-        assert kiosk.is_exhausted is False
+        missing_day = datetime.date(1999, 6, 15)
+        kiosk(missing_day)  # should not raise
+        assert kiosk.current_externals == {}
 
-    def test_is_exhausted_true_after_last_entry(self):
+    def test_external_states_exhausted_false_before_last_entry(self):
+        kiosk = VariableKiosk(_make_external_states())
+        kiosk(DAY1)
+        assert kiosk.external_states_exhausted is False
+
+    def test_external_states_exhausted_true_after_last_entry(self):
         kiosk = VariableKiosk(_make_external_states())
         kiosk(DAY1)
         kiosk(DAY2)
         kiosk(DAY3)
-        assert kiosk.is_exhausted is True
+        assert kiosk.external_states_exhausted is True
 
-    def test_is_exhausted_false_without_external_list(self):
+    def test_external_states_exhausted_false_without_external_list(self):
         kiosk = VariableKiosk()
-        assert kiosk.is_exhausted is False
+        assert kiosk.external_states_exhausted is False
 
     def test_original_list_is_not_modified(self):
         ext = _make_external_states()
@@ -97,6 +99,31 @@ class TestVariableKioskCall:
         kiosk(DAY3)
         # The stored list must be intact even after full consumption
         assert len(kiosk.external_state_list) == 3
+        assert all("DAY" in entry for entry in kiosk.external_state_list)
+
+    def test_sparse_external_states_injects_on_matching_days(self):
+        """Only days present in the list inject externals; gaps clear current_externals."""
+        ext = [
+            {"DAY": DAY1, "LAI": 0.5},
+            {"DAY": DAY3, "LAI": 1.5},  # DAY2 intentionally absent
+        ]
+        kiosk = VariableKiosk(ext)
+        kiosk(DAY1)
+        assert kiosk.current_externals == {"LAI": 0.5}
+        kiosk(DAY2)  # no entry → externals cleared
+        assert kiosk.current_externals == {}
+        kiosk(DAY3)
+        assert kiosk.current_externals == {"LAI": 1.5}
+
+    def test_external_states_exhausted_false_on_gap_day_before_last_entry(self):
+        """A gap day before the last entry does not signal finished."""
+        ext = [
+            {"DAY": DAY1, "LAI": 0.5},
+            {"DAY": DAY3, "LAI": 1.5},
+        ]
+        kiosk = VariableKiosk(ext)
+        kiosk(DAY2)  # gap day, max is DAY3
+        assert kiosk.external_states_exhausted is False
 
 
 @pytest.mark.usefixtures("fast_mode")
