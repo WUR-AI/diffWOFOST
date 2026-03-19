@@ -100,10 +100,10 @@ class EngineTestHelper(Engine):
         # Update timer
         self.day, delt = self.timer()
 
-        # When the list of external states is exhausted the VariableKiosk will
-        # return True signalling the end of the test
-        stop_test = self.kiosk(self.day)
-        if stop_test:
+        self.kiosk(self.day)
+        # When the list of external states is exhausted, send crop_finish to
+        # end the test run
+        if self.kiosk.is_exhausted:
             self._send_signal(
                 signal=signals.crop_finish, day=self.day, finish_type="maturity", crop_delete=False
             )

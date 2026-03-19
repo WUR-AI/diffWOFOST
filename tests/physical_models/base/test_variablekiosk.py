@@ -57,28 +57,46 @@ class TestVariableKioskCall:
         kiosk(DAY2)
         assert kiosk.current_externals == {"LAI": 1.0, "DVS": 0.2}
 
-    def test_call_returns_false_while_states_remain(self):
+    def test_call_always_returns_false(self):
         kiosk = VariableKiosk(_make_external_states())
-        result = kiosk(DAY1)
-        assert result is False
-
-    def test_call_returns_true_on_last_entry(self):
-        kiosk = VariableKiosk(_make_external_states())
-        kiosk(DAY1)
-        kiosk(DAY2)
-        result = kiosk(DAY3)
-        assert result is True
+        assert kiosk(DAY1) is False
+        assert kiosk(DAY2) is False
+        assert kiosk(DAY3) is False
 
     def test_call_returns_false_without_external_list(self):
         kiosk = VariableKiosk()
-        result = kiosk(DAY1)
-        assert result is False
+        assert kiosk(DAY1) is False
 
     def test_call_raises_on_day_mismatch(self):
         kiosk = VariableKiosk(_make_external_states())
         wrong_day = datetime.date(1999, 1, 1)
         with pytest.raises(AssertionError):
             kiosk(wrong_day)
+
+    def test_is_exhausted_false_before_last_entry(self):
+        kiosk = VariableKiosk(_make_external_states())
+        kiosk(DAY1)
+        assert kiosk.is_exhausted is False
+
+    def test_is_exhausted_true_after_last_entry(self):
+        kiosk = VariableKiosk(_make_external_states())
+        kiosk(DAY1)
+        kiosk(DAY2)
+        kiosk(DAY3)
+        assert kiosk.is_exhausted is True
+
+    def test_is_exhausted_false_without_external_list(self):
+        kiosk = VariableKiosk()
+        assert kiosk.is_exhausted is False
+
+    def test_original_list_is_not_modified(self):
+        ext = _make_external_states()
+        kiosk = VariableKiosk(ext)
+        kiosk(DAY1)
+        kiosk(DAY2)
+        kiosk(DAY3)
+        # The stored list must be intact even after full consumption
+        assert len(kiosk.external_state_list) == 3
 
 
 @pytest.mark.usefixtures("fast_mode")

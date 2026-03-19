@@ -17,23 +17,32 @@ class VariableKiosk(_PcseVariableKiosk):
         super().__init__()
         self.current_externals = {}
         self.external_state_list = list(external_state_list) if external_state_list else None
+        self._external_state_index = 0
 
     def __call__(self, day):
         """Set the external state/rate variables for the current day.
 
-        Returns True if the list of external state/rate variables is exhausted,
-        otherwise False.
+        Advances to the next entry in the external state list and makes those
+        values available via normal kiosk access. Does nothing if the list is
+        exhausted or was not provided. Always returns False; use
+        ``is_exhausted`` to check whether all external states have been consumed.
         """
-        if self.external_state_list:
-            current_externals = self.external_state_list.pop(0)
+        if self.external_state_list and self._external_state_index < len(self.external_state_list):
+            current_externals = dict(self.external_state_list[self._external_state_index])
             forcing_day = current_externals.pop("DAY")
             msg = "Failure updating VariableKiosk with external states: days are not matching!"
             assert forcing_day == day, msg
             self.current_externals.clear()
             self.current_externals.update(current_externals)
-            if len(self.external_state_list) == 0:
-                return True
+            self._external_state_index += 1
         return False
+
+    @property
+    def is_exhausted(self):
+        """True when all external states have been consumed."""
+        if self.external_state_list is None:
+            return False
+        return self._external_state_index >= len(self.external_state_list)
 
     def is_external_state(self, item):
         """Returns True if the item is an external state."""
