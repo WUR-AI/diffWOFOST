@@ -122,7 +122,8 @@ class DiffPhenologyDynamics(torch.nn.Module):
         results = engine.get_output()
 
         # Collect phenology outputs analogous to leaf dynamics test
-        return {var: torch.stack([item[var] for item in results]) for var in ["DVS", "TSUM"]}
+        output_vars = ["DVS", "TSUM", "TSUME"]
+        return {var: torch.stack([item[var] for item in results]) for var in output_vars}
 
 
 @pytest.mark.usefixtures("fast_mode")
@@ -602,7 +603,7 @@ class TestDiffPhenologyDynamicsGradients:
         "DVSEND",
         "DTSMTB",
     ]
-    output_names = ["DVS", "TSUM"]
+    output_names = ["DVS", "TSUM", "TSUME"]
 
     param_configs = {
         "single": {
@@ -643,8 +644,8 @@ class TestDiffPhenologyDynamicsGradients:
     }
     gradient_mapping = {
         "TSUMEM": ["DVS"],
-        "TBASEM": ["DVS"],
-        "TEFFMX": ["DVS"],
+        "TBASEM": ["DVS", "TSUME"],
+        "TEFFMX": ["DVS", "TSUME"],
         "TSUM1": ["DVS"],
         "TSUM2": ["DVS"],
         "DLO": ["DVS"],

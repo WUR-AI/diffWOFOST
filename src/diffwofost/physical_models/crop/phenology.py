@@ -332,8 +332,10 @@ class DVS_Phenology(SimulationObject):
 
     | Output | Parameters influencing it                |
     |--------|------------------------------------------|
-    | DVS    | ... |
-    | TSUM   | ... |
+    | DVS    | TSUMEM, TBASEM, TEFFMX,TSUM1, TSUM2, DLO, DLC, DVSI, |
+    |        | DVSEND, DTSMTB, VERNSAT, VERNBASE, VERNDVS|
+    | TSUM   | DVSI, DVSEND, DTSMTB, VERNSAT, VERNBASE, VERNDVS  |
+    | TSUME  | TBASEM, TEFFMX |
 
     [!NOTE]
     Notice that the gradient ∂DVS/∂TEFFMX is zero.

@@ -618,7 +618,7 @@ class TestDiffWofost72Gradients:
             "DLO": (0.5, torch.float64),
             "DLC": (0.5, torch.float64),
             "DVSI": (0.0, torch.float64),
-            "DVSEND": (2.0, torch.float64),
+            "DVSEND": (1.95, torch.float64),
             "DTSMTB": ([0.0, 0.0, 35.0, 35.0, 45.0, 35.0], torch.float64),
             # Assimilation
             "AMAXTB": ([[0.0, 30.0, 2.0, 30.0]], torch.float64),
@@ -677,7 +677,7 @@ class TestDiffWofost72Gradients:
             "TDWI": ([0.1, 0.2, 0.3], torch.float64),
             "SPAN": ([25, 30, 35], torch.float64),
             "RGRLAI": ([-10, 0.08, 1], torch.float64),
-            "TBASE": ([-5, 0, 10.0], torch.float64),
+            "TBASE": ([-5, 0, 3.0], torch.float64),
             "PERDL": ([-10, 0.1, 15], torch.float64),
             "KDIFTB": (
                 [[0.0, 0.5, 10.0, 1.0], [0.0, 0.6, 12.0, 1.2], [0.0, 0.4, 8.0, 0.8]],
@@ -700,7 +700,7 @@ class TestDiffWofost72Gradients:
             "DLO": ([0.4, 0.5, 0.6], torch.float64),
             "DLC": ([0.4, 0.5, 0.6], torch.float64),
             "DVSI": ([0.0, 0.0, 0.0], torch.float64),
-            "DVSEND": ([1.9, 2.0, 2.1], torch.float64),
+            "DVSEND": ([1.85, 1.9, 1.98], torch.float64),
             "DTSMTB": (
                 [
                     [0, 0, 15, 8, 30, 18],
