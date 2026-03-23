@@ -15,7 +15,7 @@
       
       
       <link rel="icon" href="../../assets/images/favicon.png">
-      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.1">
+      <meta name="generator" content="mkdocs-1.6.1, mkdocs-material-9.7.6">
     
     
       
@@ -1172,7 +1172,12 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
     if (!diagrams.length) {
       return;
     }
-    const mermaid = (await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/10.7.0/mermaid.esm.min.mjs")).default;
+    const mermaid = (await import("https://cdnjs.cloudflare.com/ajax/libs/mermaid/11.10.0/mermaid.esm.min.mjs")).default;
+    const elkUrl = "https://cdnjs.cloudflare.com/ajax/libs/mermaid-layout-elk/0.1.9/mermaid-layout-elk.esm.min.mjs";
+    if(elkUrl) {
+      const elkLayouts = (await import(elkUrl)).default;
+      mermaid.registerLayoutLoaders(elkLayouts);
+    }
     const parser = new DOMParser();
 
     mermaid.initialize({
@@ -1269,7 +1274,8 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
      * Post-process to ensure mermaid diagrams contain only valid SVG and XHTML.
      */
     function cleanMermaidSvg(svg) {
-      return svg.replace(RE_VOID_ELEMENT, replaceVoidElement);
+      svg = svg.replace(RE_VOID_ELEMENT, replaceVoidElement);
+      return `${SVG_XML_HEADER}${svg}`;
     }
 
 
@@ -1295,6 +1301,285 @@ span.linenos.special { color: #000000; background-color: #ffffc0; padding-left: 
       }
       return `<${tag} ${rest}>`;
     }
+
+
+  /**
+   * Named HTML entities with their decimal equivalent codes.
+   *
+   * @see https://www.w3.org/TR/WD-html40-970708/sgml/entities.html
+   * */
+  const HTML_ENTITIES = `<!ENTITY Aacute "&#193;">
+<!ENTITY aacute "&#225;">
+<!ENTITY Acirc "&#194;">
+<!ENTITY acirc "&#226;">
+<!ENTITY acute "&#180;">
+<!ENTITY AElig "&#198;">
+<!ENTITY aelig "&#230;">
+<!ENTITY Agrave "&#192;">
+<!ENTITY agrave "&#224;">
+<!ENTITY alefsym "&#8501;">
+<!ENTITY Alpha "&#913;">
+<!ENTITY alpha "&#945;">
+<!ENTITY amp "&#38;">
+<!ENTITY and "&#8869;">
+<!ENTITY ang "&#8736;">
+<!ENTITY Aring "&#197;">
+<!ENTITY aring "&#229;">
+<!ENTITY asymp "&#8776;">
+<!ENTITY Atilde "&#195;">
+<!ENTITY atilde "&#227;">
+<!ENTITY Auml "&#196;">
+<!ENTITY auml "&#228;">
+<!ENTITY bdquo "&#8222;">
+<!ENTITY Beta "&#914;">
+<!ENTITY beta "&#946;">
+<!ENTITY brvbar "&#166;">
+<!ENTITY bull "&#8226;">
+<!ENTITY cap "&#8745;">
+<!ENTITY Ccedil "&#199;">
+<!ENTITY ccedil "&#231;">
+<!ENTITY cedil "&#184;">
+<!ENTITY cent "&#162;">
+<!ENTITY Chi "&#935;">
+<!ENTITY chi "&#967;">
+<!ENTITY circ "&#710;">
+<!ENTITY clubs "&#9827;">
+<!ENTITY cong "&#8773;">
+<!ENTITY copy "&#169;">
+<!ENTITY crarr "&#8629;">
+<!ENTITY cup "&#8746;">
+<!ENTITY curren "&#164;">
+<!ENTITY dagger "&#8224;">
+<!ENTITY Dagger "&#8225;">
+<!ENTITY darr "&#8595;">
+<!ENTITY dArr "&#8659;">
+<!ENTITY deg "&#176;">
+<!ENTITY Delta "&#916;">
+<!ENTITY delta "&#948;">
+<!ENTITY diams "&#9830;">
+<!ENTITY divide "&#247;">
+<!ENTITY Eacute "&#201;">
+<!ENTITY eacute "&#233;">
+<!ENTITY Ecirc "&#202;">
+<!ENTITY ecirc "&#234;">
+<!ENTITY Egrave "&#200;">
+<!ENTITY egrave "&#232;">
+<!ENTITY empty "&#8709;">
+<!ENTITY emsp "&#8195;">
+<!ENTITY ensp "&#8194;">
+<!ENTITY epsilon "&#949;">
+<!ENTITY Epsilon "&#917;">
+<!ENTITY equiv "&#8801;">
+<!ENTITY Eta "&#919;">
+<!ENTITY eta "&#951;">
+<!ENTITY ETH "&#208;">
+<!ENTITY eth "&#240;">
+<!ENTITY Euml "&#203;">
+<!ENTITY euml "&#235;">
+<!ENTITY exist "&#8707;">
+<!ENTITY fnof "&#402;">
+<!ENTITY forall "&#8704;">
+<!ENTITY frac12 "&#189;">
+<!ENTITY frac14 "&#188;">
+<!ENTITY frac34 "&#190;">
+<!ENTITY frasl "&#8260;">
+<!ENTITY Gamma "&#915;">
+<!ENTITY gamma "&#947;">
+<!ENTITY ge "&#8805;">
+<!ENTITY gt "&#62;">
+<!ENTITY harr "&#8596;">
+<!ENTITY hArr "&#8660;">
+<!ENTITY hearts "&#9829;">
+<!ENTITY hellip "&#8230;">
+<!ENTITY Iacute "&#205;">
+<!ENTITY iacute "&#237;">
+<!ENTITY Icirc "&#206;">
+<!ENTITY icirc "&#238;">
+<!ENTITY iexcl "&#161;">
+<!ENTITY Igrave "&#204;">
+<!ENTITY igrave "&#236;">
+<!ENTITY image "&#8465;">
+<!ENTITY infin "&#8734;">
+<!ENTITY int "&#8747;">
+<!ENTITY Iota "&#921;">
+<!ENTITY iota "&#953;">
+<!ENTITY iquest "&#191;">
+<!ENTITY isin "&#8712;">
+<!ENTITY Iuml "&#207;">
+<!ENTITY iuml "&#239;">
+<!ENTITY Kappa "&#922;">
+<!ENTITY kappa "&#954;">
+<!ENTITY Lambda "&#923;">
+<!ENTITY lambda "&#955;">
+<!ENTITY lang "&#9001;">
+<!ENTITY laquo "&#171;">
+<!ENTITY larr "&#8592;">
+<!ENTITY lArr "&#8656;">
+<!ENTITY lceil "&#8968;">
+<!ENTITY ldquo "&#8220;">
+<!ENTITY le "&#8804;">
+<!ENTITY lfloor "&#8970;">
+<!ENTITY lowast "&#8727;">
+<!ENTITY loz "&#9674;">
+<!ENTITY lrm "&#8206;">
+<!ENTITY lsaquo "&#8249;">
+<!ENTITY lsquo "&#8216;">
+<!ENTITY lt "&#60;">
+<!ENTITY macr "&#175;">
+<!ENTITY mdash "&#8212;">
+<!ENTITY micro "&#181;">
+<!ENTITY middot "&#183;">
+<!ENTITY minus "&#8722;">
+<!ENTITY Mu "&#924;">
+<!ENTITY mu "&#956;">
+<!ENTITY nabla "&#8711;">
+<!ENTITY nbsp "&#160;">
+<!ENTITY ndash "&#8211;">
+<!ENTITY ne "&#8800;">
+<!ENTITY ni "&#8715;">
+<!ENTITY not "&#172;">
+<!ENTITY notin "&#8713;">
+<!ENTITY nsub "&#8836;">
+<!ENTITY Ntilde "&#209;">
+<!ENTITY ntilde "&#241;">
+<!ENTITY Nu "&#925;">
+<!ENTITY nu "&#957;">
+<!ENTITY Oacute "&#211;">
+<!ENTITY oacute "&#243;">
+<!ENTITY Ocirc "&#212;">
+<!ENTITY ocirc "&#244;">
+<!ENTITY OElig "&#338;">
+<!ENTITY oelig "&#339;">
+<!ENTITY Ograve "&#210;">
+<!ENTITY ograve "&#242;">
+<!ENTITY oline "&#8254;">
+<!ENTITY Omega "&#937;">
+<!ENTITY omega "&#969;">
+<!ENTITY Omicron "&#927;">
+<!ENTITY omicron "&#959;">
+<!ENTITY oplus "&#8853;">
+<!ENTITY or "&#8870;">
+<!ENTITY ordf "&#170;">
+<!ENTITY ordm "&#186;">
+<!ENTITY Oslash "&#216;">
+<!ENTITY oslash "&#248;">
+<!ENTITY Otilde "&#213;">
+<!ENTITY otilde "&#245;">
+<!ENTITY otimes "&#8855;">
+<!ENTITY Ouml "&#214;">
+<!ENTITY ouml "&#246;">
+<!ENTITY para "&#182;">
+<!ENTITY part "&#8706;">
+<!ENTITY permil "&#8240;">
+<!ENTITY perp "&#8869;">
+<!ENTITY Phi "&#934;">
+<!ENTITY phi "&#966;">
+<!ENTITY Pi "&#928;">
+<!ENTITY pi "&#960;">
+<!ENTITY piv "&#982;">
+<!ENTITY plusmn "&#177;">
+<!ENTITY pound "&#163;">
+<!ENTITY prime "&#8242;">
+<!ENTITY Prime "&#8243;">
+<!ENTITY prod "&#8719;">
+<!ENTITY prop "&#8733;">
+<!ENTITY Psi "&#936;">
+<!ENTITY psi "&#968;">
+<!ENTITY quot "&#34;">
+<!ENTITY radic "&#8730;">
+<!ENTITY rang "&#9002;">
+<!ENTITY raquo "&#187;">
+<!ENTITY rarr "&#8594;">
+<!ENTITY rArr "&#8658;">
+<!ENTITY rceil "&#8969;">
+<!ENTITY rdquo "&#8221;">
+<!ENTITY real "&#8476;">
+<!ENTITY reg "&#174;">
+<!ENTITY rfloor "&#8971;">
+<!ENTITY Rho "&#929;">
+<!ENTITY rho "&#961;">
+<!ENTITY rlm "&#8207;">
+<!ENTITY rsaquo "&#8250;">
+<!ENTITY rsquo "&#8217;">
+<!ENTITY sbquo "&#8218;">
+<!ENTITY Scaron "&#352;">
+<!ENTITY scaron "&#353;">
+<!ENTITY sdot "&#8901;">
+<!ENTITY sect "&#167;">
+<!ENTITY shy "&#173;">
+<!ENTITY Sigma "&#931;">
+<!ENTITY sigma "&#963;">
+<!ENTITY sigmaf "&#962;">
+<!ENTITY sim "&#8764;">
+<!ENTITY spades "&#9824;">
+<!ENTITY sub "&#8834;">
+<!ENTITY sube "&#8838;">
+<!ENTITY sum "&#8721;">
+<!ENTITY sup "&#8835;">
+<!ENTITY sup1 "&#185;">
+<!ENTITY sup2 "&#178;">
+<!ENTITY sup3 "&#179;">
+<!ENTITY supe "&#8839;">
+<!ENTITY szlig "&#223;">
+<!ENTITY Tau "&#932;">
+<!ENTITY tau "&#964;">
+<!ENTITY there4 "&#8756;">
+<!ENTITY Theta "&#920;">
+<!ENTITY theta "&#952;">
+<!ENTITY thetasym "&#977;">
+<!ENTITY thinsp "&#8201;">
+<!ENTITY THORN "&#222;">
+<!ENTITY thorn "&#254;">
+<!ENTITY tilde "&#732;">
+<!ENTITY times "&#215;">
+<!ENTITY trade "&#8482;">
+<!ENTITY Uacute "&#218;">
+<!ENTITY uacute "&#250;">
+<!ENTITY uarr "&#8593;">
+<!ENTITY uArr "&#8657;">
+<!ENTITY Ucirc "&#219;">
+<!ENTITY ucirc "&#251;">
+<!ENTITY Ugrave "&#217;">
+<!ENTITY ugrave "&#249;">
+<!ENTITY uml "&#168;">
+<!ENTITY upsih "&#978;">
+<!ENTITY Upsilon "&#933;">
+<!ENTITY upsilon "&#965;">
+<!ENTITY Uuml "&#220;">
+<!ENTITY uuml "&#252;">
+<!ENTITY weierp "&#8472;">
+<!ENTITY Xi "&#926;">
+<!ENTITY xi "&#958;">
+<!ENTITY Yacute "&#221;">
+<!ENTITY yacute "&#253;">
+<!ENTITY yen "&#165;">
+<!ENTITY Yuml "&#376;">
+<!ENTITY yuml "&#255;">
+<!ENTITY Zeta "&#918;">
+<!ENTITY zeta "&#950;">
+<!ENTITY zwj "&#8205;">
+<!ENTITY zwnj "&#8204;">`.replace(/\n/g, ' ');
+
+  /**
+   * A reasonably strict xml declaration.
+   */
+  const XML_DECL = '<?xml version="1.0" standalone="no"?>';
+
+  /**
+   * The beginning of the XML doctype declaration.
+   */
+  const DOCTYPE_START = `<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd" [`;
+
+  /**
+   * The end of the XML docype declaration.
+   */
+  const DOCTYPE_END = ']>';
+
+  /**
+   * A full header for an SVG XML document.
+   */
+  const SVG_XML_HEADER = `${XML_DECL}
+    ${DOCTYPE_START}${HTML_ENTITIES}${DOCTYPE_END}`;
 
     void Promise.all([...diagrams].map(renderOneMarmaid));
   });
@@ -1399,13 +1684,13 @@ python environment. You can install it using pip:</p>
 </div>
 </div>
 </div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=e4049fea-1d05-41f1-bf9d-f030ae83a324">
+</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell">
+<div class="jp-Cell jp-CodeCell jp-Notebook-cell" id="cell-id=e4049fea-1d05-41f1-bf9d-f030ae83a324">
 <div class="jp-Cell-inputWrapper" tabindex="0">
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
 <clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-1">
@@ -1427,6 +1712,66 @@ python environment. You can install it using pip:</p>
 </div>
 </div>
 </div>
+<div class="jp-Cell-outputWrapper">
+<div class="jp-Collapser jp-OutputCollapser jp-Cell-outputCollapser">
+</div>
+<div class="jp-OutputArea jp-Cell-outputArea">
+<div class="jp-OutputArea-child">
+<div class="jp-OutputPrompt jp-OutputArea-prompt"></div>
+<div class="jp-RenderedText jp-OutputArea-output" data-mime-type="text/plain" tabindex="0">
+<pre>Requirement already satisfied: diffwofost in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (0.2.0)
+Requirement already satisfied: torch in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from diffwofost) (2.9.0)
+Requirement already satisfied: pcse in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from diffwofost) (6.0.9)
+Requirement already satisfied: SQLAlchemy&lt;2.0,&gt;=1.3.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pcse-&gt;diffwofost) (1.4.54)
+Requirement already satisfied: PyYAML&gt;=5.1 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pcse-&gt;diffwofost) (6.0.3)
+Requirement already satisfied: openpyxl&gt;=3.0.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pcse-&gt;diffwofost) (3.1.5)
+Requirement already satisfied: requests&gt;=2.0.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pcse-&gt;diffwofost) (2.32.5)
+Requirement already satisfied: pandas&gt;=0.25 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pcse-&gt;diffwofost) (2.3.3)
+Requirement already satisfied: traitlets-pcse==5.0.0.dev in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pcse-&gt;diffwofost) (5.0.0.dev0)
+Requirement already satisfied: dotmap&gt;=1.3 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pcse-&gt;diffwofost) (1.3.30)
+Requirement already satisfied: ipython_genutils in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from traitlets-pcse==5.0.0.dev-&gt;pcse-&gt;diffwofost) (0.2.0)
+Requirement already satisfied: six in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from traitlets-pcse==5.0.0.dev-&gt;pcse-&gt;diffwofost) (1.17.0)
+Requirement already satisfied: decorator in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from traitlets-pcse==5.0.0.dev-&gt;pcse-&gt;diffwofost) (5.2.1)
+Requirement already satisfied: filelock in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (3.20.0)
+Requirement already satisfied: typing-extensions&gt;=4.10.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (4.15.0)
+Requirement already satisfied: setuptools in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (80.9.0)
+Requirement already satisfied: sympy&gt;=1.13.3 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (1.14.0)
+Requirement already satisfied: networkx&gt;=2.5.1 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (3.5)
+Requirement already satisfied: jinja2 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (3.1.6)
+Requirement already satisfied: fsspec&gt;=0.8.5 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (2025.9.0)
+Requirement already satisfied: nvidia-cuda-nvrtc-cu12==12.8.93 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (12.8.93)
+Requirement already satisfied: nvidia-cuda-runtime-cu12==12.8.90 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (12.8.90)
+Requirement already satisfied: nvidia-cuda-cupti-cu12==12.8.90 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (12.8.90)
+Requirement already satisfied: nvidia-cudnn-cu12==9.10.2.21 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (9.10.2.21)
+Requirement already satisfied: nvidia-cublas-cu12==12.8.4.1 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (12.8.4.1)
+Requirement already satisfied: nvidia-cufft-cu12==11.3.3.83 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (11.3.3.83)
+Requirement already satisfied: nvidia-curand-cu12==10.3.9.90 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (10.3.9.90)
+Requirement already satisfied: nvidia-cusolver-cu12==11.7.3.90 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (11.7.3.90)
+Requirement already satisfied: nvidia-cusparse-cu12==12.5.8.93 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (12.5.8.93)
+Requirement already satisfied: nvidia-cusparselt-cu12==0.7.1 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (0.7.1)
+Requirement already satisfied: nvidia-nccl-cu12==2.27.5 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (2.27.5)
+Requirement already satisfied: nvidia-nvshmem-cu12==3.3.20 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (3.3.20)
+Requirement already satisfied: nvidia-nvtx-cu12==12.8.90 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (12.8.90)
+Requirement already satisfied: nvidia-nvjitlink-cu12==12.8.93 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (12.8.93)
+Requirement already satisfied: nvidia-cufile-cu12==1.13.1.3 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (1.13.1.3)
+Requirement already satisfied: triton==3.5.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from torch-&gt;diffwofost) (3.5.0)
+Requirement already satisfied: et-xmlfile in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from openpyxl&gt;=3.0.0-&gt;pcse-&gt;diffwofost) (2.0.0)
+Requirement already satisfied: numpy&gt;=1.26.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pandas&gt;=0.25-&gt;pcse-&gt;diffwofost) (2.3.4)
+Requirement already satisfied: python-dateutil&gt;=2.8.2 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pandas&gt;=0.25-&gt;pcse-&gt;diffwofost) (2.9.0.post0)
+Requirement already satisfied: pytz&gt;=2020.1 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pandas&gt;=0.25-&gt;pcse-&gt;diffwofost) (2025.2)
+Requirement already satisfied: tzdata&gt;=2022.7 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from pandas&gt;=0.25-&gt;pcse-&gt;diffwofost) (2025.2)
+Requirement already satisfied: charset_normalizer&lt;4,&gt;=2 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from requests&gt;=2.0.0-&gt;pcse-&gt;diffwofost) (3.4.4)
+Requirement already satisfied: idna&lt;4,&gt;=2.5 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from requests&gt;=2.0.0-&gt;pcse-&gt;diffwofost) (3.11)
+Requirement already satisfied: urllib3&lt;3,&gt;=1.21.1 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from requests&gt;=2.0.0-&gt;pcse-&gt;diffwofost) (2.5.0)
+Requirement already satisfied: certifi&gt;=2017.4.17 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from requests&gt;=2.0.0-&gt;pcse-&gt;diffwofost) (2025.10.5)
+Requirement already satisfied: greenlet!=0.4.17 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from SQLAlchemy&lt;2.0,&gt;=1.3.0-&gt;pcse-&gt;diffwofost) (3.2.4)
+Requirement already satisfied: mpmath&lt;1.4,&gt;=1.1.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from sympy&gt;=1.13.3-&gt;torch-&gt;diffwofost) (1.3.0)
+Requirement already satisfied: MarkupSafe&gt;=2.0 in /home/simone/.virtualenvs/dwof/lib/python3.12/site-packages (from jinja2-&gt;torch-&gt;diffwofost) (3.0.3)
+</pre>
+</div>
+</div>
+</div>
+</div>
 </div>
 </div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
 <div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=21731653-3976-4bb9-b83b-b11d78211700">
@@ -1434,7 +1779,7 @@ python environment. You can install it using pip:</p>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [1]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
 <clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-2">
@@ -1453,7 +1798,7 @@ python environment. You can install it using pip:</p>
 <span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span>
 <span class="kn">import</span><span class="w"> </span><span class="nn">yaml</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">pathlib</span><span class="w"> </span><span class="kn">import</span> <span class="n">Path</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Configuration</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">Configuration</span><span class="p">,</span> <span class="n">ComputeConfig</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.crop.leaf_dynamics</span><span class="w"> </span><span class="kn">import</span> <span class="n">WOFOST_Leaf_Dynamics</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">EngineTestHelper</span>
 <span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.utils</span><span class="w"> </span><span class="kn">import</span> <span class="n">prepare_engine_input</span>
@@ -1465,42 +1810,11 @@ import torch
 import numpy
 import yaml
 from pathlib import Path
-from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.config import Configuration, ComputeConfig
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import prepare_engine_input
 from diffwofost.physical_models.utils import get_test_data</div>
-</div>
-</div>
-</div>
-</div>
-</div>
-</div><div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs">
-<div class="jp-Cell jp-CodeCell jp-Notebook-cell jp-mod-noOutputs" id="cell-id=9c2ca761-22b0-4707-9f55-619f62617d12">
-<div class="jp-Cell-inputWrapper" tabindex="0">
-<div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
-</div>
-<div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
-<div class="CodeMirror cm-s-jupyter">
-<div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
-<div>
-<span class="notice" hidden="">Copied!</span>
-<svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
-<path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 010 1.5h-1.5a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-1.5a.75.75 0 011.5 0v1.5A1.75 1.75 0 019.25 16h-7.5A1.75 1.75 0 010 14.25v-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-<path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0114.25 11h-7.5A1.75 1.75 0 015 9.25v-7.5zm1.75-.25a.25.25 0 00-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 00.25-.25v-7.5a.25.25 0 00-.25-.25h-7.5z" fill="currentColor" fill-rule="evenodd"></path>
-</svg>
-</div>
-</clipboard-copy>
-</div>
-<div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># --- run on CPU ------</span>
-<span class="kn">from</span><span class="w"> </span><span class="nn">diffwofost.physical_models.config</span><span class="w"> </span><span class="kn">import</span> <span class="n">ComputeConfig</span>
-<span class="n">ComputeConfig</span><span class="o">.</span><span class="n">set_device</span><span class="p">(</span><span class="s1">'cpu'</span><span class="p">)</span>
-</pre></div>
-<div class="clipboard-copy-txt" id="cell-3"># --- run on CPU ------
-from diffwofost.physical_models.config import ComputeConfig
-ComputeConfig.set_device('cpu')</div>
 </div>
 </div>
 </div>
@@ -1512,10 +1826,10 @@ ComputeConfig.set_device('cpu')</div>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [2]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-3">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1529,7 +1843,7 @@ ComputeConfig.set_device('cpu')</div>
 <span class="kn">import</span><span class="w"> </span><span class="nn">warnings</span>
 <span class="n">warnings</span><span class="o">.</span><span class="n">filterwarnings</span><span class="p">(</span><span class="s2">"ignore"</span><span class="p">,</span> <span class="n">message</span><span class="o">=</span><span class="s2">"To copy construct from a tensor.*"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-4"># ---- disable a warning: this will be fixed in the future ----
+<div class="clipboard-copy-txt" id="cell-3"># ---- disable a warning: this will be fixed in the future ----
 import warnings
 warnings.filterwarnings("ignore", message="To copy construct from a tensor.*")</div>
 </div>
@@ -1561,10 +1875,10 @@ For example, you can download the file "test_leafdynamics_wofost72_01.yaml" as:<
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [3]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-4">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1582,7 +1896,7 @@ For example, you can download the file "test_leafdynamics_wofost72_01.yaml" as:<
 <span class="n">urllib</span><span class="o">.</span><span class="n">request</span><span class="o">.</span><span class="n">urlretrieve</span><span class="p">(</span><span class="n">url</span><span class="p">,</span> <span class="n">filename</span><span class="p">)</span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Downloaded: </span><span class="si">{</span><span class="n">filename</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-5">import urllib.request
+<div class="clipboard-copy-txt" id="cell-4">import urllib.request
 
 url = "https://raw.githubusercontent.com/ajwdewit/pcse/refs/heads/master/tests/test_data/test_leafdynamics_wofost72_01.yaml"
 filename = "test_leafdynamics_wofost72_01.yaml"
@@ -1613,10 +1927,10 @@ print(f"Downloaded: {filename}")</div>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [4]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-5">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1629,7 +1943,7 @@ print(f"Downloaded: {filename}")</div>
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- Check the path to the files that are downloaded as explained above ----</span>
 <span class="n">test_data_path</span> <span class="o">=</span> <span class="s2">"test_leafdynamics_wofost72_01.yaml"</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-6"># ---- Check the path to the files that are downloaded as explained above ----
+<div class="clipboard-copy-txt" id="cell-5"># ---- Check the path to the files that are downloaded as explained above ----
 test_data_path = "test_leafdynamics_wofost72_01.yaml"</div>
 </div>
 </div>
@@ -1642,10 +1956,10 @@ test_data_path = "test_leafdynamics_wofost72_01.yaml"</div>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [5]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-6">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1663,7 +1977,9 @@ test_data_path = "test_leafdynamics_wofost72_01.yaml"</div>
 
 <span class="n">expected_results</span> <span class="o">=</span> <span class="n">test_data</span><span class="p">[</span><span class="s2">"ModelResults"</span><span class="p">]</span>
 <span class="n">expected_lai_twlv</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
-    <span class="p">[[</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"LAI"</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"TWLV"</span><span class="p">])]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">expected_results</span><span class="p">],</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span>
+    <span class="p">[[</span><span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"LAI"</span><span class="p">]),</span> <span class="nb">float</span><span class="p">(</span><span class="n">item</span><span class="p">[</span><span class="s2">"TWLV"</span><span class="p">])]</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">expected_results</span><span class="p">],</span>
+    <span class="n">dtype</span><span class="o">=</span><span class="n">ComputeConfig</span><span class="o">.</span><span class="n">get_dtype</span><span class="p">(),</span>
+    <span class="n">device</span><span class="o">=</span><span class="n">ComputeConfig</span><span class="o">.</span><span class="n">get_device</span><span class="p">(),</span>
 <span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># shape: [1, time_steps, 2]</span>
 
 <span class="c1"># ---- dont change this: in this config file we specified the diffrentiable version of leaf_dynamics ----</span>
@@ -1672,7 +1988,7 @@ test_data_path = "test_leafdynamics_wofost72_01.yaml"</div>
     <span class="n">OUTPUT_VARS</span><span class="o">=</span><span class="p">[</span><span class="s2">"LAI"</span><span class="p">,</span> <span class="s2">"TWLV"</span><span class="p">],</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-7"># ---- Here we read the test data and set some variables ----
+<div class="clipboard-copy-txt" id="cell-6"># ---- Here we read the test data and set some variables ----
 test_data = get_test_data(test_data_path)
 (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
     prepare_engine_input(test_data, ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI"])
@@ -1680,7 +1996,9 @@ test_data = get_test_data(test_data_path)
 
 expected_results = test_data["ModelResults"]
 expected_lai_twlv = torch.tensor(
-    [[float(item["LAI"]), float(item["TWLV"])] for item in expected_results], dtype=torch.float32
+    [[float(item["LAI"]), float(item["TWLV"])] for item in expected_results],
+    dtype=ComputeConfig.get_dtype(),
+    device=ComputeConfig.get_device(),
 ).unsqueeze(0) # shape: [1, time_steps, 2]
 
 # ---- dont change this: in this config file we specified the diffrentiable version of leaf_dynamics ----
@@ -1714,10 +2032,10 @@ small and the optimization will be very slow.</p>
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [6]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-7">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1742,12 +2060,19 @@ small and the optimization will be very slow.</p>
         <span class="n">init_norm</span> <span class="o">=</span> <span class="p">(</span><span class="n">init_value</span> <span class="o">-</span> <span class="n">low</span><span class="p">)</span> <span class="o">/</span> <span class="p">(</span><span class="n">high</span> <span class="o">-</span> <span class="n">low</span><span class="p">)</span>
 
         <span class="c1"># Parameter in raw logit space</span>
-        <span class="bp">self</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">logit</span><span class="p">(</span><span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span><span class="n">init_norm</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">torch</span><span class="o">.</span><span class="n">float32</span><span class="p">),</span> <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">))</span>
+        <span class="bp">self</span><span class="o">.</span><span class="n">raw</span> <span class="o">=</span> <span class="n">torch</span><span class="o">.</span><span class="n">nn</span><span class="o">.</span><span class="n">Parameter</span><span class="p">(</span>
+            <span class="n">torch</span><span class="o">.</span><span class="n">logit</span><span class="p">(</span>
+                <span class="n">torch</span><span class="o">.</span><span class="n">tensor</span><span class="p">(</span>
+                    <span class="n">init_norm</span><span class="p">,</span> <span class="n">dtype</span><span class="o">=</span><span class="n">ComputeConfig</span><span class="o">.</span><span class="n">get_dtype</span><span class="p">(),</span> <span class="n">device</span><span class="o">=</span><span class="n">ComputeConfig</span><span class="o">.</span><span class="n">get_device</span><span class="p">()</span>
+                <span class="p">),</span>
+                <span class="n">eps</span><span class="o">=</span><span class="mf">1e-6</span><span class="p">,</span>
+            <span class="p">)</span>
+        <span class="p">)</span>
 
     <span class="k">def</span><span class="w"> </span><span class="nf">forward</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span> <span class="o">+</span> <span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">high</span> <span class="o">-</span> <span class="bp">self</span><span class="o">.</span><span class="n">low</span><span class="p">)</span> <span class="o">*</span> <span class="n">torch</span><span class="o">.</span><span class="n">sigmoid</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">raw</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-8"># ---- Adjust the values if needed  ----
+<div class="clipboard-copy-txt" id="cell-7"># ---- Adjust the values if needed  ----
 TDWI_MIN, TDWI_MAX, TDWI_INIT = (0.0, 1.0, 0.40)
 SPAN_MIN, SPAN_MAX, SPAN_INIT = (10.0, 60.0, 25.0)
 
@@ -1762,11 +2087,17 @@ class BoundedParameter(torch.nn.Module):
         init_norm = (init_value - low) / (high - low)
 
         # Parameter in raw logit space
-        self.raw = torch.nn.Parameter(torch.logit(torch.tensor(init_norm, dtype=torch.float32), eps=1e-6))
+        self.raw = torch.nn.Parameter(
+            torch.logit(
+                torch.tensor(
+                    init_norm, dtype=ComputeConfig.get_dtype(), device=ComputeConfig.get_device()
+                ),
+                eps=1e-6,
+            )
+        )
 
     def forward(self):
-        return self.low + (self.high - self.low) * torch.sigmoid(self.raw)
-</div>
+        return self.low + (self.high - self.low) * torch.sigmoid(self.raw)</div>
 </div>
 </div>
 </div>
@@ -1790,10 +2121,10 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [7]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-8">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1843,7 +2174,7 @@ We use this class to wrap the <code>EngineTestHelper</code> function and make it
             <span class="p">[</span><span class="n">torch</span><span class="o">.</span><span class="n">stack</span><span class="p">([</span><span class="n">item</span><span class="p">[</span><span class="s2">"LAI"</span><span class="p">],</span> <span class="n">item</span><span class="p">[</span><span class="s2">"TWLV"</span><span class="p">]])</span> <span class="k">for</span> <span class="n">item</span> <span class="ow">in</span> <span class="n">results</span><span class="p">]</span>
         <span class="p">)</span><span class="o">.</span><span class="n">unsqueeze</span><span class="p">(</span><span class="mi">0</span><span class="p">)</span> <span class="c1"># shape: [1, time_steps, 2]</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-9"># ---- Wrap the model with torch.nn.Module----
+<div class="clipboard-copy-txt" id="cell-8"># ---- Wrap the model with torch.nn.Module----
 class OptDiffLeafDynamics(torch.nn.Module):
     def __init__(self, crop_model_params_provider, weather_data_provider, agro_management_inputs, leaf_dynamics_config, external_states):
         super().__init__()
@@ -1893,10 +2224,10 @@ class OptDiffLeafDynamics(torch.nn.Module):
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [8]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-10">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-9">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1915,7 +2246,7 @@ class OptDiffLeafDynamics(torch.nn.Module):
     <span class="n">external_states</span><span class="p">,</span>
 <span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-10"># ----  Create model ---- 
+<div class="clipboard-copy-txt" id="cell-9"># ----  Create model ---- 
 opt_model = OptDiffLeafDynamics(
     crop_model_params_provider,
     weather_data_provider,
@@ -1934,10 +2265,10 @@ opt_model = OptDiffLeafDynamics(
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [9]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-11">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-10">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -1980,7 +2311,7 @@ opt_model = OptDiffLeafDynamics(
             <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Early stopping at step </span><span class="si">{</span><span class="n">step</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
             <span class="k">break</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-11"># ----  Early stopping ---- 
+<div class="clipboard-copy-txt" id="cell-10"># ----  Early stopping ---- 
 best_loss = float("inf")
 patience = 10  # Number of steps to wait for improvement
 patience_counter = 0
@@ -2028,22 +2359,22 @@ Step 1, Loss 0.2400, TDWI 0.4485, SPAN 27.1814
 Step 2, Loss 0.2117, TDWI 0.4727, SPAN 28.3303
 Step 3, Loss 0.1790, TDWI 0.4962, SPAN 29.5140
 Step 4, Loss 0.1502, TDWI 0.5190, SPAN 30.7290
-Step 5, Loss 0.1148, TDWI 0.5351, SPAN 31.8314
-Step 6, Loss 0.0873, TDWI 0.5459, SPAN 32.8227
-Step 7, Loss 0.0633, TDWI 0.5525, SPAN 33.6916
-Step 8, Loss 0.0380, TDWI 0.5559, SPAN 34.4434
-Step 9, Loss 0.0164, TDWI 0.5564, SPAN 35.0537
-Step 10, Loss 0.0016, TDWI 0.5543, SPAN 35.2340
-Step 11, Loss 0.0050, TDWI 0.5500, SPAN 35.0621
-Step 12, Loss 0.0018, TDWI 0.5436, SPAN 34.6755
-Step 13, Loss 0.0109, TDWI 0.5356, SPAN 34.2452
-Step 14, Loss 0.0230, TDWI 0.5261, SPAN 33.8167
-Step 15, Loss 0.0341, TDWI 0.5152, SPAN 33.4017
-Step 16, Loss 0.0472, TDWI 0.5031, SPAN 33.0102
-Step 17, Loss 0.0559, TDWI 0.4950, SPAN 32.9639
-Step 18, Loss 0.0571, TDWI 0.4903, SPAN 33.1766
-Step 19, Loss 0.0519, TDWI 0.4888, SPAN 33.5989
-Step 20, Loss 0.0400, TDWI 0.4899, SPAN 34.1872
+Step 5, Loss 0.1148, TDWI 0.5351, SPAN 31.8327
+Step 6, Loss 0.0873, TDWI 0.5459, SPAN 32.8254
+Step 7, Loss 0.0633, TDWI 0.5525, SPAN 33.6958
+Step 8, Loss 0.0375, TDWI 0.5559, SPAN 34.4362
+Step 9, Loss 0.0164, TDWI 0.5564, SPAN 35.0038
+Step 10, Loss 0.0001, TDWI 0.5543, SPAN 35.2185
+Step 11, Loss 0.0048, TDWI 0.5500, SPAN 35.0892
+Step 12, Loss 0.0019, TDWI 0.5436, SPAN 34.7440
+Step 13, Loss 0.0092, TDWI 0.5356, SPAN 34.3535
+Step 14, Loss 0.0175, TDWI 0.5260, SPAN 33.9622
+Step 15, Loss 0.0296, TDWI 0.5151, SPAN 33.5733
+Step 16, Loss 0.0409, TDWI 0.5030, SPAN 33.2059
+Step 17, Loss 0.0512, TDWI 0.4949, SPAN 33.2068
+Step 18, Loss 0.0512, TDWI 0.4903, SPAN 33.4762
+Step 19, Loss 0.0422, TDWI 0.4888, SPAN 33.9525
+Step 20, Loss 0.0299, TDWI 0.4900, SPAN 34.5985
 Early stopping at step 20
 </pre>
 </div>
@@ -2057,10 +2388,10 @@ Early stopping at step 20
 <div class="jp-Collapser jp-InputCollapser jp-Cell-inputCollapser">
 </div>
 <div class="jp-InputArea jp-Cell-inputArea">
-<div class="jp-InputPrompt jp-InputArea-prompt">In [10]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
+<div class="jp-InputPrompt jp-InputArea-prompt">In [11]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-12">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-11">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2073,7 +2404,7 @@ Early stopping at step 20
 <div class="highlight-ipynb hl-python"><pre><span></span><span class="c1"># ---- validate the results using test data ---- </span>
 <span class="nb">print</span><span class="p">(</span><span class="sa">f</span><span class="s2">"Actual TDWI </span><span class="si">{</span><span class="n">crop_model_params_provider</span><span class="p">[</span><span class="s2">"TDWI"</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">, SPAN </span><span class="si">{</span><span class="n">crop_model_params_provider</span><span class="p">[</span><span class="s2">"SPAN"</span><span class="p">]</span><span class="o">.</span><span class="n">item</span><span class="p">()</span><span class="si">:</span><span class="s2">.4f</span><span class="si">}</span><span class="s2">"</span><span class="p">)</span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-12"># ---- validate the results using test data ---- 
+<div class="clipboard-copy-txt" id="cell-11"># ---- validate the results using test data ---- 
 print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}, SPAN {crop_model_params_provider["SPAN"].item():.4f}")</div>
 </div>
 </div>
@@ -2102,7 +2433,7 @@ print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}, SPAN {crop_
 <div class="jp-InputPrompt jp-InputArea-prompt">In [ ]:</div><div class="jp-CodeMirrorEditor jp-Editor jp-InputArea-editor" data-type="inline">
 <div class="CodeMirror cm-s-jupyter">
 <div class="zeroclipboard-container">
-<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-13">
+<clipboard-copy ,="" aria-label="Copy to Clipboard" for="cell-12">
 <div>
 <span class="notice" hidden="">Copied!</span>
 <svg aria-hidden="true" class="clipboard-copy-icon" data-view-component="true" height="20" version="1.1" viewbox="0 0 16 16" width="20">
@@ -2114,7 +2445,7 @@ print(f"Actual TDWI {crop_model_params_provider["TDWI"].item():.4f}, SPAN {crop_
 </div>
 <div class="highlight-ipynb hl-python"><pre><span></span>
 </pre></div>
-<div class="clipboard-copy-txt" id="cell-13"></div>
+<div class="clipboard-copy-txt" id="cell-12"></div>
 </div>
 </div>
 </div>
