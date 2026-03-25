@@ -16,7 +16,6 @@ class VariableKiosk(_PcseVariableKiosk):
     def __init__(self, external_state_list=None):
         super().__init__()
         self.current_externals = {}
-        self.external_state_list = list(external_state_list) if external_state_list else None
         self._last_called_day = None
         # Build a day-keyed dict for O(1) lookup, preserving the original list untouched
         self._external_states = {}
