@@ -29,19 +29,17 @@ class TestVariableKioskInit:
     def test_init_without_external_states(self):
         kiosk = VariableKiosk()
         assert kiosk.current_externals == {}
-        assert kiosk.external_state_list is None
 
     def test_init_with_external_states_stores_copy(self):
         ext = _make_external_states()
         kiosk = VariableKiosk(ext)
-        assert kiosk.external_state_list is not None
-        assert len(kiosk.external_state_list) == 3
+        assert len(kiosk._external_states) == 3
 
     def test_init_makes_independent_copy_of_list(self):
         ext = _make_external_states()
         kiosk = VariableKiosk(ext)
         ext.clear()
-        assert len(kiosk.external_state_list) == 3
+        assert len(kiosk._external_states) == 3
 
 
 @pytest.mark.usefixtures("fast_mode")
@@ -97,9 +95,8 @@ class TestVariableKioskCall:
         kiosk(DAY1)
         kiosk(DAY2)
         kiosk(DAY3)
-        # The stored list must be intact even after full consumption
-        assert len(kiosk.external_state_list) == 3
-        assert all("DAY" in entry for entry in kiosk.external_state_list)
+        # The stored dict must be intact even after full consumption
+        assert len(kiosk._external_states) == 3
 
     def test_sparse_external_states_injects_on_matching_days(self):
         """Only days present in the list inject externals; gaps clear current_externals."""
