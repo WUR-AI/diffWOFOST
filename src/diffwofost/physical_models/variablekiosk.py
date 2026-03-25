@@ -56,7 +56,8 @@ class VariableKiosk(_PcseVariableKiosk):
 
     def __contains__(self, item):
         """Checks external states first, then the published kiosk variables."""
-        return item in self.current_externals or dict.__contains__(self, item)
+        current_externals = self.__dict__.get("current_externals", {})
+        return item in current_externals or dict.__contains__(self, item)
 
     def __getitem__(self, item):
         """Look in external states before falling back to published variables."""
