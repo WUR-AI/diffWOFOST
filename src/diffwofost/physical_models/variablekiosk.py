@@ -73,12 +73,3 @@ class VariableKiosk(_PcseVariableKiosk):
             return current_externals[item]
         return dict.__getitem__(self, item)
 
-    def flush_rates(self):
-        """Flush the values of all published rate variable from the kiosk."""
-        for key in self.published_rates.keys():
-            self.pop(key, None)
-
-    def flush_states(self):
-        """Flush the values of all state variable from the kiosk."""
-        for key in self.published_states.keys():
-            self.pop(key, None)
