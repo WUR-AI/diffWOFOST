@@ -20,11 +20,11 @@ class VariableKiosk(_PcseVariableKiosk):
         self._last_called_day = None
         # Build a day-keyed dict for O(1) lookup, preserving the original list untouched
         self._external_states = {}
-        if self.external_state_list:
-            for entry in self.external_state_list:
-                entry_copy = dict(entry)
-                day = entry_copy.pop("DAY")
-                self._external_states[day] = entry_copy
+        if external_state_list is not None:
+            self._external_states = {
+                item['DAY']: {k: v for k, v in item.items() if k != 'DAY'}
+                for item in list(external_state_list)
+            }
 
     def __call__(self, day):
         """Set the external state/rate variables for the current day.
