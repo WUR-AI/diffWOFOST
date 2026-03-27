@@ -1,4 +1,3 @@
-import copy
 import datetime
 import warnings
 from types import SimpleNamespace
@@ -97,11 +96,11 @@ def get_test_diff_evapotranspiration_model(device: str = "cpu"):
         prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False, device=device)
     )
     return DiffEvapotranspiration(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         evapotranspiration_config,
-        copy.deepcopy(external_states),
+        external_states,
         device=device,
     )
 
@@ -123,6 +122,7 @@ class DiffEvapotranspiration(torch.nn.Module):
         self.config = config
         self.external_states = external_states
         self.device = device
+        self.engine = EngineTestHelper(config=self.config, external_states=self.external_states)
 
     def forward(self, params_dict: dict[str, torch.Tensor]):
         for name, value in params_dict.items():
@@ -130,12 +130,10 @@ class DiffEvapotranspiration(torch.nn.Module):
                 value = value.to(self.device)
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
-            self.external_states,
         )
         engine.run_till_terminate()
         results = engine.get_output()

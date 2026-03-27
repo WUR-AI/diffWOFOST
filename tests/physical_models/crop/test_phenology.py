@@ -1,4 +1,3 @@
-import copy
 import warnings
 from unittest.mock import patch
 import pytest
@@ -86,7 +85,7 @@ def get_test_diff_phenology_model():
         prepare_engine_input(test_data, crop_model_params)
     )
     return DiffPhenologyDynamics(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         phenology_config,
@@ -106,17 +105,17 @@ class DiffPhenologyDynamics(torch.nn.Module):
         self.weather_data_provider = weather_data_provider
         self.agro_management_inputs = agro_management_inputs
         self.config = config
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
         )
         engine.run_till_terminate()
         results = engine.get_output()
