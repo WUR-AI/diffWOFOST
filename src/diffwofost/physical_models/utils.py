@@ -12,88 +12,23 @@ import logging
 import math
 from collections import namedtuple
 from collections.abc import Iterable
-from pathlib import Path
 import torch
 import yaml
 from pcse import signals
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
-from pcse.engine import BaseEngine
 from pcse.settings import settings
-from pcse.timer import Timer
 from pcse.traitlets import TraitType
 from pcse.util import doy
 from diffwofost.physical_models.config import ComputeConfig
-from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.engine import Engine
-from diffwofost.physical_models.engine import _get_params_shape
-from diffwofost.physical_models.variablekiosk import VariableKiosk
 
 logging.disable(logging.CRITICAL)
 
 
 class EngineTestHelper(Engine):
     """An engine which is purely for running the YAML unit tests."""
-
-    def __init__(
-        self,
-        parameterprovider,
-        weatherdataprovider,
-        agromanagement,
-        config,
-        external_states=None,
-    ):
-        BaseEngine.__init__(self)
-
-        # If a path is given, load the model configuration from a PCSE config file
-        if isinstance(config, str | Path):
-            self.mconf = Configuration.from_pcse_config_file(config)
-        else:
-            self.mconf = config
-
-        self.parameterprovider = parameterprovider
-        self._shape = _get_params_shape(self.parameterprovider)
-
-        # Variable kiosk for registering and publishing variables
-        self.kiosk = VariableKiosk(external_states)
-
-        # Placeholder for variables to be saved during a model run
-        self._saved_output = list()
-        self._saved_summary_output = list()
-        self._saved_terminal_output = dict()
-
-        # register handlers for starting/finishing the crop simulation, for
-        # handling output and terminating the system
-        self._connect_signal(self._on_CROP_START, signal=signals.crop_start)
-        self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
-        self._connect_signal(self._on_OUTPUT, signal=signals.output)
-        self._connect_signal(self._on_TERMINATE, signal=signals.terminate)
-
-        # Component for agromanagement
-        self.agromanager = self.mconf.AGROMANAGEMENT(self.kiosk, agromanagement)
-        start_date = self.agromanager.start_date
-        end_date = self.agromanager.end_date
-
-        # Timer: starting day, final day and model output
-        self.timer = Timer(self.kiosk, start_date, end_date, self.mconf)
-        self.day, delt = self.timer()
-        # Update external states in the kiosk
-        self.kiosk(self.day)
-
-        # Driving variables
-        self.weatherdataprovider = weatherdataprovider
-        self.drv = self._get_driving_variables(self.day)
-
-        # Component for simulation of soil processes
-        if self.mconf.SOIL is not None:
-            self.soil = self.mconf.SOIL(self.day, self.kiosk, parameterprovider)
-
-        # Call AgroManagement module for management actions at initialization
-        self.agromanager(self.day, self.drv)
-
-        # Calculate initial rates
-        self.calc_rates(self.day, self.drv)
 
     def _run(self):
         """Make one time step of the simulation."""
@@ -135,9 +70,8 @@ class WeatherDataProviderTestHelper(WeatherDataProvider):
         # instances with arrays.
         settings.METEO_RANGE_CHECKS = meteo_range_checks
         for weather in yaml_weather:
-            if "SNOWDEPTH" in weather:
-                weather.pop("SNOWDEPTH")
-            wdc = WeatherDataContainer(**weather)
+            weather_inputs = {k: v for k, v in weather.items() if k != "SNOWDEPTH"}
+            wdc = WeatherDataContainer(**weather_inputs)
             self._store_WeatherDataContainer(wdc, wdc.DAY)
 
 

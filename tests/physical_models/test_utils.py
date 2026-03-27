@@ -714,6 +714,17 @@ class TestAfgenBatched:
 class TestGetDrvParam:
     """Tests for _get_drv function."""
 
+    def test_weather_provider_does_not_mutate_input_weather(self):
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_24.yaml"
+        test_data = get_test_data(test_data_url)
+        weather_inputs = test_data["WeatherVariables"]
+
+        assert any("SNOWDEPTH" in item for item in weather_inputs)
+
+        WeatherDataProviderTestHelper(weather_inputs)
+
+        assert any("SNOWDEPTH" in item for item in weather_inputs)
+
     def test_float_broadcast(self):
         expected_shape = (3, 2)
         test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
