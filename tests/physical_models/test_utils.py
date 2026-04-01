@@ -11,6 +11,7 @@ from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import astro
 from diffwofost.physical_models.utils import daylength
 from diffwofost.physical_models.utils import get_test_data
+from diffwofost.physical_models.utils import prepare_engine_input
 from . import phy_data_folder
 
 ComputeConfig.set_dtype(torch.float64)
@@ -713,6 +714,32 @@ class TestAfgenBatched:
 @pytest.mark.usefixtures("fast_mode")
 class TestGetDrvParam:
     """Tests for _get_drv function."""
+
+    def test_prepare_engine_input_tensorizes_weather_when_checks_disabled(self):
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data = get_test_data(test_data_url)
+
+        _, weather_provider, _, external_states = prepare_engine_input(
+            test_data,
+            ["RGRLAI"],
+            meteo_range_checks=False,
+        )
+
+        weather = weather_provider(weather_provider.first_date)
+        assert isinstance(weather.TEMP, torch.Tensor)
+        assert isinstance(weather.IRRAD, torch.Tensor)
+        assert external_states
+        assert isinstance(external_states[0]["DVS"], torch.Tensor)
+
+    def test_prepare_engine_input_returns_empty_external_states_when_missing(self):
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        test_data = dict(test_data)
+        test_data.pop("ExternalStates", None)
+
+        _, _, _, external_states = prepare_engine_input(test_data, ["RGRLAI"])
+
+        assert external_states == []
 
     def test_weather_provider_does_not_mutate_input_weather(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"

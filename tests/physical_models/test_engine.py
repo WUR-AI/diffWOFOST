@@ -181,6 +181,28 @@ class TestEngine:
         crop._delete.assert_called_once_with()
         assert engine.crop is None
 
+    def test_finish_cropsimulation_keeps_crop_when_not_deleting(self):
+        _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            _get_engine_inputs()
+        )
+        engine = Engine(config=config)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
+        crop = engine.crop
+        crop.finalize = Mock()
+        crop._delete = Mock()
+        engine.flag_crop_finish = True
+        engine.flag_crop_delete = False
+        engine._save_summary_output = Mock()
+
+        engine._finish_cropsimulation(date(2000, 1, 1))
+
+        assert engine.flag_crop_finish is False
+        assert engine.flag_crop_delete is False
+        crop.finalize.assert_called_once_with(date(2000, 1, 1))
+        engine._save_summary_output.assert_called_once_with()
+        crop._delete.assert_not_called()
+        assert engine.crop is crop
+
     def test_get_params_shape_uses_first_tensor_shape(self):
         parameterprovider = _DummyParameterProvider(
             {
@@ -201,3 +223,13 @@ class TestEngine:
 
         with pytest.raises(ValueError, match="Non-matching shapes found in parameter provider"):
             _get_params_shape(parameterprovider)
+
+    def test_get_params_shape_returns_empty_tuple_for_scalar_parameters(self):
+        parameterprovider = _DummyParameterProvider(
+            {
+                "A": 1.0,
+                "B": 2.0,
+            }
+        )
+
+        assert _get_params_shape(parameterprovider) == ()
