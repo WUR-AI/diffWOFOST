@@ -100,10 +100,6 @@ class Engine(PcseEngine):
         Returns:
             Engine: The configured engine instance.
         """
-        if external_states is None:
-            external_states = self._default_external_states
-        else:
-            self._default_external_states = external_states
 
         self._reset_runtime_state()
 
