@@ -16,7 +16,6 @@ class Engine(PcseEngine):
     def __init__(
         self,
         config: str | Path | Configuration | None = None,
-        external_states=None,
     ):
         BaseEngine.__init__(self)
 
