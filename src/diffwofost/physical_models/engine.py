@@ -15,9 +15,6 @@ class Engine(PcseEngine):
 
     def __init__(
         self,
-        parameterprovider=None,
-        weatherdataprovider=None,
-        agromanagement=None,
         config: str | Path | Configuration | None = None,
         external_states=None,
     ):
