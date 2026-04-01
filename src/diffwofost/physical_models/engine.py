@@ -29,26 +29,6 @@ class Engine(PcseEngine):
         else:
             self.mconf = config
 
-        self._default_external_states = external_states
-
-        if any(
-            item is not None for item in (parameterprovider, weatherdataprovider, agromanagement)
-        ):
-            if not all(
-                item is not None
-                for item in (parameterprovider, weatherdataprovider, agromanagement)
-            ):
-                msg = (
-                    "parameterprovider, weatherdataprovider and agromanagement must all be "
-                    "provided when setting up the engine."
-                )
-                raise TypeError(msg)
-            self.setup(
-                parameterprovider,
-                weatherdataprovider,
-                agromanagement,
-                external_states=external_states,
-            )
 
     def _reset_runtime_state(self):
         for component_name in ("crop", "soil"):
