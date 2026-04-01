@@ -100,7 +100,6 @@ class Engine(PcseEngine):
         Returns:
             Engine: The configured engine instance.
         """
-
         self._reset_runtime_state()
 
         self.parameterprovider = parameterprovider
