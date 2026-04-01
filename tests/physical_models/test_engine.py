@@ -41,12 +41,8 @@ class TestEngine:
         _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             _get_engine_inputs()
         )
-        engine = Engine(
-            parameterprovider=crop_model_params_provider,
-            weatherdataprovider=weather_data_provider,
-            agromanagement=agro_management_inputs,
-            config=config,
-        )
+        engine = Engine(config=config)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
         start_day = engine.day
         engine.run(days=5)
 
@@ -90,12 +86,8 @@ class TestEngine:
         )
         original_dvsi = crop_model_params_provider["DVSI"].clone()
 
-        engine = Engine(
-            parameterprovider=crop_model_params_provider,
-            weatherdataprovider=weather_data_provider,
-            agromanagement=agro_management_inputs,
-            config=config,
-        )
+        engine = Engine(config=config)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
         engine.run(days=5)
 
         assert torch.equal(crop_model_params_provider["DVSI"], original_dvsi)

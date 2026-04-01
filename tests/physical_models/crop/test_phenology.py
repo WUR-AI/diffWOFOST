@@ -162,11 +162,11 @@ class TestPhenologyDynamics:
             _,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -246,20 +246,20 @@ class TestPhenologyDynamics:
 
         if param == "TEMP":
             with pytest.raises(ValueError):
-                engine = EngineTestHelper(
+                engine = EngineTestHelper(config=phenology_config)
+                engine.setup(
                     crop_model_params_provider,
                     weather_data_provider,
                     agro_management_inputs,
-                    phenology_config,
                 )
                 engine.run_till_terminate()
                 _ = engine.get_output()
         else:
-            engine = EngineTestHelper(
+            engine = EngineTestHelper(config=phenology_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                phenology_config,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -324,11 +324,11 @@ class TestPhenologyDynamics:
             param_vec = torch.stack([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -381,11 +381,11 @@ class TestPhenologyDynamics:
                 repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -446,11 +446,11 @@ class TestPhenologyDynamics:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -499,11 +499,11 @@ class TestPhenologyDynamics:
         )
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=phenology_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                phenology_config,
             )
 
     def test_phenology_with_incompatible_weather_parameter_vectors(self):
@@ -539,11 +539,11 @@ class TestPhenologyDynamics:
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=phenology_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                phenology_config,
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)

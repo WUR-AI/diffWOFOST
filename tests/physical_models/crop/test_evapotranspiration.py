@@ -122,7 +122,7 @@ class DiffEvapotranspiration(torch.nn.Module):
         self.config = config
         self.external_states = external_states
         self.device = device
-        self.engine = EngineTestHelper(config=self.config, external_states=self.external_states)
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict: dict[str, torch.Tensor]):
         for name, value in params_dict.items():
@@ -134,6 +134,7 @@ class DiffEvapotranspiration(torch.nn.Module):
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
+            self.external_states,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -191,11 +192,11 @@ class TestEvapotranspiration:
                 if "RD" not in state_dict:
                     state_dict["RD"] = torch.tensor(30.0, dtype=torch.float64, device=device)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=evapotranspiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            evapotranspiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -270,11 +271,11 @@ class TestEvapotranspiration:
             for (_, _), wdc in weather_data_provider.store.items():
                 wdc.ET0 = torch.ones(10, dtype=torch.float64, device=wdc.ET0.device) * wdc.ET0
             with pytest.raises(ValueError):
-                EngineTestHelper(
+                engine = EngineTestHelper(config=evapotranspiration_config)
+                engine.setup(
                     crop_model_params_provider,
                     weather_data_provider,
                     agro_management_inputs,
-                    evapotranspiration_config,
                     external_states,
                 )
             return
@@ -285,11 +286,11 @@ class TestEvapotranspiration:
             repeated = crop_model_params_provider[param].repeat(10)
         crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=evapotranspiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            evapotranspiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -351,11 +352,11 @@ class TestEvapotranspiration:
             )
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=evapotranspiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            evapotranspiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -403,11 +404,11 @@ class TestEvapotranspiration:
                 repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=evapotranspiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            evapotranspiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -459,11 +460,11 @@ class TestEvapotranspiration:
             wdc.E0 = torch.ones(batch_shape, dtype=torch.float64, device=wdc.E0.device) * wdc.E0
             wdc.ES0 = torch.ones(batch_shape, dtype=torch.float64, device=wdc.ES0.device) * wdc.ES0
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=evapotranspiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            evapotranspiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -508,11 +509,11 @@ class TestEvapotranspiration:
         )
 
         with pytest.raises(ValueError, match="Non-matching shapes found in parameter provider!"):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=evapotranspiration_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                evapotranspiration_config,
                 external_states,
             )
 
@@ -544,11 +545,11 @@ class TestEvapotranspiration:
             wdc.ET0 = torch.ones(5, dtype=torch.float64, device=wdc.ET0.device) * wdc.ET0
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=evapotranspiration_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                evapotranspiration_config,
                 external_states,
             )
 

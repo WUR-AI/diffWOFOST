@@ -105,7 +105,7 @@ class DiffStorageDynamics(torch.nn.Module):
         self.config = config
         self.external_states = external_states
         self.device = device
-        self.engine = EngineTestHelper(config=self.config, external_states=self.external_states)
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
@@ -116,6 +116,7 @@ class DiffStorageDynamics(torch.nn.Module):
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
+            self.external_states,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -150,11 +151,11 @@ class TestStorageOrganDynamics:
             external_states,
         ) = _prepare_common_storage_inputs(test_data_url)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=storage_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            storage_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -201,21 +202,21 @@ class TestStorageOrganDynamics:
             # Vectorize weather variable
             # We expect the model to handle scalar parameters with vectorized weather
             # via implicit broadcasting or explicit checks passing.
-            engine = EngineTestHelper(
+            engine = EngineTestHelper(config=storage_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                storage_dynamics_config,
                 external_states,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
         else:
-            engine = EngineTestHelper(
+            engine = EngineTestHelper(config=storage_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                storage_dynamics_config,
                 external_states,
             )
             engine.run_till_terminate()
@@ -269,11 +270,11 @@ class TestStorageOrganDynamics:
                     p_name, p_val.repeat(target_batch_size), check=False
                 )
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=storage_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            storage_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -305,11 +306,11 @@ class TestStorageOrganDynamics:
                 repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=storage_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            storage_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -340,11 +341,11 @@ class TestStorageOrganDynamics:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=storage_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            storage_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -377,11 +378,11 @@ class TestStorageOrganDynamics:
         )
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=storage_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                storage_dynamics_config,
                 external_states,
             )
 
