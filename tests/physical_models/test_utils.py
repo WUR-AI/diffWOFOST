@@ -716,7 +716,7 @@ class TestGetDrvParam:
     """Tests for _get_drv function."""
 
     def test_prepare_engine_input_tensorizes_weather_when_checks_disabled(self):
-        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_01.yaml"
+        test_data_url = f"{phy_data_folder}/test_leafdynamics_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
 
         _, weather_provider, _, external_states = prepare_engine_input(
