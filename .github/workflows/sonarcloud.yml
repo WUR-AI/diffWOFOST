@@ -28,10 +28,8 @@ jobs:
           python -m pip install -e .[dev]
       - name: Run unit tests and store coverage
         run: |
-          # [!] Note that sonarcloud runs the full test suite
-          coverage run -m pytest -n auto
-          coverage report -m
-          coverage xml -o coverage.xml
+          # [!] Note that sonarcloud runs the fast test suite
+          pytest --fast -n auto --cov=your_package --cov-report=xml:coverage.xml --cov-report=term-missing
       - name: Make coverage paths relative
         run: sed -i "s+$PWD/++g" coverage.xml
       - name: SonarQube Scan
