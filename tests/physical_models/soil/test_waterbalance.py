@@ -1,4 +1,3 @@
-import copy
 import warnings
 from unittest.mock import patch
 import pytest
@@ -31,11 +30,11 @@ def get_test_diff_waterbalance_model(device: str = "cpu"):
         prepare_engine_input(test_data, crop_model_params, device=device)
     )
     return DiffWaterbalancePP(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         waterbalance_config,
-        copy.deepcopy(external_states),
+        external_states,
     )
 
 
@@ -54,17 +53,17 @@ class DiffWaterbalancePP(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         # Pass new parameter values to the model
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -96,11 +95,11 @@ class TestWaterbalancePP:
 
         smfcf = torch.as_tensor(crop_model_params_provider["SMFCF"], dtype=torch.float64).cpu()
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=waterbalance_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            waterbalance_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -124,11 +123,11 @@ class TestWaterbalancePP:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=waterbalance_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            waterbalance_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -154,11 +153,11 @@ class TestWaterbalancePP:
         repeated = crop_model_params_provider["SMFCF"].repeat(10)
         crop_model_params_provider.set_override("SMFCF", repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=waterbalance_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            waterbalance_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -195,11 +194,11 @@ class TestWaterbalancePP:
         smfcf_vec = torch.stack([smfcf + delta, smfcf - delta, smfcf])
         crop_model_params_provider.set_override("SMFCF", smfcf_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=waterbalance_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            waterbalance_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -232,11 +231,11 @@ class TestWaterbalancePP:
         repeated = crop_model_params_provider["SMFCF"].repeat(10)
         crop_model_params_provider.set_override("SMFCF", repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=waterbalance_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            waterbalance_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -266,11 +265,11 @@ class TestWaterbalancePP:
         smfcf_2d = crop_model_params_provider["SMFCF"].broadcast_to((30, 5))
         crop_model_params_provider.set_override("SMFCF", smfcf_2d, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=waterbalance_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            waterbalance_config,
             external_states,
         )
         engine.run_till_terminate()

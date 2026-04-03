@@ -1,4 +1,3 @@
-import copy
 import warnings
 from unittest.mock import patch
 import pytest
@@ -26,11 +25,11 @@ def get_test_diff_leaf_model():
         prepare_engine_input(test_data, crop_model_params)
     )
     return DiffLeafDynamics(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         leaf_dynamics_config,
-        copy.deepcopy(external_states),
+        external_states,
     )
 
 
@@ -49,17 +48,17 @@ class DiffLeafDynamics(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -93,11 +92,11 @@ class TestLeafDynamics:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=leaf_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -151,21 +150,21 @@ class TestLeafDynamics:
             # Expect error due to incompatible shapes
             # (By defaults parameters are not reshaped following weather variables)
             with pytest.raises(ValueError):
-                engine = EngineTestHelper(
+                engine = EngineTestHelper(config=leaf_dynamics_config)
+                engine.setup(
                     crop_model_params_provider,
                     weather_data_provider,
                     agro_management_inputs,
-                    leaf_dynamics_config,
                     external_states,
                 )
                 engine.run_till_terminate()
                 actual_results = engine.get_output()
         else:
-            engine = EngineTestHelper(
+            engine = EngineTestHelper(config=leaf_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                leaf_dynamics_config,
                 external_states,
             )
             engine.run_till_terminate()
@@ -225,11 +224,11 @@ class TestLeafDynamics:
             param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=leaf_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -274,11 +273,11 @@ class TestLeafDynamics:
                 repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=leaf_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -320,11 +319,11 @@ class TestLeafDynamics:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=leaf_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -367,11 +366,11 @@ class TestLeafDynamics:
         )
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=leaf_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                leaf_dynamics_config,
                 external_states,
             )
 
@@ -395,11 +394,11 @@ class TestLeafDynamics:
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=leaf_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                leaf_dynamics_config,
                 external_states,
             )
 
@@ -451,11 +450,11 @@ class TestLeafDynamics:
         # Make SPAN a parameter requiring gradients
         crop_model_params_provider["SPAN"].requires_grad = True
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=leaf_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            leaf_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()

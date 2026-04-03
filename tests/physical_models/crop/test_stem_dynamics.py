@@ -1,4 +1,3 @@
-import copy
 import warnings
 from unittest.mock import patch
 import pytest
@@ -87,11 +86,11 @@ def get_test_diff_stem_model(device: str = "cpu"):
     ) = _prepare_common_stem_inputs(test_data_url, device=device)
 
     return DiffStemDynamics(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         stem_dynamics_config,
-        copy.deepcopy(external_states),
+        external_states,
         device=device,
     )
 
@@ -113,17 +112,17 @@ class DiffStemDynamics(torch.nn.Module):
         self.config = config
         self.external_states = external_states
         self.device = device
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -156,11 +155,11 @@ class TestStemDynamics:
             external_states,
         ) = _prepare_common_stem_inputs(test_data_url, device=device)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=stem_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            stem_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -208,21 +207,21 @@ class TestStemDynamics:
             # Vectorize weather variable
             # We expect the model to handle scalar parameters with vectorized weather
             # via implicit broadcasting or explicit checks passing.
-            engine = EngineTestHelper(
+            engine = EngineTestHelper(config=stem_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                stem_dynamics_config,
                 external_states,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
         else:
-            engine = EngineTestHelper(
+            engine = EngineTestHelper(config=stem_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                stem_dynamics_config,
                 external_states,
             )
             engine.run_till_terminate()
@@ -288,11 +287,11 @@ class TestStemDynamics:
                     p_name, p_val.repeat(target_batch_size, 1), check=False
                 )
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=stem_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            stem_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -324,11 +323,11 @@ class TestStemDynamics:
                 repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=stem_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            stem_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -363,11 +362,11 @@ class TestStemDynamics:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=stem_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            stem_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -400,11 +399,11 @@ class TestStemDynamics:
         )
 
         with pytest.raises((AssertionError, ValueError)):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=stem_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                stem_dynamics_config,
                 external_states,
             )
 
@@ -427,11 +426,11 @@ class TestStemDynamics:
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
         with pytest.raises((AssertionError, ValueError)):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=stem_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                stem_dynamics_config,
                 external_states,
             )
 

@@ -1,4 +1,3 @@
-import copy
 import warnings
 from unittest.mock import patch
 import pytest
@@ -28,11 +27,11 @@ def get_test_diff_partitioning():
         external_states,
     ) = prepare_engine_input(test_data, crop_model_params)
     return DiffPartitioning(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         partitioning_config,
-        copy.deepcopy(external_states),
+        external_states,
     )
 
 
@@ -51,17 +50,17 @@ class DiffPartitioning(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict: dict[str, torch.Tensor]):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -96,11 +95,11 @@ class TestPartitioning:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=partitioning_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            partitioning_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -141,11 +140,11 @@ class TestPartitioning:
         repeated = crop_model_params_provider[param].repeat(10, 1)
         crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=partitioning_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            partitioning_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -175,11 +174,11 @@ class TestPartitioning:
             param_vec = torch.stack([base * 0.8, base])
             crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=partitioning_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            partitioning_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -207,11 +206,11 @@ class TestPartitioning:
             repeated = crop_model_params_provider[name].repeat(2, 1)
             crop_model_params_provider.set_override(name, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=partitioning_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            partitioning_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -239,11 +238,11 @@ class TestPartitioning:
             repeated = base.repeat(30, 5, 1)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=partitioning_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            partitioning_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -280,11 +279,11 @@ class TestPartitioning:
         crop_model_params_provider.set_override("FLTB", [[0.0, 0.3, 2.0, 0.1]] * 2, check=False)
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=partitioning_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                partitioning_config,
                 external_states,
             )
 

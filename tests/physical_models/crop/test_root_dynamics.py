@@ -1,4 +1,3 @@
-import copy
 import warnings
 from unittest.mock import patch
 import pytest
@@ -27,11 +26,11 @@ def get_test_diff_root_model():
         prepare_engine_input(test_data, crop_model_params)
     )
     return DiffRootDynamics(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         root_dynamics_config,
-        copy.deepcopy(external_states),
+        external_states,
     )
 
 
@@ -50,17 +49,17 @@ class DiffRootDynamics(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -94,11 +93,11 @@ class TestRootDynamics:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=root_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -141,11 +140,11 @@ class TestRootDynamics:
             repeated = crop_model_params_provider[param].repeat(10)
         crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=root_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -201,11 +200,11 @@ class TestRootDynamics:
             param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=root_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -249,11 +248,11 @@ class TestRootDynamics:
                 repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=root_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -291,11 +290,11 @@ class TestRootDynamics:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=root_dynamics_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            root_dynamics_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -338,11 +337,11 @@ class TestRootDynamics:
         )
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=root_dynamics_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                root_dynamics_config,
                 external_states,
             )
 

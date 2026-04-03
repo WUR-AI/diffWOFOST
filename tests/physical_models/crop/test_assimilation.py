@@ -1,4 +1,3 @@
-import copy
 from unittest.mock import patch
 import pytest
 import torch
@@ -26,11 +25,11 @@ def get_test_diff_assimilation_model():
         prepare_engine_input(test_data, crop_model_params)
     )
     return DiffAssimilation(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         assimilation_config,
-        copy.deepcopy(external_states),
+        external_states,
     )
 
 
@@ -49,16 +48,16 @@ class DiffAssimilation(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
             self.external_states,
         )
         engine.run_till_terminate()
@@ -89,11 +88,11 @@ class TestAssimilation:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=assimilation_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            assimilation_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -127,11 +126,11 @@ class TestAssimilation:
         repeated = crop_model_params_provider[param].repeat(10, 1)
         crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=assimilation_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            assimilation_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -176,11 +175,11 @@ class TestAssimilation:
         param_vec = torch.stack([test_value + ymask * delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=assimilation_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            assimilation_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -214,11 +213,11 @@ class TestAssimilation:
             repeated = crop_model_params_provider[param].repeat(10, 1)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=assimilation_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            assimilation_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -256,11 +255,11 @@ class TestAssimilation:
             wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
             wdc.TMIN = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TMIN
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=assimilation_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            assimilation_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -296,11 +295,11 @@ class TestAssimilation:
         )
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=assimilation_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                assimilation_config,
                 external_states,
             )
 
@@ -322,11 +321,11 @@ class TestAssimilation:
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=assimilation_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                assimilation_config,
                 external_states,
             )
 

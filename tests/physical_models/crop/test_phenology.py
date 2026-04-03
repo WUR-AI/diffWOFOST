@@ -1,4 +1,3 @@
-import copy
 import warnings
 from unittest.mock import patch
 import pytest
@@ -86,7 +85,7 @@ def get_test_diff_phenology_model():
         prepare_engine_input(test_data, crop_model_params)
     )
     return DiffPhenologyDynamics(
-        copy.deepcopy(crop_model_params_provider),
+        crop_model_params_provider,
         weather_data_provider,
         agro_management_inputs,
         phenology_config,
@@ -106,17 +105,17 @@ class DiffPhenologyDynamics(torch.nn.Module):
         self.weather_data_provider = weather_data_provider
         self.agro_management_inputs = agro_management_inputs
         self.config = config
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         # pass new value of parameters to the model
         for name, value in params_dict.items():
             self.crop_model_params_provider.set_override(name, value, check=False)
 
-        engine = EngineTestHelper(
+        engine = self.engine.setup(
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
-            self.config,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -163,11 +162,11 @@ class TestPhenologyDynamics:
             _,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -247,20 +246,20 @@ class TestPhenologyDynamics:
 
         if param == "TEMP":
             with pytest.raises(ValueError):
-                engine = EngineTestHelper(
+                engine = EngineTestHelper(config=phenology_config)
+                engine.setup(
                     crop_model_params_provider,
                     weather_data_provider,
                     agro_management_inputs,
-                    phenology_config,
                 )
                 engine.run_till_terminate()
                 _ = engine.get_output()
         else:
-            engine = EngineTestHelper(
+            engine = EngineTestHelper(config=phenology_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                phenology_config,
             )
             engine.run_till_terminate()
             actual_results = engine.get_output()
@@ -325,11 +324,11 @@ class TestPhenologyDynamics:
             param_vec = torch.stack([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -382,11 +381,11 @@ class TestPhenologyDynamics:
                 repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -447,11 +446,11 @@ class TestPhenologyDynamics:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            phenology_config,
         )
         engine.run_till_terminate()
         actual_results = engine.get_output()
@@ -500,11 +499,11 @@ class TestPhenologyDynamics:
         )
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=phenology_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                phenology_config,
             )
 
     def test_phenology_with_incompatible_weather_parameter_vectors(self):
@@ -540,11 +539,11 @@ class TestPhenologyDynamics:
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=phenology_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                phenology_config,
             )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
