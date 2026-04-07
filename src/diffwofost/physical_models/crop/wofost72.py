@@ -109,6 +109,29 @@ class Wofost72(SimulationObject):
     ro_dynamics = Instance(SimulationObject)
     so_dynamics = Instance(SimulationObject)
 
+    COMPONENT_SPECS = {
+        "phenology": ("pheno", Phenology),
+        "partitioning": ("part", Partitioning),
+        "assimilation": ("assim", Assimilation),
+        "maintenance_respiration": ("mres", MaintenanceRespiration),
+        "evapotranspiration": ("evtra", Evapotranspiration),
+        "root_dynamics": ("ro_dynamics", Root_Dynamics),
+        "stem_dynamics": ("st_dynamics", Stem_Dynamics),
+        "storage_organ_dynamics": ("so_dynamics", Storage_Organ_Dynamics),
+        "leaf_dynamics": ("lv_dynamics", Leaf_Dynamics),
+    }
+    COMPONENT_ALIASES = {
+        "pheno": "phenology",
+        "part": "partitioning",
+        "assim": "assimilation",
+        "mres": "maintenance_respiration",
+        "evtra": "evapotranspiration",
+        "ro_dynamics": "root_dynamics",
+        "st_dynamics": "stem_dynamics",
+        "so_dynamics": "storage_organ_dynamics",
+        "lv_dynamics": "leaf_dynamics",
+    }
+
     @property
     def device(self):
         """Get device from ComputeConfig."""
@@ -153,6 +176,10 @@ class Wofost72(SimulationObject):
         kiosk: VariableKiosk,
         parvalues: ParameterProvider,
         shape: tuple | torch.Size | None = None,
+        component_overrides: dict | None = None,
+        partitioning_class: type[SimulationObject] | None = None,
+        partitioning_model=None,
+        partitioning_kwargs: dict | None = None,
     ) -> None:
         """Initialize the crop simulation.
 
@@ -167,17 +194,27 @@ class Wofost72(SimulationObject):
             kiosk, publish=["DMI", "ADMI", "REALLOC_LV", "REALLOC_ST", "REALLOC_SO"], shape=shape
         )
         self.kiosk = kiosk
+        component_overrides = self._normalize_component_overrides(
+            component_overrides=component_overrides,
+            partitioning_class=partitioning_class,
+            partitioning_model=partitioning_model,
+            partitioning_kwargs=partitioning_kwargs,
+        )
 
         # Initialize components of the crop
-        self.pheno = Phenology(day, kiosk, parvalues, shape=shape)
-        self.part = Partitioning(day, kiosk, parvalues, shape=shape)
-        self.assim = Assimilation(day, kiosk, parvalues, shape=shape)
-        self.mres = MaintenanceRespiration(day, kiosk, parvalues, shape=shape)
-        self.evtra = Evapotranspiration(day, kiosk, parvalues, shape=shape)
-        self.ro_dynamics = Root_Dynamics(day, kiosk, parvalues, shape=shape)
-        self.st_dynamics = Stem_Dynamics(day, kiosk, parvalues, shape=shape)
-        self.so_dynamics = Storage_Organ_Dynamics(day, kiosk, parvalues, shape=shape)
-        self.lv_dynamics = Leaf_Dynamics(day, kiosk, parvalues, shape=shape)
+        for component_name, (attribute_name, _) in self.COMPONENT_SPECS.items():
+            setattr(
+                self,
+                attribute_name,
+                self._initialize_component(
+                    component_name,
+                    day,
+                    kiosk,
+                    parvalues,
+                    shape=shape,
+                    component_overrides=component_overrides,
+                ),
+            )
 
         # Initial total (living+dead) above-ground biomass of the crop
         TAGP = self.kiosk.TWLV + self.kiosk.TWST + self.kiosk.TWSO
@@ -203,6 +240,68 @@ class Wofost72(SimulationObject):
 
         # assign handler for CROP_FINISH signal
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
+
+    def _normalize_component_name(self, component_name: str) -> str:
+        component_name = self.COMPONENT_ALIASES.get(component_name, component_name)
+        if component_name not in self.COMPONENT_SPECS:
+            msg = f"Unknown Wofost72 component override: {component_name}"
+            raise KeyError(msg)
+        return component_name
+
+    def _normalize_component_overrides(
+        self,
+        component_overrides: dict | None = None,
+        partitioning_class: type[SimulationObject] | None = None,
+        partitioning_model=None,
+        partitioning_kwargs: dict | None = None,
+    ) -> dict:
+        normalized_overrides = {}
+        for component_name, override in (component_overrides or {}).items():
+            canonical_name = self._normalize_component_name(component_name)
+            if override is None:
+                normalized_overrides[canonical_name] = {}
+            elif isinstance(override, dict):
+                normalized_overrides[canonical_name] = dict(override)
+            else:
+                normalized_overrides[canonical_name] = {"class": override}
+
+        if any(
+            item is not None
+            for item in (partitioning_class, partitioning_model, partitioning_kwargs)
+        ):
+            partitioning_override = normalized_overrides.setdefault("partitioning", {})
+            if partitioning_class is not None:
+                partitioning_override["class"] = partitioning_class
+            if partitioning_model is not None:
+                partitioning_override["model"] = partitioning_model
+            if partitioning_kwargs is not None:
+                partitioning_override["kwargs"] = dict(partitioning_kwargs)
+
+        return normalized_overrides
+
+    def _initialize_component(
+        self,
+        component_name: str,
+        day: datetime.date,
+        kiosk: VariableKiosk,
+        parvalues: ParameterProvider,
+        shape: tuple | torch.Size | None = None,
+        component_overrides: dict | None = None,
+    ) -> SimulationObject:
+        canonical_name = self._normalize_component_name(component_name)
+        _, default_component_class = self.COMPONENT_SPECS[canonical_name]
+        override = (
+            {} if component_overrides is None else component_overrides.get(canonical_name, {})
+        )
+
+        component_class = override.get("class", default_component_class)
+        component_kwargs = dict(override.get("kwargs", {}))
+        component_model = override.get("model")
+
+        if component_model is None:
+            return component_class(day, kiosk, parvalues, shape=shape, **component_kwargs)
+
+        return component_class(day, kiosk, component_model, shape=shape, **component_kwargs)
 
     @staticmethod
     def _check_carbon_balance(day, DMI, GASS, MRES, CVF, pf):

@@ -18,6 +18,7 @@ class TestConfiguration:
     def test_config_accept_other_optional_input_args(self):
         config = Configuration(
             CROP=WOFOST_Leaf_Dynamics,
+            CROP_KWARGS={"example": 1},
             SOIL=WaterbalancePP,
             AGROMANAGEMENT=AgroManager,
             OUTPUT_VARS=[],
@@ -30,6 +31,7 @@ class TestConfiguration:
             description="this is the description",
         )
         assert isinstance(config, Configuration)
+        assert config.CROP_KWARGS == {"example": 1}
 
     def test_config_can_be_instantiated_from_a_default_pcse_config_file(self):
         config = Configuration.from_pcse_config_file("Wofost72_Pheno.conf")

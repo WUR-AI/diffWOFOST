@@ -143,7 +143,13 @@ class Engine(PcseEngine):
         self.parameterprovider.set_active_crop(
             crop_name, variety_name, crop_start_type, crop_end_type
         )
-        self.crop = self.mconf.CROP(day, self.kiosk, self.parameterprovider, shape=self._shape)
+        self.crop = self.mconf.CROP(
+            day,
+            self.kiosk,
+            self.parameterprovider,
+            shape=self._shape,
+            **self.mconf.CROP_KWARGS,
+        )
 
     def _finish_cropsimulation(self, day):
         self.flag_crop_finish = False

@@ -144,6 +144,7 @@ class Configuration:
     """Class to store model configuration from a PCSE configuration files."""
 
     CROP: type[SimulationObject]
+    CROP_KWARGS: dict = field(default_factory=dict)
     SOIL: type[SimulationObject] | None = None
     AGROMANAGEMENT: type[AncillaryObject] = AgroManager
     OUTPUT_VARS: list = field(default_factory=list)
