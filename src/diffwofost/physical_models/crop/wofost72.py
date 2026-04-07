@@ -257,23 +257,44 @@ class Wofost72(SimulationObject):
         self,
         component_overrides: dict | None = None,
     ) -> dict:
-        """Normalize override definitions to a single internal structure.
+        """Convert user-facing component overrides into one internal format.
 
         Args:
             component_overrides: Raw override mapping passed to
                 :meth:`initialize`.
 
         Returns:
-            A dictionary keyed by canonical component names. Each value is a
-            compact override dictionary containing ``class``, ``model``, and
-            optionally ``kwargs`` for constructor keyword arguments.
+            A dictionary keyed by canonical component names. Each value is an
+            override dictionary that may contain ``class``, ``model``, and
+            ``kwargs``.
 
         Notes:
-            This method allows a concise override syntax for ML-enabled
-            components. For example, callers can pass
+            This method does three concrete things:
+
+            1. It validates that every override key refers to a known WOFOST
+               component.
+            2. It rewrites shorthand forms into a dictionary shape that
+               ``_initialize_component()`` can consume consistently.
+            3. It collects any non-reserved dict entries into ``kwargs`` so
+               they can be forwarded to the component constructor.
+
+            In practice, the accepted inputs are normalized as follows:
+
+            - ``None`` becomes ``{}``, meaning "use the default component".
+            - ``MyComponentClass`` becomes ``{"class": MyComponentClass}``.
+            - ``{"class": MyComponentClass, "model": model}`` is kept as-is.
+            - Extra keys such as ``dropout=0.0`` are moved into
+              ``{"kwargs": {"dropout": 0.0}}``.
+
+            For example, this input:
+
             ``{"partitioning": {"class": MyPartitioningWrapper,
-            "model": my_torch_model, "dropout": 0.0}}`` and the extra
-            ``dropout`` key will be moved into ``kwargs`` automatically.
+            "model": my_torch_model, "dropout": 0.0}}``
+
+            becomes:
+
+            ``{"partitioning": {"class": MyPartitioningWrapper,
+            "model": my_torch_model, "kwargs": {"dropout": 0.0}}}``
         """
         normalized_overrides = {}
         for component_name, override in (component_overrides or {}).items():
