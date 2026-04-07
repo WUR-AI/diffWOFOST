@@ -1,10 +1,16 @@
 import copy
+import datetime
 import warnings
 from unittest.mock import patch
 import pytest
 import torch
+from pcse.base import SimulationObject
+from pcse.base.variablekiosk import VariableKiosk
 from pcse.models import Wofost72_PP
+from diffwofost.ml_models.crop.partitioning import DVS_Partitioning_NN
+from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.crop.partitioning import PartioningFactors
 from diffwofost.physical_models.crop.wofost72 import Wofost72
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.utils import EngineTestHelper
@@ -29,6 +35,29 @@ WOFOST72_DIRECT_PARAMS = frozenset({"CVL", "CVO", "CVR", "CVS"})
 
 
 _wofost72_template_inputs = None
+
+
+class RecordingComponent(SimulationObject):
+    @property
+    def payload(self):
+        return self._payload
+
+    def initialize(self, day, kiosk, payload, shape=None, label=None):
+        self._day = day
+        self._kiosk = kiosk
+        self._payload = payload
+        self._shape = shape
+        self._label = label
+
+
+class RecordingPartitioningComponent(RecordingComponent):
+    def calc_rates(self, day, drv):
+        return PartioningFactors(
+            FR=torch.tensor(0.2),
+            FL=torch.tensor(0.5),
+            FS=torch.tensor(0.2),
+            FO=torch.tensor(0.3),
+        )
 
 
 def get_test_diff_wofost72_model():
@@ -491,6 +520,142 @@ class TestWofost72:
                 agro_management_inputs,
                 external_states,
             )
+
+    def test_wofost72_accepts_partitioning_override_from_configuration(self):
+        test_data_url = f"{phy_data_folder}/test_potentialproduction_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = _build_wofost72_template_inputs(test_data)
+
+        partition_model = PartitioningNN(hidden_size=8)
+        hybrid_config = Configuration(
+            CROP=Wofost72,
+            CROP_KWARGS={
+                "component_overrides": {
+                    "partitioning": {
+                        "class": DVS_Partitioning_NN,
+                        "model": partition_model,
+                    }
+                }
+            },
+            SOIL=WaterbalancePP,
+            OUTPUT_VARS=["FR", "FL", "FS", "FO", "LAI"],
+        )
+
+        engine = EngineTestHelper(config=hybrid_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert isinstance(engine.crop.part, DVS_Partitioning_NN)
+        assert actual_results
+        assert all(name in actual_results[0] for name in ["FR", "FL", "FS", "FO", "LAI"])
+
+    def test_wofost72_accepts_component_overrides_for_all_modules(self):
+        class MockKiosk(VariableKiosk):
+            pass
+
+        kiosk = MockKiosk()
+        kiosk.update(
+            {
+                "DVS": torch.tensor(0.1),
+                "TWLV": torch.tensor(40.0),
+                "TWST": torch.tensor(30.0),
+                "TWSO": torch.tensor(20.0),
+                "TWRT": torch.tensor(10.0),
+            }
+        )
+
+        parvalues = {
+            "CVL": torch.tensor(1.0),
+            "CVO": torch.tensor(1.0),
+            "CVR": torch.tensor(1.0),
+            "CVS": torch.tensor(1.0),
+            "TDWI": torch.tensor(100.0),
+        }
+        component_models = {name: object() for name in Wofost72.COMPONENT_SPECS}
+        component_overrides = {
+            "phenology": {
+                "class": RecordingComponent,
+                "model": component_models["phenology"],
+                "label": "phenology",
+            },
+            "partitioning": {
+                "class": RecordingPartitioningComponent,
+                "model": component_models["partitioning"],
+                "label": "partitioning",
+            },
+            "assimilation": {
+                "class": RecordingComponent,
+                "model": component_models["assimilation"],
+                "label": "assimilation",
+            },
+            "maintenance_respiration": {
+                "class": RecordingComponent,
+                "model": component_models["maintenance_respiration"],
+                "label": "maintenance_respiration",
+            },
+            "evapotranspiration": {
+                "class": RecordingComponent,
+                "model": component_models["evapotranspiration"],
+                "label": "evapotranspiration",
+            },
+            "root_dynamics": {
+                "class": RecordingComponent,
+                "model": component_models["root_dynamics"],
+                "label": "root_dynamics",
+            },
+            "stem_dynamics": {
+                "class": RecordingComponent,
+                "model": component_models["stem_dynamics"],
+                "label": "stem_dynamics",
+            },
+            "storage_organ_dynamics": {
+                "class": RecordingComponent,
+                "model": component_models["storage_organ_dynamics"],
+                "label": "storage_organ_dynamics",
+            },
+            "leaf_dynamics": {
+                "class": RecordingComponent,
+                "model": component_models["leaf_dynamics"],
+                "label": "leaf_dynamics",
+            },
+        }
+
+        crop = Wofost72(
+            datetime.date(2000, 1, 1),
+            kiosk,
+            parvalues,
+            component_overrides=component_overrides,
+        )
+
+        assert crop.pheno.payload is component_models["phenology"]
+        assert crop.pheno._label == "phenology"
+        assert crop.part.payload is component_models["partitioning"]
+        assert crop.part._label == "partitioning"
+        assert crop.assim.payload is component_models["assimilation"]
+        assert crop.assim._label == "assimilation"
+        assert crop.mres.payload is component_models["maintenance_respiration"]
+        assert crop.mres._label == "maintenance_respiration"
+        assert crop.evtra.payload is component_models["evapotranspiration"]
+        assert crop.evtra._label == "evapotranspiration"
+        assert crop.ro_dynamics.payload is component_models["root_dynamics"]
+        assert crop.ro_dynamics._label == "root_dynamics"
+        assert crop.st_dynamics.payload is component_models["stem_dynamics"]
+        assert crop.st_dynamics._label == "stem_dynamics"
+        assert crop.so_dynamics.payload is component_models["storage_organ_dynamics"]
+        assert crop.so_dynamics._label == "storage_organ_dynamics"
+        assert crop.lv_dynamics.payload is component_models["leaf_dynamics"]
+        assert crop.lv_dynamics._label == "leaf_dynamics"
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost72_against_pcse_pp(self, test_data_url):
