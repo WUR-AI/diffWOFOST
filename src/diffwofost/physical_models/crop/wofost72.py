@@ -120,17 +120,7 @@ class Wofost72(SimulationObject):
         "storage_organ_dynamics": ("so_dynamics", Storage_Organ_Dynamics),
         "leaf_dynamics": ("lv_dynamics", Leaf_Dynamics),
     }
-    COMPONENT_ALIASES = {
-        "pheno": "phenology",
-        "part": "partitioning",
-        "assim": "assimilation",
-        "mres": "maintenance_respiration",
-        "evtra": "evapotranspiration",
-        "ro_dynamics": "root_dynamics",
-        "st_dynamics": "stem_dynamics",
-        "so_dynamics": "storage_organ_dynamics",
-        "lv_dynamics": "leaf_dynamics",
-    }
+    COMPONENT_OVERRIDE_META_KEYS = frozenset({"class", "model", "kwargs"})
 
     @property
     def device(self):
@@ -177,29 +167,51 @@ class Wofost72(SimulationObject):
         parvalues: ParameterProvider,
         shape: tuple | torch.Size | None = None,
         component_overrides: dict | None = None,
-        partitioning_class: type[SimulationObject] | None = None,
-        partitioning_model=None,
-        partitioning_kwargs: dict | None = None,
     ) -> None:
-        """Initialize the crop simulation.
+        """Initialize the crop simulation and its embedded components.
 
-        :param day: start date of the simulation
-        :param kiosk: variable kiosk of this PCSE  instance
-        :param parvalues: `ParameterProvider` object providing parameters as
-                key/value pairs
-        :param shape: Target shape for the state and rate variables.
+        Args:
+            day: Start date of the simulation.
+            kiosk: Variable kiosk used to read and publish crop state.
+            parvalues: Parameter provider containing the physical-model
+                parameters for the crop.
+            shape: Target tensor shape for state and rate variables.
+            component_overrides: Optional mapping used to replace one or more
+                internal WOFOST components at construction time.
+
+        The ``component_overrides`` mapping must use the canonical component
+        names from ``COMPONENT_SPECS``, such as ``partitioning``,
+        ``phenology``, ``assimilation``, ``maintenance_respiration``,
+        ``evapotranspiration``, ``root_dynamics``, ``stem_dynamics``,
+        ``storage_organ_dynamics``, and ``leaf_dynamics``.
+
+        Each override entry may be one of the following:
+
+        - ``None``: keep the default component class with no extra arguments.
+        - a ``SimulationObject`` subclass: replace only the component class.
+        - a dict containing reserved keys:
+          ``class`` for the replacement component class and ``model`` for an
+          optional ML model object.
+        - any additional keys in that dict are forwarded as keyword arguments
+          to the component constructor. A nested ``kwargs`` dict is also
+          accepted for backward-compatible explicit constructor kwargs.
+
+        ML-backed overrides are supported by passing a ``model`` object in the
+        override entry. When no model is provided, the component is constructed
+        with ``(day, kiosk, parvalues, shape=..., **kwargs)`` so the component
+        reads crop parameters from the ``ParameterProvider`` as usual. When a
+        model is provided, the component is constructed with
+        ``(day, kiosk, model, shape=..., **kwargs)`` instead. This allows a
+        replacement component such as a neural partitioning module to consume a
+        trained or trainable PyTorch model while the rest of WOFOST remains
+        unchanged.
         """
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(
             kiosk, publish=["DMI", "ADMI", "REALLOC_LV", "REALLOC_ST", "REALLOC_SO"], shape=shape
         )
         self.kiosk = kiosk
-        component_overrides = self._normalize_component_overrides(
-            component_overrides=component_overrides,
-            partitioning_class=partitioning_class,
-            partitioning_model=partitioning_model,
-            partitioning_kwargs=partitioning_kwargs,
-        )
+        component_overrides = self._normalize_component_overrides(component_overrides)
 
         # Initialize components of the crop
         for component_name, (attribute_name, _) in self.COMPONENT_SPECS.items():
@@ -241,41 +253,55 @@ class Wofost72(SimulationObject):
         # assign handler for CROP_FINISH signal
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
 
-    def _normalize_component_name(self, component_name: str) -> str:
-        component_name = self.COMPONENT_ALIASES.get(component_name, component_name)
-        if component_name not in self.COMPONENT_SPECS:
-            msg = f"Unknown Wofost72 component override: {component_name}"
-            raise KeyError(msg)
-        return component_name
-
     def _normalize_component_overrides(
         self,
         component_overrides: dict | None = None,
-        partitioning_class: type[SimulationObject] | None = None,
-        partitioning_model=None,
-        partitioning_kwargs: dict | None = None,
     ) -> dict:
+        """Normalize override definitions to a single internal structure.
+
+        Args:
+            component_overrides: Raw override mapping passed to
+                :meth:`initialize`.
+
+        Returns:
+            A dictionary keyed by canonical component names. Each value is a
+            compact override dictionary containing ``class``, ``model``, and
+            optionally ``kwargs`` for constructor keyword arguments.
+
+        Notes:
+            This method allows a concise override syntax for ML-enabled
+            components. For example, callers can pass
+            ``{"partitioning": {"class": MyPartitioningWrapper,
+            "model": my_torch_model, "dropout": 0.0}}`` and the extra
+            ``dropout`` key will be moved into ``kwargs`` automatically.
+        """
         normalized_overrides = {}
         for component_name, override in (component_overrides or {}).items():
-            canonical_name = self._normalize_component_name(component_name)
+            if component_name not in self.COMPONENT_SPECS:
+                msg = f"Unknown Wofost72 component override: {component_name}"
+                raise KeyError(msg)
             if override is None:
-                normalized_overrides[canonical_name] = {}
+                normalized_overrides[component_name] = {}
             elif isinstance(override, dict):
-                normalized_overrides[canonical_name] = dict(override)
+                override_dict = dict(override)
+                explicit_kwargs = override_dict.pop("kwargs", None)
+                constructor_kwargs = {
+                    key: value
+                    for key, value in override_dict.items()
+                    if key not in self.COMPONENT_OVERRIDE_META_KEYS
+                }
+                normalized_override = {
+                    key: value
+                    for key, value in override_dict.items()
+                    if key in self.COMPONENT_OVERRIDE_META_KEYS - {"kwargs"}
+                }
+                if explicit_kwargs is not None:
+                    constructor_kwargs = {**dict(explicit_kwargs), **constructor_kwargs}
+                if constructor_kwargs:
+                    normalized_override["kwargs"] = constructor_kwargs
+                normalized_overrides[component_name] = normalized_override
             else:
-                normalized_overrides[canonical_name] = {"class": override}
-
-        if any(
-            item is not None
-            for item in (partitioning_class, partitioning_model, partitioning_kwargs)
-        ):
-            partitioning_override = normalized_overrides.setdefault("partitioning", {})
-            if partitioning_class is not None:
-                partitioning_override["class"] = partitioning_class
-            if partitioning_model is not None:
-                partitioning_override["model"] = partitioning_model
-            if partitioning_kwargs is not None:
-                partitioning_override["kwargs"] = dict(partitioning_kwargs)
+                normalized_overrides[component_name] = {"class": override}
 
         return normalized_overrides
 
@@ -288,10 +314,28 @@ class Wofost72(SimulationObject):
         shape: tuple | torch.Size | None = None,
         component_overrides: dict | None = None,
     ) -> SimulationObject:
-        canonical_name = self._normalize_component_name(component_name)
-        _, default_component_class = self.COMPONENT_SPECS[canonical_name]
+        """Build one embedded WOFOST component from the override definition.
+
+        Args:
+            component_name: Canonical component name to instantiate.
+            day: Current simulation day.
+            kiosk: Variable kiosk shared across crop components.
+            parvalues: Physical-model parameter provider.
+            shape: Optional tensor broadcast shape for the component.
+            component_overrides: Normalized component override mapping.
+
+        Returns:
+            The instantiated simulation component.
+
+        The constructor call depends on whether the override provides a
+        ``model``. Default physical components expect the parameter provider as
+        their third positional argument, whereas ML-backed wrappers typically
+        expect a model object there instead. This method centralizes that
+        dispatch so callers only need to describe the override declaratively.
+        """
+        _, default_component_class = self.COMPONENT_SPECS[component_name]
         override = (
-            {} if component_overrides is None else component_overrides.get(canonical_name, {})
+            {} if component_overrides is None else component_overrides.get(component_name, {})
         )
 
         component_class = override.get("class", default_component_class)

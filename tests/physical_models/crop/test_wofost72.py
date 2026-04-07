@@ -546,11 +546,11 @@ class TestWofost72:
             OUTPUT_VARS=["FR", "FL", "FS", "FO", "LAI"],
         )
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=hybrid_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            hybrid_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -584,38 +584,50 @@ class TestWofost72:
         }
         component_models = {name: object() for name in Wofost72.COMPONENT_SPECS}
         component_overrides = {
-            "phenology": {"class": RecordingComponent, "model": component_models["phenology"]},
+            "phenology": {
+                "class": RecordingComponent,
+                "model": component_models["phenology"],
+                "label": "phenology",
+            },
             "partitioning": {
                 "class": RecordingPartitioningComponent,
                 "model": component_models["partitioning"],
+                "label": "partitioning",
             },
             "assimilation": {
                 "class": RecordingComponent,
                 "model": component_models["assimilation"],
+                "label": "assimilation",
             },
             "maintenance_respiration": {
                 "class": RecordingComponent,
                 "model": component_models["maintenance_respiration"],
+                "label": "maintenance_respiration",
             },
             "evapotranspiration": {
                 "class": RecordingComponent,
                 "model": component_models["evapotranspiration"],
+                "label": "evapotranspiration",
             },
             "root_dynamics": {
                 "class": RecordingComponent,
                 "model": component_models["root_dynamics"],
+                "label": "root_dynamics",
             },
             "stem_dynamics": {
                 "class": RecordingComponent,
                 "model": component_models["stem_dynamics"],
+                "label": "stem_dynamics",
             },
             "storage_organ_dynamics": {
                 "class": RecordingComponent,
                 "model": component_models["storage_organ_dynamics"],
+                "label": "storage_organ_dynamics",
             },
             "leaf_dynamics": {
                 "class": RecordingComponent,
                 "model": component_models["leaf_dynamics"],
+                "label": "leaf_dynamics",
             },
         }
 
@@ -627,14 +639,23 @@ class TestWofost72:
         )
 
         assert crop.pheno.payload is component_models["phenology"]
+        assert crop.pheno._label == "phenology"
         assert crop.part.payload is component_models["partitioning"]
+        assert crop.part._label == "partitioning"
         assert crop.assim.payload is component_models["assimilation"]
+        assert crop.assim._label == "assimilation"
         assert crop.mres.payload is component_models["maintenance_respiration"]
+        assert crop.mres._label == "maintenance_respiration"
         assert crop.evtra.payload is component_models["evapotranspiration"]
+        assert crop.evtra._label == "evapotranspiration"
         assert crop.ro_dynamics.payload is component_models["root_dynamics"]
+        assert crop.ro_dynamics._label == "root_dynamics"
         assert crop.st_dynamics.payload is component_models["stem_dynamics"]
+        assert crop.st_dynamics._label == "stem_dynamics"
         assert crop.so_dynamics.payload is component_models["storage_organ_dynamics"]
+        assert crop.so_dynamics._label == "storage_organ_dynamics"
         assert crop.lv_dynamics.payload is component_models["leaf_dynamics"]
+        assert crop.lv_dynamics._label == "leaf_dynamics"
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost72_against_pcse_pp(self, test_data_url):
