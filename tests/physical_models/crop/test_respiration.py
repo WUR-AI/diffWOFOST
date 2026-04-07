@@ -51,7 +51,7 @@ class DiffRespiration(torch.nn.Module):
         self.agro_management_inputs = agro_management_inputs
         self.config = config
         self.external_states = external_states
-        self.engine = EngineTestHelper(config=self.config, external_states=self.external_states)
+        self.engine = EngineTestHelper(config=self.config)
 
     def forward(self, params_dict):
         for name, value in params_dict.items():
@@ -61,6 +61,7 @@ class DiffRespiration(torch.nn.Module):
             self.crop_model_params_provider,
             self.weather_data_provider,
             self.agro_management_inputs,
+            self.external_states,
         )
         engine.run_till_terminate()
         results = engine.get_output()
@@ -91,11 +92,11 @@ class TestRespiration:
             external_states,
         ) = prepare_engine_input(test_data, crop_model_params)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=respiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            respiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -130,11 +131,11 @@ class TestRespiration:
             for (_, _), wdc in weather_data_provider.store.items():
                 wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
             with pytest.raises(ValueError):
-                engine = EngineTestHelper(
+                engine = EngineTestHelper(config=respiration_config)
+                engine.setup(
                     crop_model_params_provider,
                     weather_data_provider,
                     agro_management_inputs,
-                    respiration_config,
                     external_states,
                 )
                 engine.run_till_terminate()
@@ -147,11 +148,11 @@ class TestRespiration:
             repeated = crop_model_params_provider[param].repeat(10)
         crop_model_params_provider.set_override(param, repeated, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=respiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            respiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -193,11 +194,11 @@ class TestRespiration:
         param_vec = torch.tensor([test_value - delta, test_value + delta, test_value])
         crop_model_params_provider.set_override(param, param_vec, check=False)
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=respiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            respiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -232,11 +233,11 @@ class TestRespiration:
             "RFSETB", crop_model_params_provider["RFSETB"].repeat(10, 1), check=False
         )
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=respiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            respiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -273,11 +274,11 @@ class TestRespiration:
         for (_, _), wdc in weather_data_provider.store.items():
             wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
 
-        engine = EngineTestHelper(
+        engine = EngineTestHelper(config=respiration_config)
+        engine.setup(
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
-            respiration_config,
             external_states,
         )
         engine.run_till_terminate()
@@ -313,11 +314,11 @@ class TestRespiration:
         )
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=respiration_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                respiration_config,
                 external_states,
             )
 
@@ -339,11 +340,11 @@ class TestRespiration:
             wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
         with pytest.raises(ValueError):
-            EngineTestHelper(
+            engine = EngineTestHelper(config=respiration_config)
+            engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
                 agro_management_inputs,
-                respiration_config,
                 external_states,
             )
 

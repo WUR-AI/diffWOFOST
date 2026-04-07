@@ -1,3 +1,10 @@
+"""Reusable simulation engine for diffWOFOST physical models.
+
+This module adapts the PCSE engine so a single engine instance can be set up
+and reused across multiple simulation runs while keeping tensor-shaped model
+parameters and external state handling intact.
+"""
+
 import gc
 from pathlib import Path
 import torch
@@ -11,16 +18,29 @@ from diffwofost.physical_models.variablekiosk import VariableKiosk
 
 
 class Engine(PcseEngine):
+    """PCSE engine wrapper with reusable runtime state.
+
+    The engine accepts either a loaded Configuration instance or a path to a
+    PCSE configuration file. Calling setup(...) resets all run-specific state so
+    the same Engine object can be reused safely for multiple simulations.
+    """
+
     mconf = Instance(Configuration)
 
     def __init__(
         self,
-        parameterprovider=None,
-        weatherdataprovider=None,
-        agromanagement=None,
         config: str | Path | Configuration | None = None,
-        external_states=None,
     ):
+        """Initialize the engine with a model configuration.
+
+        Args:
+            config (str | pathlib.Path | Configuration | None): Model
+                configuration as a loaded Configuration instance or a path to a
+                PCSE configuration file.
+
+        Raises:
+            TypeError: If no configuration is provided.
+        """
         BaseEngine.__init__(self)
 
         if config is None:
@@ -33,28 +53,13 @@ class Engine(PcseEngine):
         else:
             self.mconf = config
 
-        self._default_external_states = external_states
-
-        if any(
-            item is not None for item in (parameterprovider, weatherdataprovider, agromanagement)
-        ):
-            if not all(
-                item is not None
-                for item in (parameterprovider, weatherdataprovider, agromanagement)
-            ):
-                msg = (
-                    "parameterprovider, weatherdataprovider and agromanagement must all be "
-                    "provided when setting up the engine."
-                )
-                raise TypeError(msg)
-            self.setup(
-                parameterprovider,
-                weatherdataprovider,
-                agromanagement,
-                external_states=external_states,
-            )
-
     def _reset_runtime_state(self):
+        """Clear state from a previous simulation run.
+
+        Removes crop and soil components when present, resets engine flags and
+        clears cached outputs so a subsequent call to setup(...) starts from a
+        clean runtime state.
+        """
         for component_name in ("crop", "soil"):
             component = getattr(self, component_name, None)
             if component is not None:
@@ -81,12 +86,20 @@ class Engine(PcseEngine):
         agromanagement,
         external_states=None,
     ):
-        """Set up the engine for a new simulation run."""
-        if external_states is None:
-            external_states = self._default_external_states
-        else:
-            self._default_external_states = external_states
+        """Set up the engine for a new simulation run.
 
+        Args:
+            parameterprovider: Provider with crop and soil parameter values.
+            weatherdataprovider: Provider used to retrieve daily driving
+                weather variables.
+            agromanagement: AgroManagement definition passed to the configured
+                agromanagement component.
+            external_states (list[dict] | None): Optional list of day-keyed
+                external states to inject through the VariableKiosk.
+
+        Returns:
+            Engine: The configured engine instance.
+        """
         self._reset_runtime_state()
 
         self.parameterprovider = parameterprovider
@@ -130,7 +143,20 @@ class Engine(PcseEngine):
     def _on_CROP_START(
         self, day, crop_name=None, variety_name=None, crop_start_type=None, crop_end_type=None
     ):
-        """Starts the crop."""
+        """Instantiate the crop component after a crop-start signal.
+
+        Args:
+            day: Current simulation day.
+            crop_name: Crop identifier passed through the agromanagement
+                signal.
+            variety_name: Variety identifier passed through the agromanagement
+                signal.
+            crop_start_type: Crop start mode used by the parameter provider.
+            crop_end_type: Crop end mode used by the parameter provider.
+
+        Raises:
+            RuntimeError: If a crop component is already active.
+        """
         self.logger.debug(f"Received signal 'CROP_START' on day {day}")
 
         if self.crop is not None:
@@ -163,8 +189,41 @@ class Engine(PcseEngine):
             self.crop = None
             gc.collect()
 
+    def _finish_cropsimulation(self, day):
+        """Finalize and optionally delete the active crop simulation.
+
+        Args:
+            day: Current simulation day used for crop finalization.
+        """
+        self.flag_crop_finish = False
+
+        self.crop.finalize(day)
+        self._save_summary_output()
+
+        if self.flag_crop_delete:
+            self.flag_crop_delete = False
+            self.crop._delete()
+            self.crop = None
+            gc.collect()
+
 
 def _get_params_shape(parameterprovider):
+    """Infer the common tensor batch shape from a parameter provider.
+
+    Afgen table parameters are expected to have an extra trailing dimension for
+    table coordinates, which is ignored when determining the simulation shape.
+
+    Args:
+        parameterprovider: Parameter provider containing scalar and tensor
+            parameters.
+
+    Returns:
+        tuple: Shared tensor shape for all tensor-valued parameters, or an
+        empty tuple when all parameters are scalar.
+
+    Raises:
+        ValueError: If tensor parameters do not share a common shape.
+    """
     shape = ()
     for paramname in parameterprovider._unique_parameters:
         param = parameterprovider[paramname]
