@@ -72,3 +72,4 @@ venv.bak/
 
 # test data
 tests/physical_models/test_data/*.yaml
+docs/notebooks/data
