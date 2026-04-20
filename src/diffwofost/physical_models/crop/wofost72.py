@@ -28,6 +28,7 @@ from diffwofost.physical_models.crop.storage_organ_dynamics import (
     WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics,
 )
 from diffwofost.physical_models.traitlets import Tensor
+from diffwofost.physical_models.utils import normalize_component_overrides
 
 
 class Wofost72(SimulationObject):
@@ -211,7 +212,9 @@ class Wofost72(SimulationObject):
             kiosk, publish=["DMI", "ADMI", "REALLOC_LV", "REALLOC_ST", "REALLOC_SO"], shape=shape
         )
         self.kiosk = kiosk
-        component_overrides = self._normalize_component_overrides(component_overrides)
+        component_overrides = normalize_component_overrides(
+            component_overrides, self.COMPONENT_SPECS, self.COMPONENT_OVERRIDE_META_KEYS
+        )
 
         # Initialize components of the crop
         for component_name, (attribute_name, _) in self.COMPONENT_SPECS.items():
@@ -252,79 +255,6 @@ class Wofost72(SimulationObject):
 
         # assign handler for CROP_FINISH signal
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
-
-    def _normalize_component_overrides(
-        self,
-        component_overrides: dict | None = None,
-    ) -> dict:
-        """Convert user-facing component overrides into one internal format.
-
-        Args:
-            component_overrides: Raw override mapping passed to
-                :meth:`initialize`.
-
-        Returns:
-            A dictionary keyed by canonical component names. Each value is an
-            override dictionary that may contain ``class``, ``model``, and
-            ``kwargs``.
-
-        Notes:
-            This method does three concrete things:
-
-            1. It validates that every override key refers to a known WOFOST
-               component.
-            2. It rewrites shorthand forms into a dictionary shape that
-               ``_initialize_component()`` can consume consistently.
-            3. It collects any non-reserved dict entries into ``kwargs`` so
-               they can be forwarded to the component constructor.
-
-            In practice, the accepted inputs are normalized as follows:
-
-            - ``None`` becomes ``{}``, meaning "use the default component".
-            - ``MyComponentClass`` becomes ``{"class": MyComponentClass}``.
-            - ``{"class": MyComponentClass, "model": model}`` is kept as-is.
-            - Extra keys such as ``dropout=0.0`` are moved into
-              ``{"kwargs": {"dropout": 0.0}}``.
-
-            For example, this input:
-
-            ``{"partitioning": {"class": MyPartitioningWrapper,
-            "model": my_torch_model, "dropout": 0.0}}``
-
-            becomes:
-
-            ``{"partitioning": {"class": MyPartitioningWrapper,
-            "model": my_torch_model, "kwargs": {"dropout": 0.0}}}``
-        """
-        normalized_overrides = {}
-        for component_name, override in (component_overrides or {}).items():
-            if component_name not in self.COMPONENT_SPECS:
-                msg = f"Unknown Wofost72 component override: {component_name}"
-                raise KeyError(msg)
-            if override is None:
-                normalized_overrides[component_name] = {}
-            elif isinstance(override, dict):
-                override_dict = dict(override)
-                explicit_kwargs = override_dict.pop("kwargs", None)
-                constructor_kwargs = {
-                    key: value
-                    for key, value in override_dict.items()
-                    if key not in self.COMPONENT_OVERRIDE_META_KEYS
-                }
-                normalized_override = {
-                    key: value
-                    for key, value in override_dict.items()
-                    if key in self.COMPONENT_OVERRIDE_META_KEYS - {"kwargs"}
-                }
-                if explicit_kwargs is not None:
-                    constructor_kwargs = {**dict(explicit_kwargs), **constructor_kwargs}
-                if constructor_kwargs:
-                    normalized_override["kwargs"] = constructor_kwargs
-                normalized_overrides[component_name] = normalized_override
-            else:
-                normalized_overrides[component_name] = {"class": override}
-
-        return normalized_overrides
 
     def _initialize_component(
         self,

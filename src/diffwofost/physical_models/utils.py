@@ -148,6 +148,89 @@ def get_test_data(test_data_path):
         return yaml.safe_load(f)
 
 
+def normalize_component_overrides(
+    component_overrides: dict | None,
+    component_specs: dict,
+    component_override_meta_keys: frozenset,
+) -> dict:
+    """Convert user-facing component overrides into one internal format.
+
+    Args:
+        component_overrides: Raw override mapping passed to
+            :meth:`~diffwofost.physical_models.crop.wofost72.Wofost72.initialize`.
+        component_specs: Mapping of canonical component names to
+            ``(attribute_name, default_class)`` pairs (typically
+            ``Wofost72.COMPONENT_SPECS``).
+        component_override_meta_keys: Frozenset of reserved keys that are
+            handled specially and not forwarded as constructor kwargs
+            (typically ``Wofost72.COMPONENT_OVERRIDE_META_KEYS``).
+
+    Returns:
+        A dictionary keyed by canonical component names. Each value is an
+        override dictionary that may contain ``class``, ``model``, and
+        ``kwargs``.
+
+    Notes:
+        This function does three concrete things:
+
+        1. It validates that every override key refers to a known WOFOST
+           component.
+        2. It rewrites shorthand forms into a dictionary shape that
+           ``_initialize_component()`` can consume consistently.
+        3. It collects any non-reserved dict entries into ``kwargs`` so
+           they can be forwarded to the component constructor.
+
+        In practice, the accepted inputs are normalized as follows:
+
+        - ``None`` becomes ``{}``, meaning "use the default component".
+        - ``MyComponentClass`` becomes ``{"class": MyComponentClass}``.
+        - ``{"class": MyComponentClass, "model": model}`` is kept as-is.
+        - Extra keys such as ``dropout=0.0`` are moved into
+          ``{"kwargs": {"dropout": 0.0}}``.
+
+        For example, this input:
+
+        ``{"partitioning": {"class": MyPartitioningWrapper,
+        "model": my_torch_model, "dropout": 0.0}}``
+
+        becomes:
+
+        ``{"partitioning": {"class": MyPartitioningWrapper,
+        "model": my_torch_model, "kwargs": {"dropout": 0.0}}}``
+
+    TODO: This function will become part of the Engine
+    """
+    normalized_overrides = {}
+    for component_name, override in (component_overrides or {}).items():
+        if component_name not in component_specs:
+            msg = f"Unknown Wofost72 component override: {component_name}"
+            raise KeyError(msg)
+        if override is None:
+            normalized_overrides[component_name] = {}
+        elif isinstance(override, dict):
+            override_dict = dict(override)
+            explicit_kwargs = override_dict.pop("kwargs", None)
+            constructor_kwargs = {
+                key: value
+                for key, value in override_dict.items()
+                if key not in component_override_meta_keys
+            }
+            normalized_override = {
+                key: value
+                for key, value in override_dict.items()
+                if key in component_override_meta_keys - {"kwargs"}
+            }
+            if explicit_kwargs is not None:
+                constructor_kwargs = {**dict(explicit_kwargs), **constructor_kwargs}
+            if constructor_kwargs:
+                normalized_override["kwargs"] = constructor_kwargs
+            normalized_overrides[component_name] = normalized_override
+        else:
+            normalized_overrides[component_name] = {"class": override}
+
+    return normalized_overrides
+
+
 def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     """Calculate the numerical gradient of output with respect to a parameter."""
     delta = 1e-6
