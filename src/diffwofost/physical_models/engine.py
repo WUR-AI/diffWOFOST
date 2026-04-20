@@ -177,17 +177,6 @@ class Engine(PcseEngine):
             **self.mconf.CROP_KWARGS,
         )
 
-    def _finish_cropsimulation(self, day):
-        self.flag_crop_finish = False
-
-        self.crop.finalize(day)
-        self._save_summary_output()
-
-        if self.flag_crop_delete:
-            self.flag_crop_delete = False
-            self.crop._delete()
-            self.crop = None
-            gc.collect()
 
     def _finish_cropsimulation(self, day):
         """Finalize and optionally delete the active crop simulation.
