@@ -534,12 +534,10 @@ class TestWofost72:
         partition_model = PartitioningNN(hidden_size=8)
         hybrid_config = Configuration(
             CROP=Wofost72,
-            CROP_KWARGS={
-                "component_overrides": {
-                    "partitioning": {
-                        "class": DVS_Partitioning_NN,
-                        "model": partition_model,
-                    }
+            CROP_COMPONENTS={
+                "partitioning": {
+                    "class": DVS_Partitioning_NN,
+                    "model": partition_model,
                 }
             },
             SOIL=WaterbalancePP,

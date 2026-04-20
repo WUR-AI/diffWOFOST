@@ -174,9 +174,8 @@ class Engine(PcseEngine):
             self.kiosk,
             self.parameterprovider,
             shape=self._shape,
-            **self.mconf.CROP_KWARGS,
+            component_overrides=self.mconf.CROP_COMPONENTS or None,
         )
-
 
     def _finish_cropsimulation(self, day):
         """Finalize and optionally delete the active crop simulation.

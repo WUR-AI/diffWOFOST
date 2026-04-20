@@ -261,6 +261,8 @@ def initialize_component(
     their third positional argument, whereas ML-backed wrappers typically
     expect a model object there instead. This function centralizes that
     dispatch so callers only need to describe the override declaratively.
+
+    TODO: This function will become part of the Engine
     """
     _, default_component_class = component_specs[component_name]
     override = {} if component_overrides is None else component_overrides.get(component_name, {})
