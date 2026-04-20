@@ -231,6 +231,50 @@ def normalize_component_overrides(
     return normalized_overrides
 
 
+def initialize_component(
+    component_name: str,
+    component_specs: dict,
+    day,
+    kiosk,
+    parvalues,
+    shape=None,
+    component_overrides: dict | None = None,
+):
+    """Build one embedded WOFOST component from the override definition.
+
+    Args:
+        component_name: Canonical component name to instantiate.
+        component_specs: Mapping of canonical component names to
+            ``(attribute_name, default_class)`` pairs (typically
+            ``Wofost72.COMPONENT_SPECS``).
+        day: Current simulation day.
+        kiosk: Variable kiosk shared across crop components.
+        parvalues: Physical-model parameter provider.
+        shape: Optional tensor broadcast shape for the component.
+        component_overrides: Normalized component override mapping.
+
+    Returns:
+        The instantiated simulation component.
+
+    The constructor call depends on whether the override provides a
+    ``model``. Default physical components expect the parameter provider as
+    their third positional argument, whereas ML-backed wrappers typically
+    expect a model object there instead. This function centralizes that
+    dispatch so callers only need to describe the override declaratively.
+    """
+    _, default_component_class = component_specs[component_name]
+    override = {} if component_overrides is None else component_overrides.get(component_name, {})
+
+    component_class = override.get("class", default_component_class)
+    component_kwargs = dict(override.get("kwargs", {}))
+    component_model = override.get("model")
+
+    if component_model is None:
+        return component_class(day, kiosk, parvalues, shape=shape, **component_kwargs)
+
+    return component_class(day, kiosk, component_model, shape=shape, **component_kwargs)
+
+
 def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):
     """Calculate the numerical gradient of output with respect to a parameter."""
     delta = 1e-6

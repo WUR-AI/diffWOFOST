@@ -28,6 +28,7 @@ from diffwofost.physical_models.crop.storage_organ_dynamics import (
     WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics,
 )
 from diffwofost.physical_models.traitlets import Tensor
+from diffwofost.physical_models.utils import initialize_component
 from diffwofost.physical_models.utils import normalize_component_overrides
 
 
@@ -221,8 +222,9 @@ class Wofost72(SimulationObject):
             setattr(
                 self,
                 attribute_name,
-                self._initialize_component(
+                initialize_component(
                     component_name,
+                    self.COMPONENT_SPECS,
                     day,
                     kiosk,
                     parvalues,
@@ -255,48 +257,6 @@ class Wofost72(SimulationObject):
 
         # assign handler for CROP_FINISH signal
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
-
-    def _initialize_component(
-        self,
-        component_name: str,
-        day: datetime.date,
-        kiosk: VariableKiosk,
-        parvalues: ParameterProvider,
-        shape: tuple | torch.Size | None = None,
-        component_overrides: dict | None = None,
-    ) -> SimulationObject:
-        """Build one embedded WOFOST component from the override definition.
-
-        Args:
-            component_name: Canonical component name to instantiate.
-            day: Current simulation day.
-            kiosk: Variable kiosk shared across crop components.
-            parvalues: Physical-model parameter provider.
-            shape: Optional tensor broadcast shape for the component.
-            component_overrides: Normalized component override mapping.
-
-        Returns:
-            The instantiated simulation component.
-
-        The constructor call depends on whether the override provides a
-        ``model``. Default physical components expect the parameter provider as
-        their third positional argument, whereas ML-backed wrappers typically
-        expect a model object there instead. This method centralizes that
-        dispatch so callers only need to describe the override declaratively.
-        """
-        _, default_component_class = self.COMPONENT_SPECS[component_name]
-        override = (
-            {} if component_overrides is None else component_overrides.get(component_name, {})
-        )
-
-        component_class = override.get("class", default_component_class)
-        component_kwargs = dict(override.get("kwargs", {}))
-        component_model = override.get("model")
-
-        if component_model is None:
-            return component_class(day, kiosk, parvalues, shape=shape, **component_kwargs)
-
-        return component_class(day, kiosk, component_model, shape=shape, **component_kwargs)
 
     @staticmethod
     def _check_carbon_balance(day, DMI, GASS, MRES, CVF, pf):
