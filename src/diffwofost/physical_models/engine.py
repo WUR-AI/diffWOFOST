@@ -12,6 +12,7 @@ from pcse import signals
 from pcse.base import BaseEngine
 from pcse.engine import Engine as PcseEngine
 from pcse.timer import Timer
+from pcse.traitlets import Any
 from pcse.traitlets import Instance
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.variablekiosk import VariableKiosk
@@ -26,6 +27,7 @@ class Engine(PcseEngine):
     """
 
     mconf = Instance(Configuration)
+    weatherdataprovider = Any
 
     def __init__(
         self,
