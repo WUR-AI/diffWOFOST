@@ -143,6 +143,10 @@ class Engine(PcseEngine):
         self.calc_rates(self.day, self.drv)
         return self
 
+    def _get_driving_variables(self, day):
+        """Get driving variables, compute derived properties and return it."""
+        return self.weatherdataprovider(day)
+
     def _on_CROP_START(
         self, day, crop_name=None, variety_name=None, crop_start_type=None, crop_end_type=None
     ):
