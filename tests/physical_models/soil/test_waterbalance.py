@@ -6,6 +6,7 @@ from numpy.testing import assert_array_almost_equal
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.wofost72 import Wofost72
+from diffwofost.physical_models.soil.classic_waterbalance import WaterbalanceFD
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import calculate_numerical_grad
@@ -414,6 +415,367 @@ class TestDiffWaterbalancePPGradients:
         )
 
         model = get_test_diff_waterbalance_model(device=device)
+        output = model({param_name: param})
+        loss = output[output_name].sum()
+
+        grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
+
+        assert_array_almost_equal(
+            numerical_grad.detach().cpu().numpy(),
+            grads.detach().cpu().numpy(),
+            decimal=3,
+        )
+
+        if torch.all(grads == 0):
+            warnings.warn(
+                f"Gradient for parameter '{param_name}' with respect to output "
+                f"'{output_name}' is zero: {grads.detach().cpu().numpy()}",
+                UserWarning,
+            )
+
+
+# ---------------------------------------------------------------------------
+# WaterbalanceFD tests
+# ---------------------------------------------------------------------------
+
+waterbalance_fd_config = Configuration(
+    CROP=Wofost72,
+    SOIL=WaterbalanceFD,
+    OUTPUT_VARS=["SM", "EVS", "W", "WLOW"],
+)
+
+
+def get_test_diff_waterbalance_fd_model(device: str = "cpu"):
+    """Return a fresh DiffWaterbalanceFD model ready to be called."""
+    test_data_url = f"{phy_data_folder}/test_waterlimitedproduction_wofost72_05.yaml"
+    test_data = get_test_data(test_data_url)
+    crop_model_params = ["SMFCF", "SMW", "SM0"]
+    (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
+        prepare_engine_input(test_data, crop_model_params, device=device)
+    )
+    return DiffWaterbalanceFD(
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        waterbalance_fd_config,
+        external_states,
+    )
+
+
+class DiffWaterbalanceFD(torch.nn.Module):
+    def __init__(
+        self,
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        config,
+        external_states,
+    ):
+        super().__init__()
+        self.crop_model_params_provider = crop_model_params_provider
+        self.weather_data_provider = weather_data_provider
+        self.agro_management_inputs = agro_management_inputs
+        self.config = config
+        self.external_states = external_states
+        self.engine = EngineTestHelper(config=self.config)
+
+    def forward(self, params_dict):
+        for name, value in params_dict.items():
+            self.crop_model_params_provider.set_override(name, value, check=False)
+
+        engine = self.engine.setup(
+            self.crop_model_params_provider,
+            self.weather_data_provider,
+            self.agro_management_inputs,
+            self.external_states,
+        )
+        engine.run_till_terminate()
+
+        return {
+            "SM": engine.soil.states.SM,
+            "EVS": engine.soil.rates.EVS,
+            "W": engine.soil.states.W,
+            "WLOW": engine.soil.states.WLOW,
+        }
+
+
+@pytest.mark.usefixtures("fast_mode")
+class TestWaterbalanceFD:
+    waterbalance_fd_data_urls = [
+        f"{phy_data_folder}/test_waterlimitedproduction_wofost72_{i:02d}.yaml" for i in range(1, 45)
+    ]
+
+    @pytest.mark.parametrize("test_data_url", waterbalance_fd_data_urls)
+    def test_waterbalance_sm_non_negative(self, test_data_url, device):
+        """SM must remain non-negative throughout the simulation.
+
+        Note: SM may legitimately drop below SMW (wilting point) during integration,
+        as is also the case in PCSE's original WaterbalanceFD.
+        """
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        engine = EngineTestHelper(config=waterbalance_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert len(actual_results) > 0
+        for model in actual_results:
+            sm = model["SM"].cpu()
+            assert torch.all(sm >= 0.0), f"SM={sm} must be non-negative"
+
+    @pytest.mark.parametrize("test_data_url", waterbalance_fd_data_urls)
+    def test_waterbalance_evs_non_negative(self, test_data_url, device):
+        """Soil evaporation EVS must never be negative."""
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        engine = EngineTestHelper(config=waterbalance_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert len(actual_results) > 0
+        for model in actual_results:
+            assert torch.all(model["EVS"].cpu() >= 0.0), "EVS must be non-negative"
+
+    @pytest.mark.parametrize("test_data_url", waterbalance_fd_data_urls)
+    def test_wofost72_wlp_fd_with_waterbalance(self, test_data_url):
+        """WaterbalanceFD plugged into Wofost72 reproduces PCSE reference results."""
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        expected_results = test_data["ModelResults"]
+        expected_precision = test_data["Precision"]
+
+        engine = EngineTestHelper(config=waterbalance_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model_out in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model_out["day"]
+            assert all(
+                abs(float(reference[var]) - float(model_out[var])) < precision
+                for var, precision in expected_precision.items()
+                if var in model_out
+            )
+
+    def test_waterbalance_fd_with_batched_parameters(self, device):
+        """SMFCF as a 1-D vector → SM is broadcast to the same shape."""
+        test_data_url = phy_data_folder / "test_waterlimitedproduction_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        smfcf = crop_model_params_provider["SMFCF"]
+        repeated = smfcf.repeat(5)
+        crop_model_params_provider.set_override("SMFCF", repeated, check=False)
+
+        engine = EngineTestHelper(config=waterbalance_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+
+        sm_from_soil = engine.soil.states.SM.cpu()
+        assert sm_from_soil.shape == (5,), f"SM shape should be (5,), got {sm_from_soil.shape}"
+        # All elements processed the same parameters, so SM values must be identical
+        assert torch.all(torch.isclose(sm_from_soil, sm_from_soil[0], atol=1e-6)), (
+            "Batched SMFCF with equal values should produce equal SM"
+        )
+
+    def test_waterbalance_fd_wwlow_remains_total_water_for_fractional_timestep(self):
+        """WWLOW must remain W + WLOW even when integrate() uses delt != 1."""
+        test_data_url = phy_data_folder / "test_waterlimitedproduction_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        engine = EngineTestHelper(config=waterbalance_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+
+        soil = engine.soil
+        soil.RDold = soil._determine_rooting_depth()
+
+        delt = 0.5
+        soil.rates.DW = torch.ones_like(soil.states.W)
+        soil.rates.DWLOW = 2.0 * torch.ones_like(soil.states.WLOW)
+
+        expected_total = (
+            soil.states.W + soil.rates.DW * delt + soil.states.WLOW + soil.rates.DWLOW * delt
+        )
+
+        soil.integrate(engine.day, delt=delt)
+
+        assert torch.allclose(soil.states.WWLOW.cpu(), expected_total.cpu(), atol=1e-6), (
+            "WWLOW should equal the sum of rooted and lower-zone water after integration"
+        )
+
+
+@pytest.mark.usefixtures("fast_mode")
+class TestDiffWaterbalanceFDGradients:
+    """Gradient tests for WaterbalanceFD."""
+
+    param_names = ["SMFCF", "SMW", "SM0"]
+    output_names = ["SM", "EVS"]
+
+    # All three soil moisture parameters influence both SM and EVS.
+    # EVS has a multi-timestep gradient path: param → RIN → DW → W → SM → EVSMX → EVS.
+    gradient_mapping = {
+        "SMFCF": ["SM", "EVS"],
+        "SMW": ["SM", "EVS"],
+        "SM0": ["SM", "EVS"],
+    }
+
+    param_configs = {
+        "single": {
+            "SMFCF": (0.30, torch.float64),
+            "SMW": (0.15, torch.float64),
+            "SM0": (0.40, torch.float64),
+        },
+        "tensor": {
+            "SMFCF": ([0.26, 0.30, 0.34], torch.float64),
+            "SMW": ([0.12, 0.15, 0.18], torch.float64),
+            "SM0": ([0.38, 0.40, 0.42], torch.float64),
+        },
+    }
+
+    gradient_params = []
+    no_gradient_params = []
+    no_graph_mapping: dict[str, list[str]] = {}
+    for param_name in param_names:
+        no_graph_outputs: list[str] = []
+        for output_name in output_names:
+            if output_name in gradient_mapping.get(param_name, []):
+                gradient_params.append((param_name, output_name))
+            else:
+                no_gradient_params.append((param_name, output_name))
+                no_graph_outputs.append(output_name)
+        if no_graph_outputs:
+            no_graph_mapping[param_name] = no_graph_outputs
+
+    @pytest.mark.parametrize("param_name,output_name", no_gradient_params)
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_no_gradients(self, param_name, output_name, config_type, device):
+        """Parameters should *not* propagate gradients to certain outputs."""
+        model = get_test_diff_waterbalance_fd_model(device=device)
+        value, dtype = self.param_configs[config_type][param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
+        output = model({param_name: param})
+        loss = output[output_name].sum()
+
+        should_have_no_graph = output_name in self.no_graph_mapping.get(param_name, [])
+
+        if not loss.requires_grad:
+            assert should_have_no_graph, (
+                f"Expected a computation graph for {param_name} → {output_name}, "
+                f"but loss.requires_grad is False"
+            )
+            return
+
+        assert not should_have_no_graph, (
+            f"Expected no computation graph for {param_name} → {output_name}, "
+            f"but loss.requires_grad is True"
+        )
+
+        grads = torch.autograd.grad(loss, param, retain_graph=True, allow_unused=True)[0]
+        if grads is not None:
+            assert torch.all((grads == 0) | torch.isnan(grads)), (
+                f"Gradient for {param_name} w.r.t. {output_name} should be zero or NaN"
+            )
+
+    @pytest.mark.parametrize("param_name,output_name", gradient_params)
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_gradients_forward_backward_match(self, param_name, output_name, config_type, device):
+        """Forward (torch.autograd.grad) and backward (loss.backward) gradients must agree."""
+        model = get_test_diff_waterbalance_fd_model(device=device)
+        value, dtype = self.param_configs[config_type][param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=dtype, device=device))
+        output = model({param_name: param})
+        loss = output[output_name].sum()
+
+        grads = torch.autograd.grad(loss, param, retain_graph=True)[0]
+        assert grads is not None, f"Gradients for {param_name} should not be None"
+
+        param.grad = None
+        loss.backward()
+        grad_backward = param.grad
+
+        assert grad_backward is not None, f"Backward gradient for {param_name} should not be None"
+        assert torch.allclose(grad_backward, grads), (
+            f"Forward and backward gradients for {param_name} → {output_name} should match"
+        )
+
+    @pytest.mark.parametrize("param_name,output_name", gradient_params)
+    @pytest.mark.parametrize("config_type", ["single", "tensor"])
+    def test_gradients_numerical(self, param_name, output_name, config_type, device):
+        """Analytical gradients must match finite-difference numerical gradients."""
+        value, _ = self.param_configs[config_type][param_name]
+        param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64, device=device))
+
+        numerical_grad = calculate_numerical_grad(
+            lambda: get_test_diff_waterbalance_fd_model(device=device),
+            param_name,
+            param.data,
+            output_name,
+        )
+
+        model = get_test_diff_waterbalance_fd_model(device=device)
         output = model({param_name: param})
         loss = output[output_name].sum()
 

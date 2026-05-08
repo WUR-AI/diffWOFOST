@@ -31,6 +31,7 @@ model_names = [
     "leafdynamics",
     "rootdynamics",
     "potentialproduction",
+    "waterlimitedproduction",
     "phenology",
     "partitioning",
     "assimilation",
@@ -72,6 +73,7 @@ def download_test_files(request):
     file_names = [
         f"test_{model_name}_wofost72_{i:02d}.yaml" for model_name in model_names for i in indices
     ]
+
     for file_name in file_names:
         download_file(file_name)
 

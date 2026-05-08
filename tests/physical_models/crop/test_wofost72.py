@@ -12,6 +12,7 @@ from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import PartioningFactors
 from diffwofost.physical_models.crop.wofost72 import Wofost72
+from diffwofost.physical_models.soil.classic_waterbalance import WaterbalanceFD
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import _afgen_y_mask
@@ -24,6 +25,12 @@ wofost72_config = Configuration(
     CROP=Wofost72,
     SOIL=WaterbalancePP,
     OUTPUT_VARS=["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+)
+
+wofost72_fd_config = Configuration(
+    CROP=Wofost72,
+    SOIL=WaterbalanceFD,
+    OUTPUT_VARS=["DVS", "LAI", "RD", "SM", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
 )
 
 # All output variables used in the differentiable model for gradient tests (mirrors OUTPUT_VARS)
@@ -654,6 +661,70 @@ class TestWofost72:
         assert crop.so_dynamics._label == "storage_organ_dynamics"
         assert crop.lv_dynamics.payload is component_models["leaf_dynamics"]
         assert crop.lv_dynamics._label == "leaf_dynamics"
+
+    def test_wofost72_runs_with_waterbalance_fd(self, device):
+        test_data_url = f"{phy_data_folder}/test_waterlimitedproduction_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        engine = EngineTestHelper(config=wofost72_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert isinstance(engine.soil, WaterbalanceFD)
+        assert actual_results
+        assert all(name in actual_results[0] for name in wofost72_fd_config.OUTPUT_VARS)
+        assert all(
+            actual_results[0][name].device.type == device for name in wofost72_fd_config.OUTPUT_VARS
+        )
+
+    def test_wofost72_runs_with_waterbalance_fd_and_batched_parameters(self, device):
+        test_data_url = f"{phy_data_folder}/test_waterlimitedproduction_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        for param in ("SPAN", "TDWI", "SMFCF", "SMW", "SM0"):
+            crop_model_params_provider.set_override(
+                param, crop_model_params_provider[param].repeat(3), check=False
+            )
+
+        engine = EngineTestHelper(config=wofost72_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert isinstance(engine.soil, WaterbalanceFD)
+        assert actual_results
+        assert all(
+            actual_results[-1][name].shape == (3,) for name in wofost72_fd_config.OUTPUT_VARS
+        )
+        assert all(
+            actual_results[-1][name].device.type == device
+            for name in wofost72_fd_config.OUTPUT_VARS
+        )
 
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost72_against_pcse_pp(self, test_data_url):
