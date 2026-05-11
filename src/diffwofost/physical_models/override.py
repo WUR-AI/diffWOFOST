@@ -16,7 +16,7 @@ class ComponentOverride:
 
 
 def normalize_components(
-    crop_components: dict,
+    crop_components: dict | None,
     crop_component_specs: dict,
 ) -> dict[str, ComponentOverride]:
     """Convert user-facing component overrides into ComponentOverride instances.
@@ -61,5 +61,14 @@ def normalize_components(
             model=model,
             kwargs=constructor_kwargs or None,
         )
+
+    # Add defaults for any components not in overrides
+    for component_name, (_, default_class) in crop_component_specs.items():
+        if component_name not in normalized_overrides:
+            normalized_overrides[component_name] = ComponentOverride(
+                component_class=default_class,
+                model=None,
+                kwargs=None,
+            )
 
     return normalized_overrides
