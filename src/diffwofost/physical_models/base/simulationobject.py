@@ -45,7 +45,7 @@ def initialize_components(
     day,
     kiosk,
     parvalues,
-    shape,
+    shape=None,
     component_overrides: dict | None = None,
 ) -> None:
     """Generic crop component initialization for any SimulationObject.
