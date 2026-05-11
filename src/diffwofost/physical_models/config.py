@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
+import inspect
 from pathlib import Path
 from typing import Self
 import pcse
@@ -145,6 +146,7 @@ class Configuration:
 
     CROP: type[SimulationObject]
     CROP_COMPONENTS: dict = field(default_factory=dict)
+    CROP_NN_MODEL: type[torch.nn.Module] | None = None
     SOIL: type[SimulationObject] | None = None
     AGROMANAGEMENT: type[AncillaryObject] = AgroManager
     OUTPUT_VARS: list = field(default_factory=list)
@@ -155,6 +157,28 @@ class Configuration:
     OUTPUT_WEEKDAY: int = 0
     model_config_file: str | Path | None = None
     description: str | None = None
+
+    def __post_init__(self):
+        """Validate config data based on CROP.initialize signature."""
+        sig_arguments = inspect.signature(self.CROP.initialize).parameters
+
+        # Validate CROP_NN_MODEL, ignore if not compatible with CROP.initialize
+        if self.CROP_NN_MODEL is not None and "nn_model" not in sig_arguments:
+            object.__setattr__(self, "CROP_NN_MODEL", None)
+
+        # Validate CROP_COMPONENTS, ignore if not compatible with CROP.initialize
+        if self.CROP_COMPONENTS and "component_overrides" not in sig_arguments:
+            object.__setattr__(self, "CROP_COMPONENTS", {})
+
+        # Validate component overrides have "class" key with non-None value
+        for component_name, override in self.CROP_COMPONENTS.items():
+            if isinstance(override, dict) and override:
+                if "class" not in override:
+                    msg = f"Component override '{component_name}' must have a 'class' key"
+                    raise ValueError(msg)
+                if override["class"] is None:
+                    msg = f"Component override '{component_name}' 'class' cannot be None"
+                    raise ValueError(msg)
 
     @classmethod
     def from_pcse_config_file(cls, filename: str | Path) -> Self:
