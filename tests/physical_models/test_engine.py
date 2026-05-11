@@ -3,6 +3,8 @@ from pathlib import Path
 from unittest.mock import Mock
 import pytest
 import torch
+from pcse.base import ParameterProvider
+from pcse.base.variablekiosk import VariableKiosk
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.phenology import DVS_Phenology
 from diffwofost.physical_models.crop.wofost72 import Wofost72
@@ -233,3 +235,29 @@ class TestEngine:
         )
 
         assert _get_params_shape(parameterprovider) == ()
+
+    def test_config_with_crop_components(self):
+        config = Configuration(
+            CROP=Wofost72,
+            CROP_COMPONENTS={"phenology": {"class": DVS_Phenology}},
+        )
+        engine = Engine(config=config)
+        assert engine._components_overrides["phenology"].component_class == DVS_Phenology
+
+    def test_config_with_crop_components_nn_model(self):
+        class TestPhenology(DVS_Phenology):
+            def initialize(self, day, kiosk, parvalues, nn_model, shape=None):
+                self._initialized = True
+
+        nn_model = torch.nn.Module()
+        config = Configuration(
+            CROP=TestPhenology,
+            CROP_NN_MODEL=nn_model,
+        )
+        engine = Engine(config=config)
+        engine.parameterprovider = ParameterProvider()
+        engine.kiosk = VariableKiosk()
+        engine._shape = ()
+        engine._on_CROP_START(date(2000, 1, 1))
+        assert engine.mconf.CROP_NN_MODEL == nn_model
+        assert engine.crop._initialized is True
