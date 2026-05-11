@@ -145,7 +145,7 @@ class Configuration:
     """Class to store model configuration from a PCSE configuration files."""
 
     CROP: type[SimulationObject]
-    CROP_COMPONENTS: dict = field(default_factory=dict)
+    CROP_COMPONENTS: dict | None = None
     CROP_NN_MODEL: type[torch.nn.Module] | None = None
     SOIL: type[SimulationObject] | None = None
     AGROMANAGEMENT: type[AncillaryObject] = AgroManager
@@ -171,7 +171,7 @@ class Configuration:
             object.__setattr__(self, "CROP_COMPONENTS", {})
 
         # Validate component overrides have "class" key with non-None value
-        for component_name, override in self.CROP_COMPONENTS.items():
+        for component_name, override in (self.CROP_COMPONENTS or {}).items():
             if isinstance(override, dict) and override:
                 if "class" not in override:
                     msg = f"Component override '{component_name}' must have a 'class' key"
