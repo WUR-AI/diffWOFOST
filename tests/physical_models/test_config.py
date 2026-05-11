@@ -6,6 +6,7 @@ from pcse.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
+from diffwofost.physical_models.crop.wofost72 import Wofost72
 from . import phy_data_folder
 
 
@@ -17,8 +18,8 @@ class TestConfiguration:
 
     def test_config_accept_other_optional_input_args(self):
         config = Configuration(
-            CROP=WOFOST_Leaf_Dynamics,
-            CROP_COMPONENTS={"example": 1},
+            CROP=Wofost72,
+            CROP_COMPONENTS={"example": {"class": DVS_Phenology}},
             SOIL=WaterbalancePP,
             AGROMANAGEMENT=AgroManager,
             OUTPUT_VARS=[],
@@ -31,7 +32,7 @@ class TestConfiguration:
             description="this is the description",
         )
         assert isinstance(config, Configuration)
-        assert config.CROP_COMPONENTS == {"example": 1}
+        assert config.CROP_COMPONENTS == {"example": {"class": DVS_Phenology}}
 
     def test_config_can_be_instantiated_from_a_default_pcse_config_file(self):
         config = Configuration.from_pcse_config_file("Wofost72_Pheno.conf")
@@ -60,6 +61,46 @@ class TestConfiguration:
         assert config.OUTPUT_VARS == ["DVS", "LAI"]
         assert config.SUMMARY_OUTPUT_VARS == ["LAI"]
         assert config.TERMINAL_OUTPUT_VARS == ["DVS"]
+
+    def test_non_existing_crop_nn_model(self):
+        """The WOFOST_Leaf_Dynamics does not support nn_model"""
+        nn_model = torch.nn.Module()
+        config = Configuration(
+            CROP=WOFOST_Leaf_Dynamics,
+            CROP_NN_MODEL=nn_model,
+        )
+        assert config.CROP_NN_MODEL is None
+
+    def test_non_existing_crop_components(self):
+        """The WOFOST_Leaf_Dynamics does not support component overrides"""
+        config = Configuration(
+            CROP=WOFOST_Leaf_Dynamics,
+            CROP_COMPONENTS={"example": 1},
+        )
+        assert config.CROP_COMPONENTS is None
+
+    def test_crop_components_invalid_type(self):
+        with pytest.raises(ValueError) as exc_info:
+            Configuration(
+            CROP=Wofost72,
+            CROP_COMPONENTS={"example": 1},
+        )
+        assert "must be a dict" in str(exc_info.value)
+
+    def test_crop_components_invalid_override(self):
+        with pytest.raises(ValueError) as exc_info:
+            Configuration(
+            CROP=Wofost72,
+            CROP_COMPONENTS={"example": {"not_class_key": 1}},
+        )
+        assert "must have a 'class' key" in str(exc_info.value)
+    def test_crop_components_invalid_class(self):
+        with pytest.raises(ValueError) as exc_info:
+            Configuration(
+            CROP=Wofost72,
+            CROP_COMPONENTS={"example": {"class": None}},
+        )
+        assert "'class' cannot be None" in str(exc_info.value)
 
 
 @pytest.mark.usefixtures("fast_mode")

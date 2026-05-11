@@ -168,7 +168,7 @@ class Configuration:
 
         # Validate CROP_COMPONENTS, ignore if not compatible with CROP.initialize
         if self.CROP_COMPONENTS and "component_overrides" not in sig_arguments:
-            object.__setattr__(self, "CROP_COMPONENTS", {})
+            object.__setattr__(self, "CROP_COMPONENTS", None)
 
         # Validate component overrides have "class" key with non-None value
         for component_name, override in (self.CROP_COMPONENTS or {}).items():
@@ -179,6 +179,9 @@ class Configuration:
                 if override["class"] is None:
                     msg = f"Component override '{component_name}' 'class' cannot be None"
                     raise ValueError(msg)
+            else:
+                msg = f"Component override for '{component_name}' must be a dict"
+                raise ValueError(msg)
 
     @classmethod
     def from_pcse_config_file(cls, filename: str | Path) -> Self:
