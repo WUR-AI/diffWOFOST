@@ -189,7 +189,7 @@ class Engine(PcseEngine):
         if self.mconf.CROP_COMPONENTS:
             crop_kwargs["component_overrides"] = self._components_overrides
 
-        self.mconf.CROP(*crop_args, **crop_kwargs)
+        self.crop = self.mconf.CROP(*crop_args, **crop_kwargs)
 
     def _finish_cropsimulation(self, day):
         """Finalize and optionally delete the active crop simulation.
