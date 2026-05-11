@@ -12,6 +12,7 @@ from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import PartioningFactors
 from diffwofost.physical_models.crop.wofost72 import Wofost72
+from diffwofost.physical_models.override import normalize_components
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import _afgen_y_mask
@@ -628,12 +629,12 @@ class TestWofost72:
                 "label": "leaf_dynamics",
             },
         }
-
+        normalized_components = normalize_components(component_overrides, Wofost72.COMPONENT_SPECS)
         crop = Wofost72(
             datetime.date(2000, 1, 1),
             kiosk,
             parvalues,
-            component_overrides=component_overrides,
+            component_overrides=normalized_components,
         )
 
         assert crop.pheno.payload is component_models["phenology"]
