@@ -1,17 +1,18 @@
 from dataclasses import dataclass
 from typing import Any
-
 import torch
 from pcse.base import SimulationObject
 
+
 @dataclass(frozen=True)
 class ComponentOverride:
-    """Type-safe representation of a component override."""
+    """Representation of a component override."""
     component_class: type[SimulationObject] | None = None
     model: type[torch.nn.Module] = None
     kwargs: dict[str, Any] | None = None
 
     def get_kwargs(self) -> dict[str, Any]:
+        """Return the keyword arguments for the component constructor."""
         return self.kwargs or {}
 
 

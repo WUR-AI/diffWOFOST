@@ -6,7 +6,6 @@ parameters and external state handling intact.
 """
 
 import gc
-import inspect
 from pathlib import Path
 import torch
 from pcse import signals
@@ -14,8 +13,8 @@ from pcse.base import BaseEngine
 from pcse.engine import Engine as PcseEngine
 from pcse.timer import Timer
 from pcse.traitlets import Instance
-from diffwofost.physical_models.override import normalize_components
 from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.override import normalize_components
 from diffwofost.physical_models.variablekiosk import VariableKiosk
 
 

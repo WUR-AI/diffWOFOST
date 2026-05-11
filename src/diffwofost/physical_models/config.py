@@ -1,6 +1,6 @@
+import inspect
 from dataclasses import dataclass
 from dataclasses import field
-import inspect
 from pathlib import Path
 from typing import Self
 import pcse

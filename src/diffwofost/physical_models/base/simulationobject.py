@@ -3,7 +3,7 @@ from diffwofost.physical_models.override import ComponentOverride
 
 
 def initialize_component(
-    component_spec: dict,
+    component_spec: ComponentOverride,
     day,
     kiosk,
     parvalues,
@@ -12,10 +12,7 @@ def initialize_component(
     """Build one embedded model component from the override definition.
 
     Args:
-        component_name: Canonical component name to instantiate.
-        component_specs: Mapping of canonical component names to
-            ``(attribute_name, default_class)`` pairs (typically
-            ``Wofost72.COMPONENT_SPECS``).
+        component_spec: Specification of the component to be initialized.
         day: Current simulation day.
         kiosk: Variable kiosk shared across crop components.
         parvalues: Physical-model parameter provider.
@@ -32,7 +29,6 @@ def initialize_component(
     dispatch so callers only need to describe the override declaratively.
 
     """
-
     constructor_kwargs = dict(component_spec.kwargs or {})
     component_class = component_spec.component_class
     if shape is not None:
@@ -55,6 +51,8 @@ def initialize_components(
     """Generic crop component initialization for any SimulationObject.
 
     Args:
+        simulation_object: The SimulationObject for which to initialize the
+            components.
         day: Start date of the simulation.
         kiosk: Variable kiosk used to read and publish crop state.
         parvalues: Parameter provider containing the physical-model
@@ -66,10 +64,10 @@ def initialize_components(
             physical models to be initialized one by one, and some
             components may depend on previously initialized ones.
     """
-    for component_name, (attribute_name, default_component_spec) in simulation_object.COMPONENT_SPECS.items():
+    for component_name, (attribute_name, default_spec) in simulation_object.COMPONENT_SPECS.items():
         if component_overrides is None:
             component_spec = ComponentOverride(
-                component_class=default_component_spec,
+                component_class=default_spec,
                 model=None,
                 kwargs=None,
             )

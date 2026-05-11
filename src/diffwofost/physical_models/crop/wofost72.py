@@ -11,6 +11,7 @@ from pcse.traitlets import Unicode
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
+from diffwofost.physical_models.base.simulationobject import initialize_components
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.crop.assimilation import WOFOST72_Assimilation as Assimilation
 from diffwofost.physical_models.crop.evapotranspiration import (
@@ -28,7 +29,6 @@ from diffwofost.physical_models.crop.storage_organ_dynamics import (
     WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics,
 )
 from diffwofost.physical_models.traitlets import Tensor
-from diffwofost.physical_models.base.simulationobject import initialize_components
 
 
 class Wofost72(SimulationObject):
