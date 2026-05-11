@@ -1,5 +1,5 @@
-from pcse.base import SimulationObject as PCSE_SimulationObject
-from typing import Dict
+from pcse.base import SimulationObject
+from diffwofost.physical_models.override import ComponentOverride
 
 
 def initialize_component(
@@ -33,60 +33,55 @@ def initialize_component(
 
     """
 
-    constructor_kwargs = dict(component_spec["kwargs"])
-    component_class = component_spec["component_class"]
+    constructor_kwargs = dict(component_spec.kwargs or {})
+    component_class = component_spec.component_class
     if shape is not None:
         constructor_kwargs["shape"] = shape
 
-    if component_spec["model"] is not None:
-        return component_class(day, kiosk, component_spec["model"], **constructor_kwargs)
+    if component_spec.model is not None:
+        return component_class(day, kiosk, component_spec.model, **constructor_kwargs)
 
     return component_class(day, kiosk, parvalues, **constructor_kwargs)
 
 
-class SimulationObject(PCSE_SimulationObject):
-    """Base class for simulation objects with component management."""
+def initialize_components(
+    simulation_object: SimulationObject,
+    day,
+    kiosk,
+    parvalues,
+    shape,
+    component_overrides: dict | None = None,
+) -> None:
+    """Generic crop component initialization for any SimulationObject.
 
-    COMPONENT_SPECS: Dict[str, tuple] = {}
-
-    def initialize_components(
-        self,
-        day,
-        kiosk,
-        parvalues,
-        shape,
-        component_overrides: dict | None = None,
-    ) -> None:
-        """Generic crop component initialization for any SimulationObject.
-
-        Args:
-            day: Start date of the simulation.
-            kiosk: Variable kiosk used to read and publish crop state.
-            parvalues: Parameter provider containing the physical-model
-                parameters for the crop.
-            shape: Target tensor shape for state and rate variables.
-            component_overrides: Mapping used to replace one or more
-                internal components (e.g. in WOFOST) at initialization time.
-                The order of components in the mapping matter because these are
-                physical models to be initialized one by one, and some
-                components may depend on previously initialized ones.
-        """
-        for component_name, (attribute_name, default_component_spec) in self.COMPONENT_SPECS.items():
-            if component_overrides is None:
-                component_spec = {
-                    "component_class": default_component_spec,
-                    "model": None,
-                    "kwargs": {},
-                }
-            else:
-                component_spec = component_overrides[component_name]
-            component = initialize_component(
-                component_spec,
-                day,
-                kiosk,
-                parvalues,
-                shape=shape,
+    Args:
+        day: Start date of the simulation.
+        kiosk: Variable kiosk used to read and publish crop state.
+        parvalues: Parameter provider containing the physical-model
+            parameters for the crop.
+        shape: Target tensor shape for state and rate variables.
+        component_overrides: Mapping used to replace one or more
+            internal components (e.g. in WOFOST) at initialization time.
+            The order of components in the mapping matter because these are
+            physical models to be initialized one by one, and some
+            components may depend on previously initialized ones.
+    """
+    for component_name, (attribute_name, default_component_spec) in simulation_object.COMPONENT_SPECS.items():
+        if component_overrides is None:
+            component_spec = ComponentOverride(
+                component_class=default_component_spec,
+                model=None,
+                kwargs=None,
             )
-            print(type(component))
-            1/0
-            setattr(self, attribute_name, component)
+        else:
+            component_spec = component_overrides[component_name]
+        component = initialize_component(
+            component_spec,
+            day,
+            kiosk,
+            parvalues,
+            shape=shape,
+        )
+        setattr(simulation_object, attribute_name, component)
+
+    return simulation_object

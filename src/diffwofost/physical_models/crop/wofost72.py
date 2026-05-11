@@ -2,7 +2,7 @@ import datetime
 import torch
 from pcse import exceptions as exc
 from pcse import signals
-from diffwofost.physical_models.base import SimulationObject
+from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.base.weather import WeatherDataContainer
@@ -28,6 +28,7 @@ from diffwofost.physical_models.crop.storage_organ_dynamics import (
     WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics,
 )
 from diffwofost.physical_models.traitlets import Tensor
+from diffwofost.physical_models.base.simulationobject import initialize_components
 
 
 class Wofost72(SimulationObject):
@@ -190,7 +191,8 @@ class Wofost72(SimulationObject):
         self.kiosk = kiosk
 
         # Initialize components of the crop
-        self.initialize_components(
+        self = initialize_components(
+            self,
             day,
             kiosk,
             parvalues,
