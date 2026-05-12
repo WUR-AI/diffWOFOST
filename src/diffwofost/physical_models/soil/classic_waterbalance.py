@@ -497,6 +497,7 @@ class WaterbalanceFD(SimulationObject):
         SStmp = RAIN_t + r.RIRR - r.EVW - r.RIN
         r.DSS = torch.minimum(SStmp, p.SSMAX - s.SS)
         r.DTSR = SStmp - r.DSS
+        # incoming rainfall rate
         r.DRAINT = RAIN_t
 
     def integrate(self, day, delt=1.0):
