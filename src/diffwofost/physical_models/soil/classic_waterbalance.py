@@ -373,7 +373,7 @@ class WaterbalanceFD(SimulationObject):
             WI=W,
             WLOW=WLOW,
             WLOWI=WLOW,
-            WWLOW=WWLOW,
+            WWLOW=(W + WLOW),  # Total water in soil column
             WTRAT=0.0,
             EVST=0.0,
             EVWT=0.0,
