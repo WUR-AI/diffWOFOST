@@ -30,7 +30,22 @@ wofost72_config = Configuration(
 wofost72_fd_config = Configuration(
     CROP=Wofost72,
     SOIL=WaterbalanceFD,
-    OUTPUT_VARS=["DVS", "LAI", "RD", "SM", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+    OUTPUT_VARS=[
+        "DVS",
+        "EVS",
+        "LAI",
+        "RD",
+        "SM",
+        "TAGP",
+        "TRA",
+        "TWLV",
+        "TWRT",
+        "TWSO",
+        "TWST",
+        "W",
+        "WLOW",
+        "WWLOW",
+    ],
 )
 
 # All output variables used in the differentiable model for gradient tests (mirrors OUTPUT_VARS)
