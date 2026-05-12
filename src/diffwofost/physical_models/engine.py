@@ -183,7 +183,8 @@ class Engine(PcseEngine):
         crop_kwargs = {"shape": self._shape}
 
         if self.mconf.CROP_NN_MODEL is not None:
-            crop_args.append(self.mconf.CROP_NN_MODEL)
+            # crop_nn_model initialize doesnot accpet parameterprovider
+            crop_args = [day, self.kiosk, self.mconf.CROP_NN_MODEL]
 
         if self.mconf.CROP_COMPONENTS:
             crop_kwargs["component_overrides"] = self._components_overrides

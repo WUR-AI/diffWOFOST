@@ -4,8 +4,13 @@ from diffwofost.ml_models.crop.partitioning import DVS_Partitioning_NN
 from diffwofost.ml_models.crop.partitioning import PartitioningMLP
 from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import PartioningFactors
+from diffwofost.physical_models.utils import EngineTestHelper
+from diffwofost.physical_models.utils import get_test_data
+from diffwofost.physical_models.utils import prepare_engine_input
 from diffwofost.physical_models.variablekiosk import VariableKiosk
+from .. import phy_data_folder
 
 
 def _assert_valid_partitioning(pf, expected_shape):
@@ -93,3 +98,40 @@ class TestDVSPartitioningNN:
         _assert_valid_partitioning(updated_pf, torch.Size([]))
         assert isinstance(component.states.PF, PartioningFactors)
         assert not torch.allclose(initial_pf.FR, updated_pf.FR)
+
+    def test_partitioning_with_engine(self):
+        """This is useful when nn_model is trained already."""
+        partition_nn = PartitioningNN(hidden_size=32)
+        partitioning_config = Configuration(
+            CROP=DVS_Partitioning_NN,
+            CROP_NN_MODEL=partition_nn,
+            OUTPUT_VARS=["FR", "FL", "FS", "FO"],
+        )
+        print(phy_data_folder)
+        test_data_url = f"{phy_data_folder}/test_partitioning_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        expected_results = test_data["ModelResults"]
+        crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        engine = EngineTestHelper(config=partitioning_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+        output_dict = {}
+        for var in ["FR", "FL", "FS", "FO"]:
+            stacked = torch.stack([item[var] for item in actual_results])
+            output_dict[var] = stacked
+        output_vars = ["FR", "FL", "FS", "FO"]
+        assert all(var in output_dict for var in output_vars)
+        assert len(actual_results) == len(expected_results)
