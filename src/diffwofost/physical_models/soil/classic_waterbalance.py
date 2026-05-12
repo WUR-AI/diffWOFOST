@@ -394,7 +394,15 @@ class WaterbalanceFD(SimulationObject):
         self._connect_signal(self._on_IRRIGATE, signals.irrigate)
 
     def calc_rates(self, day, drv):
-        """Calculate the rates of change for all water balance components."""
+        """Calculate the rates of change for all water balance components.
+        
+        Args:
+            day (datetime.date): The current date of the simulation.
+            drv (WeatherDataContainer): A dictionary-like container holding
+                weather data elements as key/value. The values are
+                arrays or scalars. See PCSE documentation for details.
+        
+        """
         s = self.states
         p = self.params
         r = self.rates
