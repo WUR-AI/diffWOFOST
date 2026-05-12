@@ -103,6 +103,18 @@ class TestConfiguration:
             )
         assert "'class' cannot be None" in str(exc_info.value)
 
+    def test_add_crop_components(self):
+        """The WOFOST_Leaf_Dynamics does not support component overrides"""
+        config = Configuration(CROP=WOFOST_Leaf_Dynamics)
+        config.CROP_COMPONENTS = {"example": {"class": DVS_Phenology}}
+        assert config.CROP_COMPONENTS["example"]["class"] == DVS_Phenology
+
+    def test_add_nn_model(self):
+        """The WOFOST_Leaf_Dynamics does not support component overrides"""
+        config = Configuration(CROP=WOFOST_Leaf_Dynamics)
+        config.CROP_NN_MODEL = torch.nn.Module()
+        assert isinstance(config.CROP_NN_MODEL, torch.nn.Module)
+
 
 @pytest.mark.usefixtures("fast_mode")
 class TestComputeConfig:

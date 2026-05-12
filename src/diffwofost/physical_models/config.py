@@ -140,7 +140,7 @@ class ComputeConfig:
         cls._initialize_defaults()
 
 
-@dataclass(frozen=True)
+@dataclass
 class Configuration:
     """Class to store model configuration from a PCSE configuration files."""
 
@@ -168,7 +168,7 @@ class Configuration:
             (self.CROP_COMPONENTS, "component_overrides", "CROP_COMPONENTS"),
         ]:
             if field_value is not None and sig_key not in sig_arguments:
-                object.__setattr__(self, attr_name, None)
+                setattr(self, attr_name, None)
 
         # Validate component overrides have "class" key with non-None value
         for component_name, override in (self.CROP_COMPONENTS or {}).items():
