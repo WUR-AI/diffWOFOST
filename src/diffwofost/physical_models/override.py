@@ -7,6 +7,7 @@ from pcse.base import SimulationObject
 @dataclass(frozen=True)
 class ComponentOverride:
     """Representation of a component override."""
+
     component_class: type[SimulationObject] | None = None
     model: type[torch.nn.Module] = None
     kwargs: dict[str, Any] | None = None
@@ -17,6 +18,7 @@ class ComponentOverride:
 
     @classmethod
     def from_default(cls, component_class):
+        """Create a ComponentOverride from a default component class."""
         return cls(component_class=component_class, model=None, kwargs=None)
 
 

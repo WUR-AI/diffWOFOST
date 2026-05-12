@@ -60,7 +60,7 @@ class Engine(PcseEngine):
             self._components_overrides = normalize_components(
                 self.mconf.CROP_COMPONENTS,
                 self.mconf.CROP.COMPONENT_SPECS,
-        )
+            )
 
     def _reset_runtime_state(self):
         """Clear state from a previous simulation run.

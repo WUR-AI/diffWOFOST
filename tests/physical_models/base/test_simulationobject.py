@@ -15,6 +15,7 @@ class TestSimulationObject(SimulationObject):
         "phenology": ("pheno", Phenology),
         "partitioning": ("part", Partitioning),
     }
+
     def initialize(self, day, kiosk):
         pass
 
@@ -26,7 +27,11 @@ class TestPartioning(SimulationObject):
 
 def test_initialize_components():
     day = datetime.date(2000, 1, 1)
-    kiosk = VariableKiosk([{"DAY": day, "DVS": 0.1},])
+    kiosk = VariableKiosk(
+        [
+            {"DAY": day, "DVS": 0.1},
+        ]
+    )
     parvalues = {
         # Phenology
         "TSUMEM": 50.0,
@@ -44,10 +49,9 @@ def test_initialize_components():
         "CROP_END_TYPE": "maturity",
         # Partitioning
         "FRTB": [[0.0, 0.3, 2.0, 0.1]],
-        "FLTB":[[0.0, 0.85, 1.0, 0.5, 1.3, 0.05, 1.57, 0.05, 1.92, 0.05, 2.0, 0.05]],
+        "FLTB": [[0.0, 0.85, 1.0, 0.5, 1.3, 0.05, 1.57, 0.05, 1.92, 0.05, 2.0, 0.05]],
         "FSTB": [[0.0, 0.15, 1.0, 0.5, 1.3, 0.10, 1.57, 0.10, 1.92, 0.05, 2.0, 0.05]],
-        "FOTB":
-            [[0.0, 0.00, 1.0, 0.0, 1.3, 0.85, 1.57, 0.85, 1.92, 0.90, 2.0, 0.90]],
+        "FOTB": [[0.0, 0.00, 1.0, 0.0, 1.3, 0.85, 1.57, 0.85, 1.92, 0.90, 2.0, 0.90]],
     }
 
     simulation_object = TestSimulationObject(day, kiosk)
@@ -69,7 +73,11 @@ def test_initialize_components():
 
 def test_initialize_components_with_overrides():
     day = datetime.date(2000, 1, 1)
-    kiosk = VariableKiosk([{"DAY": day, "DVS": 0.1},])
+    kiosk = VariableKiosk(
+        [
+            {"DAY": day, "DVS": 0.1},
+        ]
+    )
     parvalues = {
         # Phenology
         "TSUMEM": 50.0,

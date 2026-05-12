@@ -82,24 +82,25 @@ class TestConfiguration:
     def test_crop_components_invalid_type(self):
         with pytest.raises(ValueError) as exc_info:
             Configuration(
-            CROP=Wofost72,
-            CROP_COMPONENTS={"example": 1},
-        )
+                CROP=Wofost72,
+                CROP_COMPONENTS={"example": 1},
+            )
         assert "must be a dict" in str(exc_info.value)
 
     def test_crop_components_invalid_override(self):
         with pytest.raises(ValueError) as exc_info:
             Configuration(
-            CROP=Wofost72,
-            CROP_COMPONENTS={"example": {"not_class_key": 1}},
-        )
+                CROP=Wofost72,
+                CROP_COMPONENTS={"example": {"not_class_key": 1}},
+            )
         assert "must have a 'class' key" in str(exc_info.value)
+
     def test_crop_components_invalid_class(self):
         with pytest.raises(ValueError) as exc_info:
             Configuration(
-            CROP=Wofost72,
-            CROP_COMPONENTS={"example": {"class": None}},
-        )
+                CROP=Wofost72,
+                CROP_COMPONENTS={"example": {"class": None}},
+            )
         assert "'class' cannot be None" in str(exc_info.value)
 
 
