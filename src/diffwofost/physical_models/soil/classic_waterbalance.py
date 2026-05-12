@@ -504,7 +504,12 @@ class WaterbalanceFD(SimulationObject):
         r.DRAINT = RAIN_t
 
     def integrate(self, day, delt=1.0):
-        """Integrate state variables over one time step."""
+        """Integrate state variables over one time step.
+
+        Args:
+            day (datetime.date): The current date of the simulation.
+            delt (float, optional): The time step for integration. Defaults to 1.0.
+        """
         s = self.states
         p = self.params
         r = self.rates
