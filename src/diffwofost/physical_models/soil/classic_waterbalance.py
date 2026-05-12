@@ -371,7 +371,7 @@ class WaterbalanceFD(SimulationObject):
             SS=self.params.SSI,
             SSI=p.SSI,
             W=W,
-            WI=WI,
+            WI=W,
             WLOW=WLOW,
             WLOWI=WLOWI,
             WWLOW=WWLOW,
