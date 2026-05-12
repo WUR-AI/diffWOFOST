@@ -348,9 +348,6 @@ class WaterbalanceFD(SimulationObject):
             max=p.SM0 * (RDM - RD),
         )
 
-        # Total water in soil column
-        WWLOW = W + WLOW
-
         # Days since last rain: 1 if SM is above halfway between SMW and SMFCF, else 5
         halfway = p.SMW + 0.5 * (p.SMFCF - p.SMW)
         self.DSLR = torch.where(SM >= halfway, torch.ones_like(SM), torch.full_like(SM, 5.0))
