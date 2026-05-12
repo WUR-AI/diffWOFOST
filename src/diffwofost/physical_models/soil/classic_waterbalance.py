@@ -340,7 +340,6 @@ class WaterbalanceFD(SimulationObject):
         # Initial soil moisture content in rooted zone, clamped to [SMW, SMLIM]
         SM = torch.clamp(p.SMW + p.WAV / RD, min=p.SMW, max=SMLIM)
         W = SM * RD
-        WI = W
 
         # Initial water in subsoil (below rooted zone to maximum rootable depth)
         WLOW = torch.clamp(
