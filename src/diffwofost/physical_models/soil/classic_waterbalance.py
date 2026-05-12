@@ -347,7 +347,6 @@ class WaterbalanceFD(SimulationObject):
             min=torch.zeros_like(W),
             max=p.SM0 * (RDM - RD),
         )
-        WLOWI = WLOW
 
         # Total water in soil column
         WWLOW = W + WLOW
