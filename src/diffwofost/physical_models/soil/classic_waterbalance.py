@@ -326,7 +326,6 @@ class WaterbalanceFD(SimulationObject):
         device = ComputeConfig.get_device()
 
         self.params = self.Parameters(parvalues, shape=shape)
-        p = self.params
 
         # Check validity of SMLIM (site parameter, not stored in self.params)
         SMLIM_raw = torch.as_tensor(parvalues["SMLIM"], dtype=dtype, device=device)
