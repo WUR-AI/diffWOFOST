@@ -337,9 +337,6 @@ class WaterbalanceFD(SimulationObject):
         self.RDold = torch.as_tensor(self.DEFAULT_RD, dtype=dtype, device=device)
         self.RDM = torch.maximum(self.RDold, self.params.RDMSOL)
 
-        # Initial surface storage
-        SS = p.SSI
-
         # Initial soil moisture content in rooted zone, clamped to [SMW, SMLIM]
         SM = torch.clamp(p.SMW + p.WAV / RD, min=p.SMW, max=SMLIM)
         W = SM * RD
