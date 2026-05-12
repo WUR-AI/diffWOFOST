@@ -334,10 +334,8 @@ class WaterbalanceFD(SimulationObject):
             self.logger.warn("SMLIM not in valid range, adjusted.")
 
         # Default rooting depth: 10 cm; derive maximum rootable depth
-        RD = torch.as_tensor(self.DEFAULT_RD, dtype=dtype, device=device)
-        RDM = torch.maximum(RD, p.RDMSOL)
-        self.RDold = RD
-        self.RDM = RDM
+        self.RDold = torch.as_tensor(self.DEFAULT_RD, dtype=dtype, device=device)
+        self.RDM = torch.maximum(self.RDold, self.params.RDMSOL)
 
         # Initial surface storage
         SS = p.SSI
