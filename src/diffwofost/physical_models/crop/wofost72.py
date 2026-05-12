@@ -298,9 +298,8 @@ class Wofost72(SimulationObject):
         # Phenology
         self.pheno.calc_rates(day, drv)
 
-        # Before emergence, only phenology and evapotranspiration need to run:
-        # soil evaporation still depends on the crop kiosk rates, while canopy
-        # assimilation and growth remain inactive.
+        # if before emergence there is no need to continue
+        # because only the phenology is running.
         # TODO: revisit this when fixing #60
         if torch.all(self.pheno.states.STAGE == 0):
             self.evtra(day, drv)

@@ -232,8 +232,8 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         es0 = _get_drv(drv.ES0, self.params_shape, dtype=self.dtype, device=self.device)
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
-        # If DVS < 0, the crop has not yet emerged, so evapotranspiration
-        # outputs remain at zero until emergence.
+        # If DVS < 0, the crop has not yet emerged, so we zero the rates using a mask
+        # A mask (1 if DVS >= 0, 0 if DVS < 0)
         dvs_mask = (dvs >= 0.0).to(dtype=self.dtype)
 
         kglob = 0.75 * p.KDIFTB(dvs)
