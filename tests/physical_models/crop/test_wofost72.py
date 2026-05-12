@@ -189,7 +189,7 @@ class DiffWofost72(torch.nn.Module):
 
 
 @pytest.mark.usefixtures("fast_mode")
-class TestWofost72:
+class TestWofost72_PP:
     wofost72_data_urls = [
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml"
         for i in range(1, 45)  # there are 44 test files
@@ -662,8 +662,45 @@ class TestWofost72:
         assert crop.lv_dynamics.payload is component_models["leaf_dynamics"]
         assert crop.lv_dynamics._label == "leaf_dynamics"
 
-    def test_wofost72_runs_with_waterbalance_fd(self, device):
-        test_data_url = f"{phy_data_folder}/test_waterlimitedproduction_wofost72_05.yaml"
+    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
+    def test_wofost72_against_pcse_pp(self, test_data_url):
+        """Test that diffWOFOST Wofost72 gives the same results as PCSE Wofost72_PP."""
+        # prepare model input
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
+        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            prepare_engine_input(test_data, crop_model_params)
+        )
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        with patch("pcse.crop.wofost72.Wofost72", Wofost72):
+            model = Wofost72_PP(
+                crop_model_params_provider, weather_data_provider, agro_management_inputs
+            )
+            model.run_till_terminate()
+            actual_results = model.get_output()
+
+            assert len(actual_results) == len(expected_results)
+
+            for reference, model in zip(expected_results, actual_results, strict=False):
+                assert reference["DAY"] == model["day"]
+                assert all(
+                    abs(reference[var] - model[var]) < precision
+                    for var, precision in expected_precision.items()
+                )
+
+
+@pytest.mark.usefixtures("fast_mode")
+class TestWofost72_WLP:
+    wofost72_wlp_data_urls = [
+        f"{phy_data_folder}/test_waterlimitedproduction_wofost72_{i:02d}.yaml"
+        for i in range(1, 45)  # there are 44 test files
+    ]
+
+    @pytest.mark.parametrize("test_data_url", wofost72_wlp_data_urls)
+    def test_wofost72_runs_with_waterbalance_fd(self, test_data_url, device):
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "SMFCF", "SMW", "SM0"]
         (
@@ -683,12 +720,21 @@ class TestWofost72:
         engine.run_till_terminate()
         actual_results = engine.get_output()
 
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
         assert isinstance(engine.soil, WaterbalanceFD)
         assert actual_results
-        assert all(name in actual_results[0] for name in wofost72_fd_config.OUTPUT_VARS)
-        assert all(
-            actual_results[0][name].device.type == device for name in wofost72_fd_config.OUTPUT_VARS
-        )
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
+            assert all(
+                abs(reference[var] - model_cpu[var]) < precision
+                for var, precision in expected_precision.items()
+            )
 
     def test_wofost72_runs_with_waterbalance_fd_and_batched_parameters(self, device):
         test_data_url = f"{phy_data_folder}/test_waterlimitedproduction_wofost72_05.yaml"
@@ -725,35 +771,6 @@ class TestWofost72:
             actual_results[-1][name].device.type == device
             for name in wofost72_fd_config.OUTPUT_VARS
         )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost72_against_pcse_pp(self, test_data_url):
-        """Test that diffWOFOST Wofost72 gives the same results as PCSE Wofost72_PP."""
-        # prepare model input
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.Wofost72", Wofost72):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
 
 @pytest.mark.usefixtures("fast_mode")

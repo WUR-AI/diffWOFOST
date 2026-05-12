@@ -449,7 +449,7 @@ def get_test_diff_waterbalance_fd_model(device: str = "cpu"):
     """Return a fresh DiffWaterbalanceFD model ready to be called."""
     test_data_url = f"{phy_data_folder}/test_waterlimitedproduction_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
-    crop_model_params = ["SMFCF", "SMW", "SM0"]
+    crop_model_params = ["SMFCF", "SMW", "SM0", "CRAIRC", "SOPE", "KSUB", "RDMSOL"]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
         prepare_engine_input(test_data, crop_model_params, device=device)
     )
@@ -667,15 +667,20 @@ class TestWaterbalanceFD:
 class TestDiffWaterbalanceFDGradients:
     """Gradient tests for WaterbalanceFD."""
 
-    param_names = ["SMFCF", "SMW", "SM0"]
+    param_names = ["SMFCF", "SMW", "SM0", "CRAIRC", "SOPE", "KSUB", "RDMSOL"]
     output_names = ["SM", "EVS"]
 
-    # All three soil moisture parameters influence both SM and EVS.
-    # EVS has a multi-timestep gradient path: param → RIN → DW → W → SM → EVSMX → EVS.
+    # The soil parameters below all produce a computation graph to SM and EVS
+    # in the current FD test setup. EVS has a multi-timestep path through the
+    # soil water states (for example via RIN/PERC/LOSS/W -> SM -> EVS).
     gradient_mapping = {
         "SMFCF": ["SM", "EVS"],
         "SMW": ["SM", "EVS"],
         "SM0": ["SM", "EVS"],
+        "CRAIRC": ["SM", "EVS"],
+        "SOPE": ["SM", "EVS"],
+        "KSUB": ["SM", "EVS"],
+        "RDMSOL": ["SM", "EVS"],
     }
 
     param_configs = {
@@ -683,11 +688,19 @@ class TestDiffWaterbalanceFDGradients:
             "SMFCF": (0.30, torch.float64),
             "SMW": (0.15, torch.float64),
             "SM0": (0.40, torch.float64),
+            "CRAIRC": (0.06, torch.float64),
+            "SOPE": (10.0, torch.float64),
+            "KSUB": (10.0, torch.float64),
+            "RDMSOL": (100.0, torch.float64),
         },
         "tensor": {
             "SMFCF": ([0.26, 0.30, 0.34], torch.float64),
             "SMW": ([0.12, 0.15, 0.18], torch.float64),
             "SM0": ([0.38, 0.40, 0.42], torch.float64),
+            "CRAIRC": ([0.04, 0.06, 0.08], torch.float64),
+            "SOPE": ([8.0, 10.0, 12.0], torch.float64),
+            "KSUB": ([8.0, 10.0, 12.0], torch.float64),
+            "RDMSOL": ([90.0, 100.0, 110.0], torch.float64),
         },
     }
 
