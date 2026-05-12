@@ -421,15 +421,31 @@ class WaterbalanceFD(SimulationObject):
         r.RIRR = self._RIRR
         self._RIRR = torch.zeros_like(self._RIRR)
 
-        # Transpiration and maximum evaporation rates from crop module (or defaults)
+        # Transpiration and maximum evaporation rates from crop module.
+        # Before emergence there is no canopy shading yet, so the water balance
+        # must fall back to the weather-driven soil and surface evaporation.
+        weather_wtra = torch.zeros_like(torch.as_tensor(drv.ES0, dtype=dtype, device=device))
+        weather_evwmx = torch.as_tensor(drv.E0, dtype=dtype, device=device)
+        weather_evsmx = torch.as_tensor(drv.ES0, dtype=dtype, device=device)
+
         if "TRA" not in k:
-            r.WTRA = torch.zeros_like(torch.as_tensor(drv.ES0, dtype=dtype, device=device))
-            EVWMX = torch.as_tensor(drv.E0, dtype=dtype, device=device)
-            EVSMX = torch.as_tensor(drv.ES0, dtype=dtype, device=device)
+            r.WTRA = weather_wtra
+            EVWMX = weather_evwmx
+            EVSMX = weather_evsmx
         else:
-            r.WTRA = k["TRA"]
-            EVWMX = torch.as_tensor(k["EVWMX"], dtype=dtype, device=device)
-            EVSMX = torch.as_tensor(k["EVSMX"], dtype=dtype, device=device)
+            crop_wtra = torch.as_tensor(k["TRA"], dtype=dtype, device=device)
+            crop_evwmx = torch.as_tensor(k["EVWMX"], dtype=dtype, device=device)
+            crop_evsmx = torch.as_tensor(k["EVSMX"], dtype=dtype, device=device)
+
+            if "DVS" in k:
+                emerged_mask = torch.as_tensor(k["DVS"], dtype=dtype, device=device) >= 0.0
+                r.WTRA = torch.where(emerged_mask, crop_wtra, weather_wtra)
+                EVWMX = torch.where(emerged_mask, crop_evwmx, weather_evwmx)
+                EVSMX = torch.where(emerged_mask, crop_evsmx, weather_evsmx)
+            else:
+                r.WTRA = crop_wtra
+                EVWMX = crop_evwmx
+                EVSMX = crop_evsmx
 
         # Actual evaporation rates
         # If SS > 1 cm: evaporate from surface water; else from soil
