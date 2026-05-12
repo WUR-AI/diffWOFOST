@@ -614,7 +614,14 @@ class WaterbalanceFD(SimulationObject):
     def _redistribute_water(self, RDchange):
         """Redistribute water between root zone and lower zone after RD changes.
 
-        :param RDchange: Change in root depth (cm); positive = downward growth.
+        Redistribution of water is needed when roots grow during the growing season
+        and when the crop is finished and the root zone shifts back from the crop rooted
+        depth to the default depth of the upper (rooted) layer of the water balance.
+        Or when the initial rooting depth of a crop is different from the default one used
+        by the water balance module (10 cm)
+        
+        Args:
+            RDchange: Change in root depth (cm); positive = downward growth.
         """
         s = self.states
         p = self.params
