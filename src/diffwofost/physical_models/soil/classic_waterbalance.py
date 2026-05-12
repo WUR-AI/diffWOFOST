@@ -369,7 +369,7 @@ class WaterbalanceFD(SimulationObject):
             kiosk,
             publish=["SM", "DSOS"],
             SM=SM,
-            SS=SS,
+            SS=self.params.SSI,
             SSI=p.SSI,
             W=W,
             WI=WI,
