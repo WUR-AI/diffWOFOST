@@ -15,6 +15,10 @@ class ComponentOverride:
         """Return the keyword arguments for the component constructor."""
         return self.kwargs or {}
 
+    @classmethod
+    def from_default(cls, component_class):
+        return cls(component_class=component_class, model=None, kwargs=None)
+
 
 def normalize_components(
     crop_components: dict | None,

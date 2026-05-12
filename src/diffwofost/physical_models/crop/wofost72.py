@@ -191,7 +191,8 @@ class Wofost72(SimulationObject):
         self.kiosk = kiosk
 
         # Initialize components of the crop
-        self = initialize_components(
+        # This will add attributes to self for each component, e.g. self.pheno, self.part, etc.
+        initialize_components(
             self,
             day,
             kiosk,

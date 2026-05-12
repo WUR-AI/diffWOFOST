@@ -66,11 +66,7 @@ def initialize_components(
     """
     for component_name, (attribute_name, default_spec) in simulation_object.COMPONENT_SPECS.items():
         if component_overrides is None:
-            component_spec = ComponentOverride(
-                component_class=default_spec,
-                model=None,
-                kwargs=None,
-            )
+            component_spec = ComponentOverride.from_default(default_spec)
         else:
             component_spec = component_overrides[component_name]
         component = initialize_component(
@@ -81,5 +77,3 @@ def initialize_components(
             shape=shape,
         )
         setattr(simulation_object, attribute_name, component)
-
-    return simulation_object
