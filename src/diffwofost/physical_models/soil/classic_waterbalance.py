@@ -329,27 +329,31 @@ class WaterbalanceFD(SimulationObject):
 
         # Check validity of SMLIM (site parameter, not stored in self.params)
         SMLIM_raw = torch.as_tensor(parvalues["SMLIM"], dtype=dtype, device=device)
-        SMLIM = torch.maximum(p.SMW, torch.minimum(p.SM0, SMLIM_raw))
+        SMLIM = torch.maximum(self.params.SMW, torch.minimum(self.params.SM0, SMLIM_raw))
         if torch.any(SMLIM != SMLIM_raw):
-            self.logger.warn("SMLIM not in valid range, adjusted.")
+            self.logger.warning("SMLIM not in valid range, adjusted.")
 
         # Default rooting depth: 10 cm; derive maximum rootable depth
         self.RDold = torch.as_tensor(self.DEFAULT_RD, dtype=dtype, device=device)
         self.RDM = torch.maximum(self.RDold, self.params.RDMSOL)
 
         # Initial soil moisture content in rooted zone, clamped to [SMW, SMLIM]
-        SM = torch.clamp(p.SMW + p.WAV / RD, min=p.SMW, max=SMLIM)
-        W = SM * RD
+        SM = torch.clamp(
+            self.params.SMW + self.params.WAV / self.RDold,
+            min=self.params.SMW,
+            max=SMLIM,
+        )
+        W = SM * self.RDold
 
         # Initial water in subsoil (below rooted zone to maximum rootable depth)
         WLOW = torch.clamp(
-            p.WAV + RDM * p.SMW - W,
+            self.params.WAV + self.RDM * self.params.SMW - W,
             min=torch.zeros_like(W),
-            max=p.SM0 * (RDM - RD),
+            max=self.params.SM0 * (self.RDM - self.RDold),
         )
 
         # Days since last rain: 1 if SM is above halfway between SMW and SMFCF, else 5
-        halfway = p.SMW + 0.5 * (p.SMFCF - p.SMW)
+        halfway = self.params.SMW + 0.5 * (self.params.SMFCF - self.params.SMW)
         self.DSLR = torch.where(SM >= halfway, torch.ones_like(SM), torch.full_like(SM, 5.0))
 
         # Initialize helper variables
@@ -365,7 +369,7 @@ class WaterbalanceFD(SimulationObject):
             publish=["SM", "DSOS"],
             SM=SM,
             SS=self.params.SSI,
-            SSI=p.SSI,
+            SSI=self.params.SSI,
             W=W,
             WI=W,
             WLOW=WLOW,
@@ -395,13 +399,13 @@ class WaterbalanceFD(SimulationObject):
 
     def calc_rates(self, day, drv):
         """Calculate the rates of change for all water balance components.
-        
+
         Args:
             day (datetime.date): The current date of the simulation.
             drv (WeatherDataContainer): A dictionary-like container holding
                 weather data elements as key/value. The values are
                 arrays or scalars. See PCSE documentation for details.
-        
+
         """
         s = self.states
         p = self.params
@@ -619,7 +623,7 @@ class WaterbalanceFD(SimulationObject):
         depth to the default depth of the upper (rooted) layer of the water balance.
         Or when the initial rooting depth of a crop is different from the default one used
         by the water balance module (10 cm)
-        
+
         Args:
             RDchange: Change in root depth (cm); positive = downward growth.
         """
