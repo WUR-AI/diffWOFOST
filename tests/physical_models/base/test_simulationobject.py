@@ -56,7 +56,7 @@ def test_initialize_components():
 
     simulation_object = TestSimulationObject(day, kiosk)
 
-    initialized_simulation_object = initialize_components(
+    initialize_components(
         simulation_object=simulation_object,
         day=day,
         kiosk=kiosk,
@@ -64,11 +64,11 @@ def test_initialize_components():
         shape=(1,),
     )
 
-    assert initialized_simulation_object is simulation_object
-    assert hasattr(initialized_simulation_object, "pheno")
-    assert isinstance(initialized_simulation_object.pheno, Phenology)
-    assert hasattr(initialized_simulation_object, "part")
-    assert isinstance(initialized_simulation_object.part, Partitioning)
+    assert simulation_object is simulation_object
+    assert hasattr(simulation_object, "pheno")
+    assert isinstance(simulation_object.pheno, Phenology)
+    assert hasattr(simulation_object, "part")
+    assert isinstance(simulation_object.part, Partitioning)
 
 
 def test_initialize_components_with_overrides():
@@ -109,7 +109,7 @@ def test_initialize_components_with_overrides():
         ),
     }
 
-    initialized_simulation_object = initialize_components(
+    initialize_components(
         simulation_object=simulation_object,
         day=day,
         kiosk=kiosk,
@@ -117,4 +117,4 @@ def test_initialize_components_with_overrides():
         component_overrides=component_overrides,
     )
 
-    assert initialized_simulation_object.part._test_kwarg == "overridden_value"
+    assert simulation_object.part._test_kwarg == "overridden_value"

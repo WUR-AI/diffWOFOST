@@ -85,7 +85,7 @@ class TestConfiguration:
                 CROP=Wofost72,
                 CROP_COMPONENTS={"example": 1},
             )
-        assert "must be a dict" in str(exc_info.value)
+        assert "be a non-empty dict" in str(exc_info.value)
 
     def test_crop_components_invalid_override(self):
         with pytest.raises(ValueError) as exc_info:
