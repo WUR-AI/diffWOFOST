@@ -315,10 +315,12 @@ class WaterbalanceFD(SimulationObject):
     def initialize(self, day, kiosk, parvalues, shape=None):
         """Initialize the freely-draining water balance.
 
-        :param day: start date of the simulation
-        :param kiosk: variable kiosk of this PCSE instance
-        :param parvalues: ParameterProvider containing all parameters
-        :param shape: Optional tensor shape for batched simulation
+        Args:
+            day: Start date of the simulation.
+            kiosk: Variable kiosk used to read and publish crop state.
+            parvalues: Parameter provider containing the physical-model
+                parameters for the soil.
+            shape: Target tensor shape for state and rate variables.
         """
         dtype = ComputeConfig.get_dtype()
         device = ComputeConfig.get_device()
