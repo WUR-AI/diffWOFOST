@@ -372,7 +372,7 @@ class WaterbalanceFD(SimulationObject):
             W=W,
             WI=W,
             WLOW=WLOW,
-            WLOWI=WLOWI,
+            WLOWI=WLOW,
             WWLOW=WWLOW,
             WTRAT=0.0,
             EVST=0.0,
