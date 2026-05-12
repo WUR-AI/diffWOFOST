@@ -232,8 +232,9 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         es0 = _get_drv(drv.ES0, self.params_shape, dtype=self.dtype, device=self.device)
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
-        # If DVS < 0, the crop has not yet emerged, so we zero the rates using a mask
-        # A mask (1 if DVS >= 0, 0 if DVS < 0)
+        # Before emergence there is no canopy shading yet, so potential soil and
+        # water evaporation follow the weather forcings directly while canopy
+        # transpiration is forced to zero.
         dvs_mask = (dvs >= 0.0).to(dtype=self.dtype)
 
         kglob = 0.75 * p.KDIFTB(dvs)
@@ -242,8 +243,8 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         # maximum evaporation and transpiration rates
         ekl = torch.exp(-kglob * lai)
 
-        r.EVWMX = dvs_mask * e0 * ekl
-        r.EVSMX = dvs_mask * torch.clamp(es0 * ekl, min=0.0)
+        r.EVWMX = torch.where(dvs_mask > 0.0, e0 * ekl, e0)
+        r.EVSMX = torch.where(dvs_mask > 0.0, torch.clamp(es0 * ekl, min=0.0), es0)
         r.TRAMX = dvs_mask * et0_crop * (1.0 - ekl) * rf_tramx_co2
 
         # Critical soil moisture
@@ -665,8 +666,9 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         # reduction factor for CO2 on TRAMX
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
-        # If DVS < 0, the crop has not yet emerged, so we zero the rates using a mask
-        # A mask (1 if DVS >= 0, 0 if DVS < 0)
+        # Before emergence there is no canopy shading yet, so potential soil and
+        # water evaporation follow the weather forcings directly while canopy
+        # transpiration is forced to zero.
         dvs_mask = (dvs >= 0.0).to(dtype=self.dtype)
         # Layered mask: (n_layers, *params_shape)
         dvs_mask_layers = dvs_mask.unsqueeze(0).expand(n_layers, *self.params_shape)
@@ -676,8 +678,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         # maximum evaporation and transpiration rates
         kglob = 0.75 * p.KDIFTB(dvs)
         ekl = torch.exp(-kglob * lai)
-        r.EVWMX = dvs_mask * e0 * ekl
-        r.EVSMX = dvs_mask * torch.clamp(es0 * ekl, min=0.0)
+        r.EVWMX = torch.where(dvs_mask > 0.0, e0 * ekl, e0)
+        r.EVSMX = torch.where(dvs_mask > 0.0, torch.clamp(es0 * ekl, min=0.0), es0)
         r.TRAMX = dvs_mask * et0_crop * (1.0 - ekl) * rf_tramx_co2
 
         # Critical soil moisture
