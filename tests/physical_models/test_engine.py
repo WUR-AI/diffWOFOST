@@ -246,7 +246,7 @@ class TestEngine:
 
     def test_config_with_crop_components_nn_model(self):
         class TestPhenology(DVS_Phenology):
-            def initialize(self, day, kiosk, parvalues, nn_model, shape=None):
+            def initialize(self, day, kiosk, nn_model, shape=None):
                 self._initialized = True
 
         nn_model = torch.nn.Module()
