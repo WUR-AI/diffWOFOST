@@ -26,8 +26,9 @@ from diffwofost.physical_models.utils import Afgen
 class WaterbalancePP(SimulationObject):
     """Fake waterbalance for simulation under potential production.
 
-    Keeps the soil moisture content at field capacity and only accumulates crop transpiration
-    and soil evaporation rates through the course of the simulation
+    Keeps the soil moisture content at field capacity and only accumulates
+    crop transpiration and soil evaporation rates through the course of the
+    simulation.
     """
 
     # Counter for Days-Dince-Last-Rain
@@ -50,9 +51,11 @@ class WaterbalancePP(SimulationObject):
     def initialize(self, day, kiosk, parvalues, shape: tuple | torch.Size | None = None):
         """Initialize the potential-production waterbalance.
 
-        :param day: start date of the simulation
-        :param kiosk: variable kiosk of this PCSE  instance
-        :param parvalues: ParameterProvider object containing all parameters
+        Args:
+            day: start date of the simulation
+            kiosk: variable kiosk of this PCSE instance
+            parvalues: ParameterProvider object containing all parameters
+            shape: optional shape for state and rate tensors (default None for scalar)
 
         This waterbalance keeps the soil moisture always at field capacity. Therefore
         `WaterbalancePP` has only one parameter (`SMFCF`: the field capacity of the
