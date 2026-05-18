@@ -129,12 +129,19 @@ class Engine(PcseEngine):
         self.weatherdataprovider = weatherdataprovider
         self.drv = self._get_driving_variables(self.day)
 
+        # Call AgroManagement module for management actions at initialization
+        self.agromanager(self.day, None)
+
         # Component for simulation of soil processes
         if self.mconf.SOIL is not None:
             self.soil = self.mconf.SOIL(self.day, self.kiosk, parameterprovider)
-
-        # Call AgroManagement module for management actions at initialization
-        self.agromanager(self.day, self.drv)
+        if self.mconf.CROP is not None:
+            crop_kwargs = {}
+            if self.mconf.CROP_COMPONENTS:
+                crop_kwargs["component_overrides"] = self.mconf.CROP_COMPONENTS
+            self.crop = self.mconf.CROP(
+                self.day, self.kiosk, self.parameterprovider, shape=self._shape, **crop_kwargs
+            )
 
         # Calculate initial rates
         self.calc_rates(self.day, self.drv)
@@ -159,24 +166,8 @@ class Engine(PcseEngine):
         """
         self.logger.debug(f"Received signal 'CROP_START' on day {day}")
 
-        if self.crop is not None:
-            raise RuntimeError(
-                "A CROP_START signal was received while self.cropsimulation still holds a valid "
-                "cropsimulation object. It looks like you forgot to send a CROP_FINISH signal with "
-                "option crop_delete=True"
-            )
-
         self.parameterprovider.set_active_crop(
             crop_name, variety_name, crop_start_type, crop_end_type
-        )
-        crop_kwargs = {"shape": self._shape}
-        if self.mconf.CROP_COMPONENTS:
-            crop_kwargs["component_overrides"] = self.mconf.CROP_COMPONENTS
-        self.crop = self.mconf.CROP(
-            day,
-            self.kiosk,
-            self.parameterprovider,
-            **crop_kwargs,
         )
 
     def _finish_cropsimulation(self, day):
@@ -189,12 +180,6 @@ class Engine(PcseEngine):
 
         self.crop.finalize(day)
         self._save_summary_output()
-
-        if self.flag_crop_delete:
-            self.flag_crop_delete = False
-            self.crop._delete()
-            self.crop = None
-            gc.collect()
 
 
 def _get_params_shape(parameterprovider):
