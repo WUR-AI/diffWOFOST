@@ -6,6 +6,7 @@ parameters and external state handling intact.
 """
 
 import gc
+from collections.abc import MutableMapping
 from pathlib import Path
 import torch
 from pcse import signals
@@ -26,6 +27,7 @@ class Engine(PcseEngine):
     """
 
     mconf = Instance(Configuration)
+    parameterprovider = Instance(MutableMapping)
 
     def __init__(
         self,
@@ -166,9 +168,10 @@ class Engine(PcseEngine):
         """
         self.logger.debug(f"Received signal 'CROP_START' on day {day}")
 
-        self.parameterprovider.set_active_crop(
-            crop_name, variety_name, crop_start_type, crop_end_type
-        )
+        if hasattr(self.parameterprovider, "set_active_crop"):
+            self.parameterprovider.set_active_crop(
+                crop_name, variety_name, crop_start_type, crop_end_type
+            )
 
     def _finish_cropsimulation(self, day):
         """Finalize and optionally delete the active crop simulation.
@@ -200,7 +203,7 @@ def _get_params_shape(parameterprovider):
         ValueError: If tensor parameters do not share a common shape.
     """
     shape = ()
-    for paramname in parameterprovider._unique_parameters:
+    for paramname in parameterprovider.keys():
         param = parameterprovider[paramname]
         if isinstance(param, torch.Tensor):
             # We need to drop the last dimension from the Afgen table parameters
