@@ -1,7 +1,7 @@
 import datetime
 from pcse.base import SimulationObject
 from pcse.traitlets import Instance
-from diffwofost.physical_models.base.simulationobject import initialize_components
+from diffwofost.physical_models.base.simulationobject import initialize_all_components
 from diffwofost.physical_models.crop.partitioning import DVS_Partitioning as Partitioning
 from diffwofost.physical_models.crop.phenology import DVS_Phenology as Phenology
 from diffwofost.physical_models.override import ComponentOverride
@@ -56,7 +56,7 @@ def test_initialize_components():
 
     simulation_object = TestSimulationObject(day, kiosk)
 
-    initialize_components(
+    initialize_all_components(
         simulation_object=simulation_object,
         day=day,
         kiosk=kiosk,
@@ -109,7 +109,7 @@ def test_initialize_components_with_overrides():
         ),
     }
 
-    initialize_components(
+    initialize_all_components(
         simulation_object=simulation_object,
         day=day,
         kiosk=kiosk,

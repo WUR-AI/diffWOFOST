@@ -2,7 +2,7 @@ from pcse.base import SimulationObject
 from diffwofost.physical_models.override import ComponentOverride
 
 
-def initialize_component(
+def initialize_single_component(
     component_spec: ComponentOverride,
     day,
     kiosk,
@@ -40,7 +40,7 @@ def initialize_component(
     return component_class(day, kiosk, parvalues, **constructor_kwargs)
 
 
-def initialize_components(
+def initialize_all_components(
     simulation_object: SimulationObject,
     day,
     kiosk,
@@ -69,7 +69,7 @@ def initialize_components(
             component_spec = ComponentOverride.from_default(default_spec)
         else:
             component_spec = component_overrides[component_name]
-        component = initialize_component(
+        component = initialize_single_component(
             component_spec,
             day,
             kiosk,

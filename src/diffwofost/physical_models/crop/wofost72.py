@@ -11,7 +11,7 @@ from pcse.traitlets import Unicode
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
-from diffwofost.physical_models.base.simulationobject import initialize_components
+from diffwofost.physical_models.base.simulationobject import initialize_all_components
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.crop.assimilation import WOFOST72_Assimilation as Assimilation
 from diffwofost.physical_models.crop.evapotranspiration import (
@@ -192,7 +192,7 @@ class Wofost72(SimulationObject):
 
         # Initialize components of the crop
         # This will add attributes to self for each component, e.g. self.pheno, self.part, etc.
-        initialize_components(
+        initialize_all_components(
             self,
             day,
             kiosk,
