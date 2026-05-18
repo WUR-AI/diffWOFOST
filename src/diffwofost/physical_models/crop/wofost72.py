@@ -302,6 +302,7 @@ class Wofost72(SimulationObject):
         # because only the phenology is running.
         # TODO: revisit this when fixing #60
         if torch.all(self.pheno.states.STAGE == 0):
+            self.evtra(day, drv)
             return
 
         # Potential assimilation

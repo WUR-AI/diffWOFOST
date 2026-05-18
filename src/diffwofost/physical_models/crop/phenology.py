@@ -389,11 +389,14 @@ class DVS_Phenology(SimulationObject):
         STAGE = Tensor(-99.0)
 
     def initialize(self, day, kiosk, parvalues, shape=None):
-        """:param day: start date of the simulation
+        """Initialize the DVS_Phenology module.
 
-        :param kiosk: variable kiosk of this PCSE  instance
-        :param parvalues: `ParameterProvider` object providing parameters as
+        Args:
+            day: start date of the simulation
+            kiosk: variable kiosk of this PCSE instance
+            parvalues: `ParameterProvider` object providing parameters as
                 key/value pairs
+            shape: optional shape for state and rate tensors (default None for scalar)
         """
         self._device = ComputeConfig.get_device()
         self._dtype = ComputeConfig.get_dtype()

@@ -12,6 +12,7 @@ from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import PartioningFactors
 from diffwofost.physical_models.crop.wofost72 import Wofost72
+from diffwofost.physical_models.soil.classic_waterbalance import WaterbalanceFD
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.utils import EngineTestHelper
 from diffwofost.physical_models.utils import _afgen_y_mask
@@ -24,6 +25,27 @@ wofost72_config = Configuration(
     CROP=Wofost72,
     SOIL=WaterbalancePP,
     OUTPUT_VARS=["DVS", "LAI", "RD", "TAGP", "TRA", "TWLV", "TWRT", "TWSO", "TWST"],
+)
+
+wofost72_fd_config = Configuration(
+    CROP=Wofost72,
+    SOIL=WaterbalanceFD,
+    OUTPUT_VARS=[
+        "DVS",
+        "EVS",
+        "LAI",
+        "RD",
+        "SM",
+        "TAGP",
+        "TRA",
+        "TWLV",
+        "TWRT",
+        "TWSO",
+        "TWST",
+        "W",
+        "WLOW",
+        "WWLOW",
+    ],
 )
 
 # All output variables used in the differentiable model for gradient tests (mirrors OUTPUT_VARS)
@@ -182,7 +204,7 @@ class DiffWofost72(torch.nn.Module):
 
 
 @pytest.mark.usefixtures("fast_mode")
-class TestWofost72:
+class TestWofost72_PP:
     wofost72_data_urls = [
         f"{phy_data_folder}/test_potentialproduction_wofost72_{i:02d}.yaml"
         for i in range(1, 45)  # there are 44 test files
@@ -683,6 +705,87 @@ class TestWofost72:
                     abs(reference[var] - model[var]) < precision
                     for var, precision in expected_precision.items()
                 )
+
+
+@pytest.mark.usefixtures("fast_mode")
+class TestWofost72_WLP:
+    wofost72_wlp_data_urls = [
+        f"{phy_data_folder}/test_waterlimitedproduction_wofost72_{i:02d}.yaml"
+        for i in range(1, 45)  # there are 44 test files
+    ]
+
+    @pytest.mark.parametrize("test_data_url", wofost72_wlp_data_urls)
+    def test_wofost72_runs_with_waterbalance_fd(self, test_data_url, device):
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        engine = EngineTestHelper(config=wofost72_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        assert isinstance(engine.soil, WaterbalanceFD)
+        assert actual_results
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
+            assert all(
+                abs(reference[var] - model_cpu[var]) < precision
+                for var, precision in expected_precision.items()
+            )
+
+    def test_wofost72_runs_with_waterbalance_fd_and_batched_parameters(self, device):
+        test_data_url = f"{phy_data_folder}/test_waterlimitedproduction_wofost72_05.yaml"
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "SMFCF", "SMW", "SM0"]
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        ) = prepare_engine_input(test_data, crop_model_params)
+
+        for param in ("SPAN", "TDWI", "SMFCF", "SMW", "SM0"):
+            crop_model_params_provider.set_override(
+                param, crop_model_params_provider[param].repeat(3), check=False
+            )
+
+        engine = EngineTestHelper(config=wofost72_fd_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        assert isinstance(engine.soil, WaterbalanceFD)
+        assert actual_results
+        assert all(
+            actual_results[-1][name].shape == (3,) for name in wofost72_fd_config.OUTPUT_VARS
+        )
+        assert all(
+            actual_results[-1][name].device.type == device
+            for name in wofost72_fd_config.OUTPUT_VARS
+        )
 
 
 @pytest.mark.usefixtures("fast_mode")
