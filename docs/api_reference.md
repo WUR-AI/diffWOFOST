@@ -24,6 +24,12 @@ hide:
 
 ::: diffwofost.physical_models.crop.evapotranspiration.Evapotranspiration
 
+## **Soil modules**
+
+::: diffwofost.physical_models.soil.classic_waterbalance.WaterbalancePP
+
+::: diffwofost.physical_models.soil.classic_waterbalance.WaterbalanceFD
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration
