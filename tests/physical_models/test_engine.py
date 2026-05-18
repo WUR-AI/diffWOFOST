@@ -159,7 +159,7 @@ class TestEngine:
         with pytest.raises(RuntimeError, match="A CROP_START signal was received"):
             engine._on_CROP_START(engine.day)
 
-    def test_finish_cropsimulation_deletes_crop_when_requested(self):
+    def test_finish_cropsimulation_does_not_delete_crop(self):
         _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             _get_engine_inputs()
         )
@@ -169,35 +169,11 @@ class TestEngine:
         crop.finalize = Mock()
         crop._delete = Mock()
         engine.flag_crop_finish = True
-        engine.flag_crop_delete = True
         engine._save_summary_output = Mock()
 
         engine._finish_cropsimulation(date(2000, 1, 1))
 
         assert engine.flag_crop_finish is False
-        assert engine.flag_crop_delete is False
-        crop.finalize.assert_called_once_with(date(2000, 1, 1))
-        engine._save_summary_output.assert_called_once_with()
-        crop._delete.assert_called_once_with()
-        assert engine.crop is None
-
-    def test_finish_cropsimulation_keeps_crop_when_not_deleting(self):
-        _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            _get_engine_inputs()
-        )
-        engine = Engine(config=config)
-        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
-        crop = engine.crop
-        crop.finalize = Mock()
-        crop._delete = Mock()
-        engine.flag_crop_finish = True
-        engine.flag_crop_delete = False
-        engine._save_summary_output = Mock()
-
-        engine._finish_cropsimulation(date(2000, 1, 1))
-
-        assert engine.flag_crop_finish is False
-        assert engine.flag_crop_delete is False
         crop.finalize.assert_called_once_with(date(2000, 1, 1))
         engine._save_summary_output.assert_called_once_with()
         crop._delete.assert_not_called()

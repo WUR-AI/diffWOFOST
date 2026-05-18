@@ -73,7 +73,6 @@ class Engine(PcseEngine):
         self.flag_terminate = False
         self.flag_crop_finish = False
         self.flag_crop_start = False
-        self.flag_crop_delete = False
         self.flag_output = False
         self.flag_summary_output = False
 
@@ -152,7 +151,7 @@ class Engine(PcseEngine):
     def _on_CROP_START(
         self, day, crop_name=None, variety_name=None, crop_start_type=None, crop_end_type=None
     ):
-        """Instantiate the crop component after a crop-start signal.
+        """Set active crop parameters for providers that support that.
 
         Args:
             day: Current simulation day.
@@ -162,9 +161,6 @@ class Engine(PcseEngine):
                 signal.
             crop_start_type: Crop start mode used by the parameter provider.
             crop_end_type: Crop end mode used by the parameter provider.
-
-        Raises:
-            RuntimeError: If a crop component is already active.
         """
         self.logger.debug(f"Received signal 'CROP_START' on day {day}")
 
@@ -172,6 +168,20 @@ class Engine(PcseEngine):
             self.parameterprovider.set_active_crop(
                 crop_name, variety_name, crop_start_type, crop_end_type
             )
+
+    def _on_CROP_FINISH(self, day):
+        """Flag finishing of the crop simulation.
+
+        The flag is needed because finishing the crop simulation is deferred to
+        the correct place in the processing loop and is done by the routine
+        _finish_cropsimulation().
+
+        Differently from PCSE, diffWOFOST does not delete the crop simulation instance.
+
+        Args:
+            day: Current simulation day.
+        """
+        self.flag_crop_finish = True
 
     def _finish_cropsimulation(self, day):
         """Finalize and optionally delete the active crop simulation.
