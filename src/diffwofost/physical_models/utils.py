@@ -15,7 +15,6 @@ from collections.abc import Iterable
 import torch
 import yaml
 from pcse import signals
-from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.weather import WeatherDataContainer
 from pcse.base.weather import WeatherDataProvider
 from pcse.settings import settings
@@ -23,6 +22,7 @@ from pcse.traitlets import TraitType
 from pcse.util import doy
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.engine import Engine
+from diffwofost.physical_models.parameter_providers import ParameterProvider
 
 logging.disable(logging.CRITICAL)
 
