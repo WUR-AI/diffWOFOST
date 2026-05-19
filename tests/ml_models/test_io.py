@@ -1,4 +1,3 @@
-import tempfile
 from pathlib import Path
 import torch
 from diffwofost.ml_models import load_model
@@ -47,7 +46,7 @@ def test_partitioning_mlp_uses_stable_default_save_path():
     assert isinstance(restored, PartitioningMLP)
     assert restored.hidden_size == 12
     assert first_path == second_path
-    assert first_path.parent == Path(tempfile.gettempdir()) / "diffwofost-ml-models"
+    assert first_path.parent == Path(__file__).resolve().parents[2] / ".diffwofost-ml-models"
     assert first_path.suffix == ".safetensors"
     _assert_same_partition_outputs(model, restored, dvs)
 

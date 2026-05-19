@@ -1,73 +1,18 @@
 import hashlib
 import importlib
 import json
-import tempfile
 from pathlib import Path
 from safetensors import safe_open
 from safetensors.torch import load_file
 from safetensors.torch import save_file
 from diffwofost.physical_models.config import ComputeConfig
 
-_MODEL_CLASS_MODULE_KEY = "diffwofost.model_module"
-_MODEL_CLASS_NAME_KEY = "diffwofost.model_class"
-_MODEL_INIT_KWARGS_KEY = "diffwofost.init_kwargs"
-
-
-def _normalize_path(path):
-    """Return an absolute resolved path.
-
-    Args:
-        path (str | Path): Input path to normalize.
-
-    Returns:
-        Path: Resolved absolute path.
-    """
-    return Path(path).expanduser().resolve()
-
-
-def _serialize_init_kwargs(init_kwargs):
-    """Serialize model constructor kwargs for safetensors metadata.
-
-    Args:
-        init_kwargs (dict): Constructor keyword arguments.
-
-    Returns:
-        str: JSON-encoded kwargs string.
-    """
-    return json.dumps(init_kwargs, sort_keys=True)
-
-
-def _deserialize_init_kwargs(serialized_kwargs):
-    """Deserialize model constructor kwargs from safetensors metadata.
-
-    Args:
-        serialized_kwargs (str): JSON-encoded constructor kwargs.
-
-    Returns:
-        dict: Decoded constructor keyword arguments.
-    """
-    return json.loads(serialized_kwargs)
-
-
-def _default_model_directory():
-    """Return the default directory used for persisted ML models.
-
-    Returns:
-        Path: Directory under the system temporary folder where models are stored.
-    """
-    return Path(tempfile.gettempdir()) / "diffwofost-ml-models"
-
-
-def _get_model_init_kwargs(model):
-    """Read the constructor kwargs stored on a model instance.
-
-    Args:
-        model (torch.nn.Module): Model instance to inspect.
-
-    Returns:
-        dict: Constructor kwargs used to rebuild the model.
-    """
-    return dict(getattr(model, "init_kwargs", {}))
+# Keep metadata field names explicit so save/load share one stable schema.
+_METADATA_KEYS = {
+    "module": "diffwofost.model_module",
+    "class": "diffwofost.model_class",
+    "init_kwargs": "diffwofost.init_kwargs",
+}
 
 
 def _default_model_filename(model):
@@ -83,7 +28,7 @@ def _default_model_filename(model):
     Returns:
         str: Default safetensors filename for this model structure.
     """
-    init_kwargs = _serialize_init_kwargs(_get_model_init_kwargs(model))
+    init_kwargs = json.dumps(dict(getattr(model, "init_kwargs", {})), sort_keys=True)
     structure_digest = hashlib.sha256(init_kwargs.encode("utf-8")).hexdigest()[:12]
     return f"{model.__class__.__name__.lower()}-{structure_digest}.safetensors"
 
@@ -117,9 +62,12 @@ def _build_safetensors_metadata(model):
         dict: Metadata with module, class, and constructor kwargs.
     """
     return {
-        _MODEL_CLASS_MODULE_KEY: model.__class__.__module__,
-        _MODEL_CLASS_NAME_KEY: model.__class__.__qualname__,
-        _MODEL_INIT_KWARGS_KEY: _serialize_init_kwargs(_get_model_init_kwargs(model)),
+        _METADATA_KEYS["module"]: model.__class__.__module__,
+        _METADATA_KEYS["class"]: model.__class__.__qualname__,
+        _METADATA_KEYS["init_kwargs"]: json.dumps(
+            dict(getattr(model, "init_kwargs", {})),
+            sort_keys=True,
+        ),
     }
 
 
@@ -127,7 +75,7 @@ def save_model(model, path=None, filename=None, directory=None):
     """Persist a torch model with safetensors and constructor metadata.
 
     If no explicit path is provided, the model is saved under a stable default
-    location in the system temporary directory. The default filename depends on
+    location in a hidden repository-local directory. The default filename depends on
     the model class name and stored constructor kwargs so repeated saves of the
     same model structure reuse the same file.
 
@@ -149,11 +97,15 @@ def save_model(model, path=None, filename=None, directory=None):
         raise ValueError("Pass either path or filename/directory, not both.")
 
     if path is None:
-        target_directory = _default_model_directory() if directory is None else Path(directory)
+        target_directory = (
+            Path(__file__).resolve().parents[3] / ".diffwofost-ml-models"
+            if directory is None
+            else Path(directory)
+        )
         target_filename = _default_model_filename(model) if filename is None else filename
         path = Path(target_directory) / target_filename
 
-    path = _normalize_path(path)
+    path = Path(path).expanduser().resolve()
     path.parent.mkdir(parents=True, exist_ok=True)
     tensors = {
         name: tensor.detach().cpu().contiguous() for name, tensor in model.state_dict().items()
@@ -185,10 +137,10 @@ def load_model(path, model_class=None, device=None, dtype=None):
         ValueError: If the stored class does not match the provided
             `model_class`.
     """
-    path = _normalize_path(path)
+    path = Path(path).expanduser().resolve()
     metadata = _load_model_metadata(path)
-    stored_module_name = metadata.get(_MODEL_CLASS_MODULE_KEY)
-    stored_class_name = metadata.get(_MODEL_CLASS_NAME_KEY)
+    stored_module_name = metadata.get(_METADATA_KEYS["module"])
+    stored_class_name = metadata.get(_METADATA_KEYS["class"])
 
     if model_class is None:
         module = importlib.import_module(stored_module_name)
@@ -202,7 +154,7 @@ def load_model(path, model_class=None, device=None, dtype=None):
             f"not {model_class.__module__}.{model_class.__qualname__}."
         )
 
-    init_kwargs = _deserialize_init_kwargs(metadata[_MODEL_INIT_KWARGS_KEY])
+    init_kwargs = json.loads(metadata[_METADATA_KEYS["init_kwargs"]])
     model = model_class(**init_kwargs)
     state_dict = load_file(str(path), device="cpu")
     model.load_state_dict(state_dict)
