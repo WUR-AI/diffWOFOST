@@ -91,9 +91,7 @@ def save_model(model, path=None, filename=None, directory=None):
 
     if path is None:
         target_directory = (
-            Path(__file__).resolve().parents[3] / ".diffwofost-ml-models"
-            if directory is None
-            else Path(directory)
+            Path.cwd().resolve() / ".diffwofost-ml-models" if directory is None else Path(directory)
         )
         target_filename = _default_model_filename(model) if filename is None else filename
         path = Path(target_directory) / target_filename
