@@ -11,6 +11,7 @@ from pcse.traitlets import Unicode
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
+from diffwofost.physical_models.base.simulationobject import initialize_all_components
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.crop.assimilation import WOFOST72_Assimilation as Assimilation
 from diffwofost.physical_models.crop.evapotranspiration import (
@@ -28,8 +29,6 @@ from diffwofost.physical_models.crop.storage_organ_dynamics import (
     WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics,
 )
 from diffwofost.physical_models.traitlets import Tensor
-from diffwofost.physical_models.utils import initialize_component
-from diffwofost.physical_models.utils import normalize_component_overrides
 
 
 class Wofost72(SimulationObject):
@@ -122,7 +121,6 @@ class Wofost72(SimulationObject):
         "storage_organ_dynamics": ("so_dynamics", Storage_Organ_Dynamics),
         "leaf_dynamics": ("lv_dynamics", Leaf_Dynamics),
     }
-    COMPONENT_OVERRIDE_META_KEYS = frozenset({"class", "model", "kwargs"})
 
     @property
     def device(self):
@@ -180,58 +178,28 @@ class Wofost72(SimulationObject):
             shape: Target tensor shape for state and rate variables.
             component_overrides: Optional mapping used to replace one or more
                 internal WOFOST components at construction time.
-
-        The ``component_overrides`` mapping must use the canonical component
-        names from ``COMPONENT_SPECS``, such as ``partitioning``,
-        ``phenology``, ``assimilation``, ``maintenance_respiration``,
-        ``evapotranspiration``, ``root_dynamics``, ``stem_dynamics``,
-        ``storage_organ_dynamics``, and ``leaf_dynamics``.
-
-        Each override entry may be one of the following:
-
-        - ``None``: keep the default component class with no extra arguments.
-        - a ``SimulationObject`` subclass: replace only the component class.
-        - a dict containing reserved keys:
-          ``class`` for the replacement component class and ``model`` for an
-          optional ML model object.
-        - any additional keys in that dict are forwarded as keyword arguments
-          to the component constructor. A nested ``kwargs`` dict is also
-          accepted for backward-compatible explicit constructor kwargs.
-
-        ML-backed overrides are supported by passing a ``model`` object in the
-        override entry. When no model is provided, the component is constructed
-        with ``(day, kiosk, parvalues, shape=..., **kwargs)`` so the component
-        reads crop parameters from the ``ParameterProvider`` as usual. When a
-        model is provided, the component is constructed with
-        ``(day, kiosk, model, shape=..., **kwargs)`` instead. This allows a
-        replacement component such as a neural partitioning module to consume a
-        trained or trainable PyTorch model while the rest of WOFOST remains
-        unchanged.
+                The ``component_overrides`` is a dictionary containing:
+                - "component_class": The class to use for the component.
+                - "model": The model to use for the component, if specified in the override.
+                - "kwargs": Any additional keyword arguments to pass to the component
+                constructor.
         """
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(
             kiosk, publish=["DMI", "ADMI", "REALLOC_LV", "REALLOC_ST", "REALLOC_SO"], shape=shape
         )
         self.kiosk = kiosk
-        component_overrides = normalize_component_overrides(
-            component_overrides, self.COMPONENT_SPECS, self.COMPONENT_OVERRIDE_META_KEYS
-        )
 
         # Initialize components of the crop
-        for component_name, (attribute_name, _) in self.COMPONENT_SPECS.items():
-            setattr(
-                self,
-                attribute_name,
-                initialize_component(
-                    component_name,
-                    self.COMPONENT_SPECS,
-                    day,
-                    kiosk,
-                    parvalues,
-                    shape=shape,
-                    component_overrides=component_overrides,
-                ),
-            )
+        # This will add attributes to self for each component, e.g. self.pheno, self.part, etc.
+        initialize_all_components(
+            self,
+            day,
+            kiosk,
+            parvalues,
+            shape=shape,
+            component_overrides=component_overrides,
+        )
 
         # Initial total (living+dead) above-ground biomass of the crop
         TAGP = self.kiosk.TWLV + self.kiosk.TWST + self.kiosk.TWSO

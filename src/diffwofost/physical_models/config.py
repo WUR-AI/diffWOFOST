@@ -1,3 +1,4 @@
+import inspect
 from dataclasses import dataclass
 from dataclasses import field
 from pathlib import Path
@@ -139,12 +140,13 @@ class ComputeConfig:
         cls._initialize_defaults()
 
 
-@dataclass(frozen=True)
+@dataclass
 class Configuration:
     """Class to store model configuration from a PCSE configuration files."""
 
     CROP: type[SimulationObject]
-    CROP_COMPONENTS: dict = field(default_factory=dict)
+    CROP_COMPONENTS: dict | None = None
+    CROP_NN_MODEL: type[torch.nn.Module] | None = None
     SOIL: type[SimulationObject] | None = None
     AGROMANAGEMENT: type[AncillaryObject] = AgroManager
     OUTPUT_VARS: list = field(default_factory=list)
@@ -155,6 +157,31 @@ class Configuration:
     OUTPUT_WEEKDAY: int = 0
     model_config_file: str | Path | None = None
     description: str | None = None
+
+    def __post_init__(self):
+        """Validate config data based on CROP.initialize signature."""
+        sig_arguments = inspect.signature(self.CROP.initialize).parameters
+
+        # Nullify CROP_NN_MODEL and CROP_COMPONENTS, if not compatible with CROP.initialize
+        for field_value, sig_key, attr_name in [
+            (self.CROP_NN_MODEL, "nn_model", "CROP_NN_MODEL"),
+            (self.CROP_COMPONENTS, "component_overrides", "CROP_COMPONENTS"),
+        ]:
+            if field_value is not None and sig_key not in sig_arguments:
+                setattr(self, attr_name, None)
+
+        # Validate component overrides have "class" key with non-None value
+        for component_name, override in (self.CROP_COMPONENTS or {}).items():
+            self._validate_component_override(component_name, override)
+
+    @staticmethod
+    def _validate_component_override(component_name: str, override) -> None:
+        if not isinstance(override, dict) or not override:
+            raise ValueError(f"Component override for '{component_name}' must be a non-empty dict")
+        if "class" not in override:
+            raise ValueError(f"Component override '{component_name}' must have a 'class' key")
+        if override["class"] is None:
+            raise ValueError(f"Component override '{component_name}' 'class' cannot be None")
 
     @classmethod
     def from_pcse_config_file(cls, filename: str | Path) -> Self:
