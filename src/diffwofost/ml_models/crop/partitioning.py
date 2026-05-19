@@ -1,12 +1,13 @@
 import torch
 from pcse.traitlets import Instance
+from diffwofost.ml_models.io import SafeTensorModelMixin
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.crop.partitioning import PartioningFactors
 from diffwofost.physical_models.crop.partitioning import _BaseDVSPartitioning
 from diffwofost.physical_models.utils import _broadcast_to
 
 
-class PartitioningMLP(torch.nn.Module):
+class PartitioningMLP(SafeTensorModelMixin, torch.nn.Module):
     """One-hidden-layer MLP for DVS-based partitioning.
 
     `PartitioningMLP` maps the crop development stage `DVS` directly to the
@@ -26,6 +27,7 @@ class PartitioningMLP(torch.nn.Module):
             hidden_size (int): Width of the hidden layer. Defaults to 8.
         """
         super().__init__()
+        self.hidden_size = hidden_size
 
         self.network = torch.nn.Sequential(
             torch.nn.Linear(1, hidden_size),
@@ -40,6 +42,10 @@ class PartitioningMLP(torch.nn.Module):
             self.network[2].bias.zero_()
 
         self.to(device=ComputeConfig.get_device(), dtype=ComputeConfig.get_dtype())
+
+    def get_init_kwargs(self):
+        """Return constructor arguments needed to rebuild this model."""
+        return {"hidden_size": self.hidden_size}
 
     def forward(self, dvs):
         """Compute partitioning factors from the development stage.
@@ -73,7 +79,7 @@ class PartitioningMLP(torch.nn.Module):
         )
 
 
-class PartitioningNN(torch.nn.Module):
+class PartitioningNN(SafeTensorModelMixin, torch.nn.Module):
     """DVS-based partitioning network with lifted stage features and two heads.
 
     `PartitioningNN` is a more structured alternative to `PartitioningMLP`.
@@ -97,6 +103,7 @@ class PartitioningNN(torch.nn.Module):
             hidden_size (int): Width of the shared hidden layers. Defaults to 32.
         """
         super().__init__()
+        self.hidden_size = hidden_size
 
         head_hidden_size = max(hidden_size // 2, 8)
         self.trunk = torch.nn.Sequential(
@@ -131,6 +138,10 @@ class PartitioningNN(torch.nn.Module):
             self.shoot_head[2].bias.zero_()
 
         self.to(device=ComputeConfig.get_device(), dtype=ComputeConfig.get_dtype())
+
+    def get_init_kwargs(self):
+        """Return constructor arguments needed to rebuild this model."""
+        return {"hidden_size": self.hidden_size}
 
     def forward(self, dvs):
         """Compute partitioning factors from the development stage.
