@@ -14,6 +14,7 @@ from pcse.engine import Engine as PcseEngine
 from pcse.timer import Timer
 from pcse.traitlets import Instance
 from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.override import normalize_components
 from diffwofost.physical_models.variablekiosk import VariableKiosk
 
 
@@ -52,6 +53,14 @@ class Engine(PcseEngine):
             self.mconf = Configuration.from_pcse_config_file(config)
         else:
             self.mconf = config
+
+        # Get the arguments of the CROP class's initialize method
+        self._components_overrides = None
+        if self.mconf.CROP_COMPONENTS is not None:
+            self._components_overrides = normalize_components(
+                self.mconf.CROP_COMPONENTS,
+                self.mconf.CROP.COMPONENT_SPECS,
+            )
 
     def _reset_runtime_state(self):
         """Clear state from a previous simulation run.
@@ -169,15 +178,18 @@ class Engine(PcseEngine):
         self.parameterprovider.set_active_crop(
             crop_name, variety_name, crop_start_type, crop_end_type
         )
+
+        crop_args = [day, self.kiosk, self.parameterprovider]
         crop_kwargs = {"shape": self._shape}
+
+        if self.mconf.CROP_NN_MODEL is not None:
+            # crop_nn_model initialize doesnot accpet parameterprovider
+            crop_args = [day, self.kiosk, self.mconf.CROP_NN_MODEL]
+
         if self.mconf.CROP_COMPONENTS:
-            crop_kwargs["component_overrides"] = self.mconf.CROP_COMPONENTS
-        self.crop = self.mconf.CROP(
-            day,
-            self.kiosk,
-            self.parameterprovider,
-            **crop_kwargs,
-        )
+            crop_kwargs["component_overrides"] = self._components_overrides
+
+        self.crop = self.mconf.CROP(*crop_args, **crop_kwargs)
 
     def _finish_cropsimulation(self, day):
         """Finalize and optionally delete the active crop simulation.
