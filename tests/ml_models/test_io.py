@@ -2,6 +2,7 @@ import tempfile
 from pathlib import Path
 import torch
 from diffwofost.ml_models import load_model
+from diffwofost.ml_models import save_model
 from diffwofost.ml_models.crop.partitioning import PartitioningMLP
 from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import ComputeConfig
@@ -26,8 +27,8 @@ def test_partitioning_nn_round_trips_through_safetensors(tmp_path):
     model = PartitioningNN(hidden_size=16)
     _fill_parameters(model, scale=10.0)
 
-    path = model.save_model(tmp_path / "partitioning_nn.safetensors")
-    restored = PartitioningNN.load_model(path)
+    path = save_model(model, tmp_path / "partitioning_nn.safetensors")
+    restored = load_model(path, model_class=PartitioningNN)
     dvs = torch.tensor([0.0, 0.5, 1.0], dtype=ComputeConfig.get_dtype())
 
     assert restored.hidden_size == 16
@@ -38,8 +39,8 @@ def test_partitioning_mlp_uses_stable_default_save_path():
     model = PartitioningMLP(hidden_size=12)
     _fill_parameters(model, scale=20.0)
 
-    first_path = model.save_model()
-    second_path = model.save_model()
+    first_path = save_model(model)
+    second_path = save_model(model)
     restored = load_model(first_path)
     dvs = torch.tensor([0.2, 1.4], dtype=ComputeConfig.get_dtype())
 
@@ -55,7 +56,11 @@ def test_partitioning_mlp_can_override_default_save_name(tmp_path):
     model = PartitioningMLP(hidden_size=12)
     _fill_parameters(model, scale=20.0)
 
-    path = model.save_model(directory=tmp_path, filename="partitioning_mlp_custom.safetensors")
+    path = save_model(
+        model,
+        directory=tmp_path,
+        filename="partitioning_mlp_custom.safetensors",
+    )
     restored = load_model(path)
     dvs = torch.tensor([0.2, 1.4], dtype=ComputeConfig.get_dtype())
 

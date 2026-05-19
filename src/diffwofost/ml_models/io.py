@@ -3,8 +3,6 @@ import importlib
 import json
 import tempfile
 from pathlib import Path
-from typing import cast
-import torch
 from safetensors import safe_open
 from safetensors.torch import load_file
 from safetensors.torch import save_file
@@ -16,28 +14,92 @@ _MODEL_INIT_KWARGS_KEY = "diffwofost.init_kwargs"
 
 
 def _normalize_path(path):
+    """Return an absolute resolved path.
+
+    Args:
+        path (str | Path): Input path to normalize.
+
+    Returns:
+        Path: Resolved absolute path.
+    """
     return Path(path).expanduser().resolve()
 
 
 def _serialize_init_kwargs(init_kwargs):
+    """Serialize model constructor kwargs for safetensors metadata.
+
+    Args:
+        init_kwargs (dict): Constructor keyword arguments.
+
+    Returns:
+        str: JSON-encoded kwargs string.
+    """
     return json.dumps(init_kwargs, sort_keys=True)
 
 
 def _deserialize_init_kwargs(serialized_kwargs):
+    """Deserialize model constructor kwargs from safetensors metadata.
+
+    Args:
+        serialized_kwargs (str): JSON-encoded constructor kwargs.
+
+    Returns:
+        dict: Decoded constructor keyword arguments.
+    """
     return json.loads(serialized_kwargs)
 
 
 def _default_model_directory():
+    """Return the default directory used for persisted ML models.
+
+    Returns:
+        Path: Directory under the system temporary folder where models are stored.
+    """
     return Path(tempfile.gettempdir()) / "diffwofost-ml-models"
 
 
+def _get_model_init_kwargs(model):
+    """Read the constructor kwargs stored on a model instance.
+
+    Args:
+        model (torch.nn.Module): Model instance to inspect.
+
+    Returns:
+        dict: Constructor kwargs used to rebuild the model.
+    """
+    return dict(getattr(model, "init_kwargs", {}))
+
+
 def _default_model_filename(model):
-    init_kwargs = _serialize_init_kwargs(model.get_init_kwargs())
+    """Build a stable default filename from the model structure.
+
+    The filename depends on the model class name and serialized constructor
+    kwargs, so repeated saves of the same model structure reuse the same path
+    unless a custom name is provided explicitly.
+
+    Args:
+        model (torch.nn.Module): Model instance to name.
+
+    Returns:
+        str: Default safetensors filename for this model structure.
+    """
+    init_kwargs = _serialize_init_kwargs(_get_model_init_kwargs(model))
     structure_digest = hashlib.sha256(init_kwargs.encode("utf-8")).hexdigest()[:12]
     return f"{model.__class__.__name__.lower()}-{structure_digest}.safetensors"
 
 
 def _load_model_metadata(path):
+    """Load metadata stored in a safetensors file.
+
+    Args:
+        path (str | Path): Path to the safetensors file.
+
+    Returns:
+        dict: Metadata dictionary stored alongside the tensors.
+
+    Raises:
+        ValueError: If the file does not contain metadata.
+    """
     with safe_open(str(path), framework="pt", device="cpu") as handle:
         metadata = handle.metadata()
     if metadata is None:
@@ -45,73 +107,106 @@ def _load_model_metadata(path):
     return metadata
 
 
-class SafeTensorModelMixin:
-    """Reusable safetensors-based persistence for diffWOFOST torch modules."""
+def _build_safetensors_metadata(model):
+    """Build the metadata needed to reconstruct a saved model.
 
-    def get_init_kwargs(self):
-        """Return constructor arguments needed to rebuild this model."""
-        return {}
+    Args:
+        model (torch.nn.Module): Model instance to describe.
 
-    def _build_safetensors_metadata(self):
-        return {
-            _MODEL_CLASS_MODULE_KEY: self.__class__.__module__,
-            _MODEL_CLASS_NAME_KEY: self.__class__.__qualname__,
-            _MODEL_INIT_KWARGS_KEY: _serialize_init_kwargs(self.get_init_kwargs()),
-        }
-
-    def save_model(self, path=None, filename=None, directory=None):
-        """Persist the model weights and minimal constructor metadata."""
-        torch_model = cast(torch.nn.Module, self)
-        if path is not None and (filename is not None or directory is not None):
-            raise ValueError("Pass either path or filename/directory, not both.")
-
-        if path is None:
-            target_directory = _default_model_directory() if directory is None else Path(directory)
-            target_filename = _default_model_filename(self) if filename is None else filename
-            path = Path(target_directory) / target_filename
-
-        path = _normalize_path(path)
-        path.parent.mkdir(parents=True, exist_ok=True)
-        tensors = {
-            name: tensor.detach().cpu().contiguous()
-            for name, tensor in torch_model.state_dict().items()
-        }
-        save_file(tensors, str(path), metadata=self._build_safetensors_metadata())
-        return path
-
-    @classmethod
-    def load_model(cls, path, device=None, dtype=None):
-        """Reconstruct a model instance from a safetensors file."""
-        path = _normalize_path(path)
-        metadata = _load_model_metadata(path)
-        module_name = metadata.get(_MODEL_CLASS_MODULE_KEY)
-        class_name = metadata.get(_MODEL_CLASS_NAME_KEY)
-        if module_name != cls.__module__ or class_name != cls.__qualname__:
-            raise ValueError(
-                f"Safetensors file {path} stores {module_name}.{class_name}, "
-                f"not {cls.__module__}.{cls.__qualname__}."
-            )
-
-        init_kwargs = _deserialize_init_kwargs(metadata[_MODEL_INIT_KWARGS_KEY])
-        model = cls(**init_kwargs)
-        torch_model = cast(torch.nn.Module, model)
-        state_dict = load_file(str(path), device="cpu")
-        torch_model.load_state_dict(state_dict)
-        target_device = ComputeConfig.get_device() if device is None else device
-        target_dtype = ComputeConfig.get_dtype() if dtype is None else dtype
-        torch_model.to(device=target_device, dtype=target_dtype)
-        return model
+    Returns:
+        dict: Metadata with module, class, and constructor kwargs.
+    """
+    return {
+        _MODEL_CLASS_MODULE_KEY: model.__class__.__module__,
+        _MODEL_CLASS_NAME_KEY: model.__class__.__qualname__,
+        _MODEL_INIT_KWARGS_KEY: _serialize_init_kwargs(_get_model_init_kwargs(model)),
+    }
 
 
-def load_model(path, device=None, dtype=None):
-    """Load a diffWOFOST model from safetensors metadata without pickle."""
+def save_model(model, path=None, filename=None, directory=None):
+    """Persist a torch model with safetensors and constructor metadata.
+
+    If no explicit path is provided, the model is saved under a stable default
+    location in the system temporary directory. The default filename depends on
+    the model class name and stored constructor kwargs so repeated saves of the
+    same model structure reuse the same file.
+
+    Args:
+        model (torch.nn.Module): Model instance to persist.
+        path (str | Path | None): Full target path. When provided, `filename`
+            and `directory` must be omitted.
+        filename (str | None): Optional custom filename used with `directory`.
+        directory (str | Path | None): Optional custom directory used with
+            `filename` or the default filename.
+
+    Returns:
+        Path: Path of the saved safetensors file.
+
+    Raises:
+        ValueError: If `path` is combined with `filename` or `directory`.
+    """
+    if path is not None and (filename is not None or directory is not None):
+        raise ValueError("Pass either path or filename/directory, not both.")
+
+    if path is None:
+        target_directory = _default_model_directory() if directory is None else Path(directory)
+        target_filename = _default_model_filename(model) if filename is None else filename
+        path = Path(target_directory) / target_filename
+
+    path = _normalize_path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tensors = {
+        name: tensor.detach().cpu().contiguous() for name, tensor in model.state_dict().items()
+    }
+    save_file(tensors, str(path), metadata=_build_safetensors_metadata(model))
+    return path
+
+
+def load_model(path, model_class=None, device=None, dtype=None):
+    """Load a diffWOFOST model from a safetensors file.
+
+    The model class is discovered from metadata by default. A caller can also
+    provide `model_class` explicitly to validate that the stored class matches
+    the expected one.
+
+    Args:
+        path (str | Path): Path to the saved safetensors file.
+        model_class (type[torch.nn.Module] | None): Expected model class. When
+            omitted, the class is resolved from the stored metadata.
+        device (str | torch.device | None): Target device for the restored
+            model. Defaults to the active `ComputeConfig` device.
+        dtype (torch.dtype | None): Target dtype for the restored model.
+            Defaults to the active `ComputeConfig` dtype.
+
+    Returns:
+        torch.nn.Module: Restored model instance with loaded parameters.
+
+    Raises:
+        ValueError: If the stored class does not match the provided
+            `model_class`.
+    """
     path = _normalize_path(path)
     metadata = _load_model_metadata(path)
-    module = importlib.import_module(metadata[_MODEL_CLASS_MODULE_KEY])
-    model_class = getattr(module, metadata[_MODEL_CLASS_NAME_KEY])
-    if not issubclass(model_class, SafeTensorModelMixin):
-        raise TypeError(
-            f"Model class {model_class.__module__}.{model_class.__qualname__} "
-            "does not support safetensors persistence."
+    stored_module_name = metadata.get(_MODEL_CLASS_MODULE_KEY)
+    stored_class_name = metadata.get(_MODEL_CLASS_NAME_KEY)
+
+    if model_class is None:
+        module = importlib.import_module(stored_module_name)
+        model_class = getattr(module, stored_class_name)
+    elif (
+        stored_module_name != model_class.__module__
+        or stored_class_name != model_class.__qualname__
+    ):
+        raise ValueError(
+            f"Safetensors file {path} stores {stored_module_name}.{stored_class_name}, "
+            f"not {model_class.__module__}.{model_class.__qualname__}."
         )
-    return model_class.load_model(path, device=device, dtype=dtype)
+
+    init_kwargs = _deserialize_init_kwargs(metadata[_MODEL_INIT_KWARGS_KEY])
+    model = model_class(**init_kwargs)
+    state_dict = load_file(str(path), device="cpu")
+    model.load_state_dict(state_dict)
+    target_device = ComputeConfig.get_device() if device is None else device
+    target_dtype = ComputeConfig.get_dtype() if dtype is None else dtype
+    model.to(device=target_device, dtype=target_dtype)
+    return model
