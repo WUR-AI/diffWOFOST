@@ -7,13 +7,6 @@ from safetensors.torch import load_file
 from safetensors.torch import save_file
 from diffwofost.physical_models.config import ComputeConfig
 
-# Keep metadata field names explicit so save/load share one stable schema.
-_METADATA_KEYS = {
-    "module": "diffwofost.model_module",
-    "class": "diffwofost.model_class",
-    "init_kwargs": "diffwofost.init_kwargs",
-}
-
 
 def _default_model_filename(model):
     """Build a stable default filename from the model structure.
@@ -62,9 +55,9 @@ def _build_safetensors_metadata(model):
         dict: Metadata with module, class, and constructor kwargs.
     """
     return {
-        _METADATA_KEYS["module"]: model.__class__.__module__,
-        _METADATA_KEYS["class"]: model.__class__.__qualname__,
-        _METADATA_KEYS["init_kwargs"]: json.dumps(
+        "diffwofost.model_module": model.__class__.__module__,
+        "diffwofost.model_class": model.__class__.__qualname__,
+        "diffwofost.init_kwargs": json.dumps(
             dict(getattr(model, "init_kwargs", {})),
             sort_keys=True,
         ),
@@ -139,8 +132,8 @@ def load_model(path, model_class=None, device=None, dtype=None):
     """
     path = Path(path).expanduser().resolve()
     metadata = _load_model_metadata(path)
-    stored_module_name = metadata.get(_METADATA_KEYS["module"])
-    stored_class_name = metadata.get(_METADATA_KEYS["class"])
+    stored_module_name = metadata.get("diffwofost.model_module")
+    stored_class_name = metadata.get("diffwofost.model_class")
 
     if model_class is None:
         module = importlib.import_module(stored_module_name)
@@ -154,7 +147,7 @@ def load_model(path, model_class=None, device=None, dtype=None):
             f"not {model_class.__module__}.{model_class.__qualname__}."
         )
 
-    init_kwargs = json.loads(metadata[_METADATA_KEYS["init_kwargs"]])
+    init_kwargs = json.loads(metadata["diffwofost.init_kwargs"])
     model = model_class(**init_kwargs)
     state_dict = load_file(str(path), device="cpu")
     model.load_state_dict(state_dict)
