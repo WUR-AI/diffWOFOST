@@ -13,6 +13,7 @@ We provide an example notebook showing optimization of models' parameters with
 | Phenology | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][pheno_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][pheno_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization_phenology.ipynb) |
 | Root dynamics| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][root_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][root_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization_root_dynamics.ipynb) |
 | Leaf dynamics| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][leaf_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][leaf_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization_leaf_dynamics.ipynb) |
+| Variational data assimilation | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][variational_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][variational_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/variational_data_assimilation.ipynb) |
 
 
 !!! note
@@ -75,3 +76,5 @@ for more details.
 [wofost_72_pp_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_wofost72_pp.ipynb
 [hybrid_partitioning_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb
 [hybrid_partitioning_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb
+[variational_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
+[variational_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
