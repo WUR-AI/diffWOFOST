@@ -51,3 +51,7 @@ hide:
 ::: diffwofost.physical_models.base.states_rates.TensorContainer
 
 ::: diffwofost.physical_models.traitlets.Tensor
+
+## **Crop modules (ML-Based)**
+
+::: diffwofost.ml_models.crop.partitioning.DVS_Partitioning_NN

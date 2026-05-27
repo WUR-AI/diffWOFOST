@@ -103,6 +103,11 @@ The package is structured as follows:
         │   ├── ...
         ├── soil/
         ├── utils.py  # helpers
+        ├── engine.py  # engine script to run the model
+        ├── config.py  # configuration script for the model
+├── ml_models/
+        ├── crop/  # ml implementation of each crop model
+        │   ├── partitioning.py
 ```
 
 !!! note
