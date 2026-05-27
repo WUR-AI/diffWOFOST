@@ -51,51 +51,38 @@ class Wofost72(SimulationObject):
 
     **Simulation parameters:**
 
-    ======== =============================================== =======  ==========
-     Name     Description                                     Type     Unit
-    ======== =============================================== =======  ==========
-    CVL      Conversion factor for assimilates to leaves       SCr     -
-    CVO      Conversion factor for assimilates to storage      SCr     -
-             organs.
-    CVR      Conversion factor for assimilates to roots        SCr     -
-    CVS      Conversion factor for assimilates to stems        SCr     -
-    ======== =============================================== =======  ==========
+    | Name    | Description                                               | Type | Unit |
+    |---------|-----------------------------------------------------------|------|------|
+    | CVL     | Conversion factor for assimilates to leaves               | SCr  | -    |
+    | CVO     | Conversion factor for assimilates to storage organs       | SCr  | -    |
+    | CVR     | Conversion factor for assimilates to roots                | SCr  | -    |
+    | CVS     | Conversion factor for assimilates to stems                | SCr  | -    |
 
 
     **State variables:**
 
-    =========== ================================================= ==== ===============
-     Name        Description                                      Pbl      Unit
-    =========== ================================================= ==== ===============
-    TAGP        Total above-ground Production                      N    |kg ha-1|
-    GASST       Total gross assimilation                           N    |kg CH2O ha-1|
-    MREST       Total gross maintenance respiration                N    |kg CH2O ha-1|
-    CTRAT       Total crop transpiration accumulated over the
-                crop cycle                                         N    cm
-    CEVST       Total soil evaporation accumulated over the
-                crop cycle                                         N    cm
-    HI          Harvest Index (only calculated during              N    -
-                `finalize()`)
-    DOF         Date representing the day of finish of the crop    N    -
-                simulation.
-    FINISH_TYPE String representing the reason for finishing the   N    -
-                simulation: maturity, harvest, leave death, etc.
-    =========== ================================================= ==== ===============
+    | Name    | Description                                               | Type | Unit |
+    |---------|-----------------------------------------------------------|------|------|
+    | TAGP    | Total above-ground Production                             | N    | kg ha-1 |
+    | GASST   | Total gross assimilation                                  | N    | kg CH2O ha-1 |
+    | MREST   | Total gross maintenance respiration                       | N    | kg CH2O ha-1 |
+    | CTRAT   | Total crop transpiration accumulated over the crop cycle  | N    | cm |
+    | CEVST   | Total soil evaporation accumulated over the crop cycle    | N    | cm |
+    | HI      | Harvest Index (only calculated during `finalize()`)       | N    | - |
+    | DOF     | Date representing the day of finish of the crop simulation | N    | - |
+    | FINISH_TYPE | String representing the reason for finishing the simulation: maturity, harvest, leave death, etc. | N    | - |
 
 
      **Rate variables:**
 
-    =======  ================================================ ==== =============
-     Name     Description                                      Pbl      Unit
-    =======  ================================================ ==== =============
-    GASS     Assimilation rate corrected for water stress       N  |kg CH2O ha-1 d-1|
-    MRES     Actual maintenance respiration rate, taking into
-             account that MRES <= GASS.                         N  |kg CH2O ha-1 d-1|
-    ASRC     Net available assimilates (GASS - MRES)            N  |kg CH2O ha-1 d-1|
-    DMI      Total dry matter increase, calculated as ASRC
-             times a weighted conversion efficiency.            Y  |kg ha-1 d-1|
-    ADMI     Aboveground dry matter increase                    Y  |kg ha-1 d-1|
-    =======  ================================================ ==== =============
+
+    | Name    | Description                                               | Type | Unit |
+    |---------|-----------------------------------------------------------|------|------|
+    | GASS    | Assimilation rate corrected for water stress              | N    | kg CH2O ha-1 d-1 |
+    | MRES    | Actual maintenance respiration rate, taking into account that MRES <= GASS | N    | kg CH2O ha-1 d-1 |
+    | ASRC    | Net available assimilates (GASS - MRES)                   | N    | kg CH2O ha-1 d-1 |
+    | DMI     | Total dry matter increase, calculated as ASRC times a weighted conversion efficiency | Y    | kg ha-1 d-1 |
+    | ADMI    | Aboveground dry matter increase                           | Y    | kg ha-1 d-1 |
 
     """
 
