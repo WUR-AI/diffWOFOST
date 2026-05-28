@@ -727,6 +727,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hybrid-modeling-with-diffwofost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hybrid modeling with diffWOFOST
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#computing-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -931,6 +942,17 @@
 </li>
       
         <li class="md-nav__item">
+  <a href="#hybrid-modeling-with-diffwofost" class="md-nav__link">
+    <span class="md-ellipsis">
+      
+        Hybrid modeling with diffWOFOST
+      
+    </span>
+  </a>
+  
+</li>
+      
+        <li class="md-nav__item">
   <a href="#computing-configuration" class="md-nav__link">
     <span class="md-ellipsis">
       
@@ -986,12 +1008,6 @@
 <td><a href="../notebooks/optimization_wofost72_pp/"><img alt="here" src="https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&amp;labelColor=gray" /></a></td>
 </tr>
 <tr>
-<td>Hybrid partitioning in WOFOST72</td>
-<td><a href="https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></td>
-<td><a href="https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb"><img alt="Access the source code" src="https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&amp;labelColor=gray&amp;color=blue" /></a></td>
-<td><a href="../notebooks/hybrid_partitioning_wofost72/"><img alt="here" src="https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&amp;labelColor=gray" /></a></td>
-</tr>
-<tr>
 <td>Phenology</td>
 <td><a href="https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_phenology.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></td>
 <td><a href="https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_phenology.ipynb"><img alt="Access the source code" src="https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&amp;labelColor=gray&amp;color=blue" /></a></td>
@@ -1021,6 +1037,41 @@ good to know in advance how the parameters in a model influence the outputs.
 If a parameter has little to no influence on an output, the gradient of the
 output w.r.t the parameter will be close to zero, which may not provide
 useful information for optimization.</p>
+</div>
+<h2 id="hybrid-modeling-with-diffwofost">Hybrid modeling with diffWOFOST</h2>
+<p>The differentiable nature of <code>diffWOFOST</code> allows for integration of machine
+learning (ML) models with physical crop models, enabling the creation of hybrid
+models that leverage the strengths of both approaches. In a hybrid modeling
+framework, crop models are <code>SimulationObjects</code> and the computations can be
+either physics-based or ML-based, see section <a href="../run_model/">How to run a model</a>.
+Here we provide an example notebook to show how to replace the <code>partitioning</code>
+model in WOFOST72.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Open the notebook</th>
+<th>Access the source</th>
+<th>View the notebook</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Hybrid partitioning in WOFOST72</td>
+<td><a href="https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb"><img alt="Open In Colab" src="https://colab.research.google.com/assets/colab-badge.svg" /></a></td>
+<td><a href="https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb"><img alt="Access the source code" src="https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&amp;labelColor=gray&amp;color=blue" /></a></td>
+<td><a href="../notebooks/hybrid_partitioning_wofost72/"><img alt="here" src="https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&amp;labelColor=gray" /></a></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The ml-based models in diffWOFOST, for example <code>PartitioningMLP</code> and
+<code>PartitioningNN</code> from <code>ml_models/crop/partitioning.py</code> are meant to be used
+as an example of how to replace a physics-based model with a machine
+learning model. They are not trained and are not evaluated against the
+original wofost model results. The purpose is to show how to run a ml-based
+model in diffWOFOST and how to integrate it with the physics-based models.</p>
 </div>
 <h2 id="computing-configuration">Computing configuration</h2>
 <p>The object <code>ComputeConfig</code> provides a central configuration for PyTorch device
