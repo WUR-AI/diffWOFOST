@@ -91,6 +91,13 @@ class HybridModel(nn.Module):
         return output, physical_params
 ```
 
+Another approach is to replace a specific component in the physics-based model
+with a machine learning model, for example, replacing the partitioning model in
+WOFOST with a ML-based partitioning model. This allows for a more targeted
+integration of machine learning into the physics-based model.
+
+See sections [How to run a model](./run_model.md) and [Example notebooks](./examples.md#hybrid-modeling-with-diffwofost) for more details.
+
 ## Code structure (under development)
 
 The package is structured as follows:
