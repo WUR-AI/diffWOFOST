@@ -70,19 +70,21 @@ class Wofost72(SimulationObject):
     | CEVST   | Total soil evaporation accumulated over the crop cycle    | N    | cm |
     | HI      | Harvest Index (only calculated during `finalize()`)       | N    | - |
     | DOF     | Date representing the day of finish of the crop simulation | N    | - |
-    | FINISH_TYPE | String representing the reason for finishing the simulation: maturity, harvest, leave death, etc. | N    | - |
-
+    | FINISH_TYPE | String representing the reason for finishing the simulation: | N    | - |
+    |  |  maturity, harvest, leave death, etc. |   |  |
 
      **Rate variables:**
 
 
-    | Name    | Description                                               | Type | Unit |
-    |---------|-----------------------------------------------------------|------|------|
-    | GASS    | Assimilation rate corrected for water stress              | N    | kg CH2O ha-1 d-1 |
-    | MRES    | Actual maintenance respiration rate, taking into account that MRES <= GASS | N    | kg CH2O ha-1 d-1 |
-    | ASRC    | Net available assimilates (GASS - MRES)                   | N    | kg CH2O ha-1 d-1 |
-    | DMI     | Total dry matter increase, calculated as ASRC times a weighted conversion efficiency | Y    | kg ha-1 d-1 |
-    | ADMI    | Aboveground dry matter increase                           | Y    | kg ha-1 d-1 |
+    | Name    | Description                                             | Type | Unit |
+    |---------|---------------------------------------------------------|------|------|
+    | GASS    | Assimilation rate corrected for water stress            | N    | kg CH2O ha-1 d-1 |
+    | MRES    | Actual maintenance respiration rate, ...                | N    | kg CH2O ha-1 d-1 |
+    |     | ... taking into account that MRES <= GASS |   | |
+    | ASRC    | Net available assimilates (GASS - MRES)                 | N    | kg CH2O ha-1 d-1 |
+    | DMI     | Total dry matter increase, ...                          | Y    | kg ha-1 d-1 |
+    |      | ... calculated as ASRC times a weighted conversion efficiency |    | |
+    | ADMI    | Aboveground dry matter increase                         | Y    | kg ha-1 d-1 |
 
     """
 
