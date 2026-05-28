@@ -12,7 +12,6 @@ We provide an example notebook showing optimization of models' parameters with
 | Phenology | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][pheno_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][pheno_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization_phenology.ipynb) |
 | Root dynamics| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][root_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][root_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization_root_dynamics.ipynb) |
 | Leaf dynamics| [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][leaf_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][leaf_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/optimization_leaf_dynamics.ipynb) |
-| Variational data assimilation | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][variational_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][variational_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/variational_data_assimilation.ipynb) |
 
 !!! note
 
@@ -39,6 +38,14 @@ model in WOFOST72.
 | Model | Open the notebook | Access the source | View the notebook |
 |-------|-------------------|-------------------|-------------------|
 | Hybrid partitioning in WOFOST72 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][hybrid_partitioning_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][hybrid_partitioning_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/hybrid_partitioning_wofost72.ipynb) |
+
+## Variational data assimilation with diffWOFOST
+
+The differentiable implementation of `diffWOFOST` also makes it possible to formulate data assimilation as a gradient-based optimization problem. In this example notebook, synthetic `LAI` and soil-moisture observations are combined with the crop model to estimate a parameter set that improves the simulated seasonal trajectory.
+
+| Model | Open the notebook | Access the source | View the notebook |
+|-------|-------------------|-------------------|-------------------|
+| Variational data assimilation | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][variational_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][variational_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/variational_data_assimilation.ipynb) |
 
 
 !!! note
