@@ -39,15 +39,6 @@ model in WOFOST72.
 |-------|-------------------|-------------------|-------------------|
 | Hybrid partitioning in WOFOST72 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][hybrid_partitioning_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][hybrid_partitioning_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/hybrid_partitioning_wofost72.ipynb) |
 
-## Variational data assimilation with diffWOFOST
-
-The differentiable implementation of `diffWOFOST` also makes it possible to formulate data assimilation as a gradient-based optimization problem. In this example notebook, synthetic `LAI` and soil-moisture observations are combined with the crop model to estimate a parameter set that improves the simulated seasonal trajectory.
-
-| Model | Open the notebook | Access the source | View the notebook |
-|-------|-------------------|-------------------|-------------------|
-| Variational data assimilation | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][variational_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][variational_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/variational_data_assimilation.ipynb) |
-
-
 !!! note
 
     The ml-based models in diffWOFOST, for example `PartitioningMLP` and
@@ -56,6 +47,15 @@ The differentiable implementation of `diffWOFOST` also makes it possible to form
     learning model. They are not trained and are not evaluated against the
     original wofost model results. The purpose is to show how to run a ml-based
     model in diffWOFOST and how to integrate it with the physics-based models.
+    
+## Variational data assimilation with diffWOFOST
+
+The differentiable implementation of `diffWOFOST` also makes it possible to formulate data assimilation as a gradient-based optimization problem. In this example notebook, synthetic `LAI` and soil-moisture observations are combined with the crop model to estimate a parameter set that improves the simulated seasonal trajectory.
+
+| Model | Open the notebook | Access the source | View the notebook |
+|-------|-------------------|-------------------|-------------------|
+| Variational data assimilation | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][variational_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][variational_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/variational_data_assimilation.ipynb) |
+
 
 ## Computing configuration
 
