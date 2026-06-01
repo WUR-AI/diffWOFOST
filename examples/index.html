@@ -1086,6 +1086,15 @@ model in WOFOST72.</p>
 </tr>
 </tbody>
 </table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>The ml-based models in diffWOFOST, for example <code>PartitioningMLP</code> and
+<code>PartitioningNN</code> from <code>ml_models/crop/partitioning.py</code> are meant to be used
+as an example of how to replace a physics-based model with a machine
+learning model. They are not trained and are not evaluated against the
+original wofost model results. The purpose is to show how to run a ml-based
+model in diffWOFOST and how to integrate it with the physics-based models.</p>
+</div>
 <h2 id="variational-data-assimilation-with-diffwofost">Variational data assimilation with diffWOFOST</h2>
 <p>The differentiable implementation of <code>diffWOFOST</code> also makes it possible to formulate data assimilation as a gradient-based optimization problem. In this example notebook, synthetic <code>LAI</code> and soil-moisture observations are combined with the crop model to estimate a parameter set that improves the simulated seasonal trajectory.</p>
 <table>
@@ -1106,15 +1115,6 @@ model in WOFOST72.</p>
 </tr>
 </tbody>
 </table>
-<div class="admonition note">
-<p class="admonition-title">Note</p>
-<p>The ml-based models in diffWOFOST, for example <code>PartitioningMLP</code> and
-<code>PartitioningNN</code> from <code>ml_models/crop/partitioning.py</code> are meant to be used
-as an example of how to replace a physics-based model with a machine
-learning model. They are not trained and are not evaluated against the
-original wofost model results. The purpose is to show how to run a ml-based
-model in diffWOFOST and how to integrate it with the physics-based models.</p>
-</div>
 <h2 id="computing-configuration">Computing configuration</h2>
 <p>The object <code>ComputeConfig</code> provides a central configuration for PyTorch device
 and dtype settings across all simulation objects in diffWOFOST. Instead of
