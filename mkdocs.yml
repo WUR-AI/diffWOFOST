@@ -97,4 +97,5 @@ extra:
   math: mathjax
 
 extra_javascript:
+  - mathjax-config.js
   - https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js
