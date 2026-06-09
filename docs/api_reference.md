@@ -38,7 +38,7 @@ hide:
 
 ::: diffwofost.physical_models.engine.Engine
 
-::: diffwofost.physical_models.utils.EngineTestHelper
+::: diffwofost.physical_models.test.EngineTestHelper
 
 ## **Other classes (for developers)**
 
