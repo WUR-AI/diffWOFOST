@@ -24,6 +24,12 @@ hide:
 
 ::: diffwofost.physical_models.crop.evapotranspiration.Evapotranspiration
 
+## **Soil modules**
+
+::: diffwofost.physical_models.soil.classic_waterbalance.WaterbalancePP
+
+::: diffwofost.physical_models.soil.classic_waterbalance.WaterbalanceFD
+
 ## **Utility (under development)**
 
 ::: diffwofost.physical_models.config.Configuration
@@ -45,3 +51,7 @@ hide:
 ::: diffwofost.physical_models.base.states_rates.TensorContainer
 
 ::: diffwofost.physical_models.traitlets.Tensor
+
+## **Crop modules (ML-Based)**
+
+::: diffwofost.ml_models.crop.partitioning.DVS_Partitioning_NN
