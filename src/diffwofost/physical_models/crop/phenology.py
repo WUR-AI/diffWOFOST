@@ -381,12 +381,12 @@ class DVS_Phenology(SimulationObject):
         DVS = Tensor(-99.0)
         TSUM = Tensor(-99.0)
         TSUME = Tensor(-99.0)
-        DOS = Tensor(-99.0)
-        DOE = Tensor(-99.0)
-        DOA = Tensor(-99.0)
-        DOM = Tensor(-99.0)
-        DOH = Tensor(-99.0)
-        STAGE = Tensor(-99.0)
+        DOS = Tensor(-99, dtype=int)
+        DOE = Tensor(-99, dtype=int)
+        DOA = Tensor(-99, dtype=int)
+        DOM = Tensor(-99, dtype=int)
+        DOH = Tensor(-99, dtype=int)
+        STAGE = Tensor(-99, dtype=int)
 
     def initialize(self, day, kiosk, parvalues, shape=None):
         """Initialize the DVS_Phenology module.
@@ -432,9 +432,9 @@ class DVS_Phenology(SimulationObject):
             DVS=DVS,
             DOS=DOS,
             DOE=DOE,
-            DOA=-1.0,  # not yet occurred
-            DOM=-1.0,  # not yet occurred
-            DOH=-1.0,  # not yet occurred
+            DOA=-1,  # not yet occurred
+            DOM=-1,  # not yet occurred
+            DOH=-1,  # not yet occurred
             STAGE=STAGE,
             shape=shape,
         )
@@ -461,7 +461,7 @@ class DVS_Phenology(SimulationObject):
         if p.CROP_START_TYPE == "emergence":
             STAGE = 1  # 1 = vegetative
             DOE = day_ordinal
-            DOS = -1.0  # Not applicable
+            DOS = -1  # Not applicable
             DVS = p.DVSI
 
             # send signal to indicate crop emergence
@@ -470,7 +470,7 @@ class DVS_Phenology(SimulationObject):
         elif p.CROP_START_TYPE == "sowing":
             STAGE = 0  # 0 = emerging
             DOS = day_ordinal
-            DOE = -1.0  # Not yet occurred
+            DOE = -1  # Not yet occurred
             DVS = -0.1
 
         else:
@@ -657,10 +657,8 @@ class DVS_Phenology(SimulationObject):
         s.DOM = torch.where(should_mature, day_ordinal, s.DOM)
         s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
 
-        # Send crop_finish signal if maturity reached for one.
-        # assumption is that all elements mature simultaneously
-        # TODO: revisit this when fixing engine for agromanager, see issue #60
-        if torch.any(should_mature) and p.CROP_END_TYPE in ["maturity", "earliest"]:
+        # Send crop_finish signal if maturity reached for all.
+        if torch.all(s.STAGE == 3) and p.CROP_END_TYPE in ["maturity", "earliest"]:
             self._send_signal(
                 signal=signals.crop_finish,
                 day=day,
@@ -671,7 +669,6 @@ class DVS_Phenology(SimulationObject):
         msg = "Finished state integration for %s"
         self.logger.debug(msg % day)
 
-    # TODO: revisit this when fixing engine for agromanager, see issue #60
     def _on_CROP_FINISH(self, day, finish_type=None):
         """Handle external crop finish signal to set harvest date.
 
@@ -683,7 +680,7 @@ class DVS_Phenology(SimulationObject):
             - If finish_type in ('harvest','earliest'): registers DOH for finalization.
 
         Notes:
-            Maturity-driven finish is triggered internally in _next_stage; this
+            Maturity-driven finish is triggered internally as part of integrate; this
             handler captures management-induced harvests.
 
         """
