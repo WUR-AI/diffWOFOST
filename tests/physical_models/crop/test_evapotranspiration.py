@@ -12,10 +12,10 @@ from diffwofost.physical_models.crop.evapotranspiration import Evapotranspiratio
 from diffwofost.physical_models.crop.evapotranspiration import EvapotranspirationCO2
 from diffwofost.physical_models.crop.evapotranspiration import EvapotranspirationCO2Layered
 from diffwofost.physical_models.crop.evapotranspiration import EvapotranspirationWrapper
-from diffwofost.physical_models.utils import EngineTestHelper
-from diffwofost.physical_models.utils import calculate_numerical_grad
-from diffwofost.physical_models.utils import get_test_data
-from diffwofost.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.test import EngineTestHelper
+from diffwofost.physical_models.test import calculate_numerical_grad
+from diffwofost.physical_models.test import get_test_data
+from diffwofost.physical_models.test import prepare_engine_input
 from .. import phy_data_folder
 
 evapotranspiration_config = Configuration(

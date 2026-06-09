@@ -11,8 +11,8 @@ from diffwofost.physical_models.crop.wofost72 import Wofost72
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.engine import _get_params_shape
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
-from diffwofost.physical_models.utils import get_test_data
-from diffwofost.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.test import get_test_data
+from diffwofost.physical_models.test import prepare_engine_input
 from . import phy_data_folder
 
 config = Configuration(
