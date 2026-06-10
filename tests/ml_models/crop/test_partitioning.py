@@ -6,9 +6,9 @@ from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import PartioningFactors
-from diffwofost.physical_models.utils import EngineTestHelper
-from diffwofost.physical_models.utils import get_test_data
-from diffwofost.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.test import EngineTestHelper
+from diffwofost.physical_models.test import get_test_data
+from diffwofost.physical_models.test import prepare_engine_input
 from diffwofost.physical_models.variablekiosk import VariableKiosk
 from .. import phy_data_folder
 
