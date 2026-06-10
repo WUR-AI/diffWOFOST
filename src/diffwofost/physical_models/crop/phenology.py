@@ -182,7 +182,7 @@ class Vernalisation(SimulationObject):
         VERNBASE = params.VERNBASE
         DVS = self.kiosk["DVS"]
 
-        TEMP = _get_drv(drv.TEMP, self.params.shape, self.dtype, self.device)
+        TEMP = _get_drv(drv["TEMP"], self.params.shape, self.dtype, self.device)
 
         # Operate elementwise only on elements not yet vernalised
         not_vernalised = ~self.states.ISVERNALISED
@@ -508,8 +508,11 @@ class DVS_Phenology(SimulationObject):
 
         # Day length sensitivity
         # daylength returns a Tensor directly; broadcast to parameter shape.
-        DAYLP = daylength(day, drv.LAT, dtype=self.dtype, device=self.device)
-        DAYLP_t = _broadcast_to(DAYLP, p.shape, dtype=self.dtype, device=self.device)
+        if "DAYLENGTH" in drv:
+            DAYLP_t = _get_drv(drv["DAYLENGTH"], p.shape, self.dtype, self.device)
+        else:
+            DAYLP = daylength(day, drv["LAT"], dtype=self.dtype, device=self.device)
+            DAYLP_t = _broadcast_to(DAYLP, p.shape, dtype=self.dtype, device=self.device)
         # Compute DVRED conditionally based on IDSL >= 1
         safe_den = p.DLO - p.DLC
         safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
@@ -529,7 +532,7 @@ class DVS_Phenology(SimulationObject):
                 self._ones,
             )
 
-        TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
+        TEMP = _get_drv(drv["TEMP"], p.shape, self.dtype, self.device)
 
         # Initialize all rate variables
         r.DTSUME = self._zeros
