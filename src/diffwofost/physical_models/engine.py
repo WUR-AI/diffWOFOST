@@ -145,18 +145,9 @@ class Engine(PcseEngine):
         # Component for simulation of soil processes
         if self.mconf.SOIL is not None:
             self.soil = self.mconf.SOIL(self.day, self.kiosk, parameterprovider)
+        # Component for crop simulation
         if self.mconf.CROP is not None:
-            crop_args = [self.day, self.kiosk, self.parameterprovider]
-            crop_kwargs = {"shape": self._shape}
-
-            if self.mconf.CROP_NN_MODEL is not None:
-                # crop_nn_model initialize doesnot accpet parameterprovider
-                crop_args = [self.day, self.kiosk, self.mconf.CROP_NN_MODEL]
-
-            if self.mconf.CROP_COMPONENTS:
-                crop_kwargs["component_overrides"] = self._components_overrides
-
-            self.crop = self.mconf.CROP(*crop_args, **crop_kwargs)
+            self._create_crop(self.day)
 
         # Calculate initial rates
         self.calc_rates(self.day, self.drv)
@@ -182,6 +173,24 @@ class Engine(PcseEngine):
             self.parameterprovider.set_active_crop(
                 crop_name, variety_name, crop_start_type, crop_end_type
             )
+
+    def _create_crop(self, day):
+        """Setup crop model instance.
+
+        Args:
+            day: Current simulation day
+        """
+        crop_args = [day, self.kiosk, self.parameterprovider]
+        crop_kwargs = {"shape": self._shape}
+
+        if self.mconf.CROP_NN_MODEL is not None:
+            # crop_nn_model initialize does not accept parameterprovider
+            crop_args = [day, self.kiosk, self.mconf.CROP_NN_MODEL]
+
+        if self.mconf.CROP_COMPONENTS:
+            crop_kwargs["component_overrides"] = self._components_overrides
+
+        self.crop = self.mconf.CROP(*crop_args, **crop_kwargs)
 
     def _on_CROP_FINISH(self, day):
         """Flag finishing of the crop simulation.
