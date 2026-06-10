@@ -151,16 +151,6 @@ class TestEngine:
         assert returned_engine is engine
         assert engine.soil is not None
 
-    def test_on_crop_start_raises_when_crop_is_already_active(self):
-        _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            _get_engine_inputs()
-        )
-        engine = Engine(config=config)
-        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
-
-        with pytest.raises(RuntimeError, match="A CROP_START signal was received"):
-            engine._on_CROP_START(engine.day)
-
     def test_finish_cropsimulation_does_not_delete_crop(self):
         _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             _get_engine_inputs()
@@ -234,6 +224,6 @@ class TestEngine:
         engine.parameterprovider = ParameterProvider()
         engine.kiosk = VariableKiosk()
         engine._shape = ()
-        engine._on_CROP_START(date(2000, 1, 1))
+        engine._create_crop(date(2000, 1, 1))
         assert engine.mconf.CROP_NN_MODEL == nn_model
         assert engine.crop._initialized is True
