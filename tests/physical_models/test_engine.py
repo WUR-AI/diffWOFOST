@@ -4,7 +4,9 @@ from unittest.mock import Mock
 import pytest
 import torch
 from pcse.base import ParameterProvider
+from pcse.base import SimulationObject
 from pcse.base.variablekiosk import VariableKiosk
+from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.phenology import DVS_Phenology
 from diffwofost.physical_models.crop.wofost72 import Wofost72
@@ -13,6 +15,7 @@ from diffwofost.physical_models.engine import _get_params_shape
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.test import get_test_data
 from diffwofost.physical_models.test import prepare_engine_input
+from diffwofost.physical_models.traitlets import Tensor
 from . import phy_data_folder
 
 config = Configuration(
@@ -50,6 +53,14 @@ class _DummyParameterProvider(dict):
 
     def set_active_crop(self, *args):
         self.active_crop_args = args
+
+
+class DummyCropModel(SimulationObject):
+    class Parameters(TensorParamTemplate):
+        A = Tensor(-99, dtype=int)
+
+    def initialize(self, day, kiosk, parvalues, shape):
+        self.params = self.Parameters(parvalues, shape=shape)
 
 
 @pytest.mark.usefixtures("fast_mode")
@@ -227,3 +238,12 @@ class TestEngine:
         engine._create_crop(date(2000, 1, 1))
         assert engine.mconf.CROP_NN_MODEL == nn_model
         assert engine.crop._initialized is True
+
+    def test_engine_accept_dict_as_parameter_provider(self):
+        engine = Engine(config=Configuration(CROP=DummyCropModel))
+        engine.parameterprovider = {"A": 10}
+        engine.kiosk = VariableKiosk()
+        engine._shape = ()
+        engine._create_crop(date(2000, 1, 1))
+        assert isinstance(engine.crop.params.A, torch.Tensor)
+        assert engine.crop.params.A == 10
