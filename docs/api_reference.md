@@ -40,6 +40,10 @@ hide:
 
 ::: diffwofost.physical_models.test.EngineTestHelper
 
+::: diffwofost.ml_models.io.save_model
+
+::: diffwofost.ml_models.io.load_model
+
 ## **Other classes (for developers)**
 
 ::: diffwofost.physical_models.base.states_rates.TensorStatesTemplate
