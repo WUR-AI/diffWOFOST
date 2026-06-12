@@ -6,6 +6,7 @@ parameters and external state handling intact.
 """
 
 import gc
+from collections.abc import Iterator
 from pathlib import Path
 import torch
 from pcse import signals
@@ -27,6 +28,7 @@ class Engine(PcseEngine):
     """
 
     mconf = Instance(Configuration)
+    weatherdataprovider = Instance(Iterator)
 
     def __init__(
         self,
@@ -99,7 +101,7 @@ class Engine(PcseEngine):
 
         Args:
             parameterprovider: Provider with crop and soil parameter values.
-            weatherdataprovider: Provider used to retrieve daily driving
+            weatherdataprovider: Iterator used to provide daily driving
                 weather variables.
             agromanagement: AgroManagement definition passed to the configured
                 agromanagement component.
@@ -207,6 +209,13 @@ class Engine(PcseEngine):
             self.crop._delete()
             self.crop = None
             gc.collect()
+
+    def _get_driving_variables(self, day):
+        """Get driving variables and return it."""
+        drv = next(self.weatherdataprovider)
+        if "DAY" in drv:
+            assert drv["DAY"] == day, "Wrong day!"
+        return drv
 
 
 def _get_params_shape(parameterprovider):

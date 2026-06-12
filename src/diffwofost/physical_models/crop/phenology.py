@@ -19,8 +19,6 @@ from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
-from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import _restore_state
 from diffwofost.physical_models.utils import _snapshot_state
 from diffwofost.physical_models.utils import daylength
@@ -182,7 +180,8 @@ class Vernalisation(SimulationObject):
         VERNBASE = params.VERNBASE
         DVS = self.kiosk["DVS"]
 
-        TEMP = _get_drv(drv.TEMP, self.params.shape, self.dtype, self.device)
+        TEMP = drv["TEMP"]
+        print(TEMP)
 
         # Operate elementwise only on elements not yet vernalised
         not_vernalised = ~self.states.ISVERNALISED
@@ -505,15 +504,13 @@ class DVS_Phenology(SimulationObject):
         p = self.params
         r = self.rates
         s = self.states
-
         # Day length sensitivity
         # daylength returns a Tensor directly; broadcast to parameter shape.
-        DAYLP = daylength(day, drv.LAT, dtype=self.dtype, device=self.device)
-        DAYLP_t = _broadcast_to(DAYLP, p.shape, dtype=self.dtype, device=self.device)
+        DAYLP = daylength(day, drv["LAT"], dtype=self.dtype, device=self.device)
         # Compute DVRED conditionally based on IDSL >= 1
         safe_den = p.DLO - p.DLC
         safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
-        dvred_active = torch.clamp((DAYLP_t - p.DLC) / safe_den, 0.0, 1.0)
+        dvred_active = torch.clamp((DAYLP - p.DLC) / safe_den, 0.0, 1.0)
         DVRED = torch.where(p.IDSL >= 1, dvred_active, self._ones)
 
         # Vernalisation factor - always compute if module exists
@@ -529,7 +526,7 @@ class DVS_Phenology(SimulationObject):
                 self._ones,
             )
 
-        TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
+        TEMP = drv["TEMP"]
 
         # Initialize all rate variables
         r.DTSUME = self._zeros
