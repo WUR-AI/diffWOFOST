@@ -6,14 +6,12 @@ import torch
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.weather import WeatherDataContainer
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_drv
 from diffwofost.physical_models.utils import astro
 
 # ---------------------------------------------------------------------------
@@ -343,7 +341,7 @@ class WOFOST72_Assimilation(SimulationObject):
         # elements (which share the same weather driver).
         self._astro_cache: dict = {}
 
-    def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
+    def calc_rates(self, day: datetime.date, drv: dict) -> torch.Tensor:
         """Compute the potential gross assimilation rate (PGASS)."""
         p = self.params
         r = self.rates
@@ -356,9 +354,9 @@ class WOFOST72_Assimilation(SimulationObject):
         lai = _broadcast_to(k["LAI"], self.params.shape, dtype=self.dtype, device=self.device)
 
         # Weather drivers
-        irrad = _get_drv(drv.IRRAD, self.params.shape, dtype=self.dtype, device=self.device)
-        dtemp = _get_drv(drv.DTEMP, self.params.shape, dtype=self.dtype, device=self.device)
-        tmin = _get_drv(drv.TMIN, self.params.shape, dtype=self.dtype, device=self.device)
+        irrad = drv["IRRAD"]
+        dtemp = drv["DTEMP"]
+        tmin = drv["TMIN"]
 
         # Assimilation is zero before crop emergence (DVS < 0)
         dvs_mask = dvs >= 0
@@ -373,14 +371,8 @@ class WOFOST72_Assimilation(SimulationObject):
         # latitude and radiation are passed directly – they may be scalars or
         # tensors; the function returns torch.Tensor results in all cases.
         dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(
-            day, drv.LAT, drv.IRRAD, dtype=self.dtype, device=self.device
+            day, drv["LAT"], drv["IRRAD"], dtype=self.dtype, device=self.device
         )
-
-        dayl_t = _broadcast_to(dayl, self.params.shape, dtype=self.dtype, device=self.device)
-        sinld_t = _broadcast_to(sinld, self.params.shape, dtype=self.dtype, device=self.device)
-        cosld_t = _broadcast_to(cosld, self.params.shape, dtype=self.dtype, device=self.device)
-        difpp_t = _broadcast_to(difpp, self.params.shape, dtype=self.dtype, device=self.device)
-        dsinbe_t = _broadcast_to(dsinbe, self.params.shape, dtype=self.dtype, device=self.device)
 
         # Parameter tables
         amax = p.AMAXTB(dvs)
@@ -389,16 +381,16 @@ class WOFOST72_Assimilation(SimulationObject):
         eff = p.EFFTB(dtemp)
 
         dtga = totass7(
-            dayl_t,
+            dayl,
             amax,
             eff,
             lai,
             kdif,
             irrad,
-            difpp_t,
-            dsinbe_t,
-            sinld_t,
-            cosld_t,
+            difpp,
+            dsinbe,
+            sinld,
+            cosld,
             epsilon=self._epsilon,
             dtype=self.dtype,
             device=self.device,
@@ -414,11 +406,11 @@ class WOFOST72_Assimilation(SimulationObject):
         r.PGASS = pgass * dvs_mask
         return r.PGASS
 
-    def __call__(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> torch.Tensor:
+    def __call__(self, day: datetime.date, drv: dict) -> torch.Tensor:
         """Calculate and return the potential gross assimilation rate (PGASS)."""
         return self.calc_rates(day, drv)
 
-    def integrate(self, day: datetime.date = None, delt=1.0) -> None:
+    def integrate(self, day: datetime.date, delt: float = 1.0) -> None:
         """No state variables to integrate for this module."""
         return
 

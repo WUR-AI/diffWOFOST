@@ -81,8 +81,8 @@ class WaterbalancePP(SimulationObject):
         # the potential soil/water evaporation rates directly because there is
         # no shading by the canopy.
         if "TRA" not in self.kiosk:
-            r.WTRA = torch.zeros_like(torch.as_tensor(drv.ES0))
-            EVSMX = torch.as_tensor(drv.ES0)
+            r.WTRA = torch.zeros_like(drv["ES0"])
+            EVSMX = drv["ES0"]
         else:
             r.WTRA = self.kiosk["TRA"]
             EVSMX = torch.as_tensor(self.kiosk["EVSMX"])
@@ -101,7 +101,7 @@ class WaterbalancePP(SimulationObject):
         self.DSLR = torch.where(rain_ge_1, torch.ones_like(dslr_inc), dslr_inc)
 
         # Hold rainfall amount to keep track of soil surface wetness and reset self.DSLR if needed
-        self.RAINold = torch.as_tensor(drv.RAIN)
+        self.RAINold = drv["RAIN"]
 
     def integrate(self, day, delt=1.0):
         """Integrate state variables over one time step."""
@@ -405,9 +405,8 @@ class WaterbalanceFD(SimulationObject):
 
         Args:
             day (datetime.date): The current date of the simulation.
-            drv (WeatherDataContainer): A dictionary-like container holding
-                weather data elements as key/value. The values are
-                arrays or scalars. See PCSE documentation for details.
+            drv (dict): A container holding weather data elements as key/value. The values are
+                arrays or scalars.
 
         """
         s = self.states
@@ -424,9 +423,9 @@ class WaterbalanceFD(SimulationObject):
         # Transpiration and maximum evaporation rates from crop module.
         # Before emergence there is no canopy shading yet, so the water balance
         # must fall back to the weather-driven soil and surface evaporation.
-        weather_wtra = torch.zeros_like(torch.as_tensor(drv.ES0, dtype=dtype, device=device))
-        weather_evwmx = torch.as_tensor(drv.E0, dtype=dtype, device=device)
-        weather_evsmx = torch.as_tensor(drv.ES0, dtype=dtype, device=device)
+        weather_wtra = torch.zeros_like(drv["ES0"], dtype=dtype, device=device)
+        weather_evwmx = drv["E0"]
+        weather_evsmx = drv["ES0"]
 
         if "TRA" not in k:
             r.WTRA = weather_wtra
@@ -472,7 +471,7 @@ class WaterbalanceFD(SimulationObject):
         )
 
         # Potentially infiltrating rainfall
-        RAIN_t = torch.as_tensor(drv.RAIN, dtype=dtype, device=device)
+        RAIN_t = drv["RAIN"]
         RINPRE_fixed = (1.0 - p.NOTINF) * RAIN_t
         RINPRE_storm = (1.0 - p.NOTINF * self.NINFTB(RAIN_t)) * RAIN_t
         # IFUNRN: 0 = fixed non-infiltrating fraction, 1 = function of storm size
