@@ -6,6 +6,7 @@ parameters and external state handling intact.
 """
 
 import gc
+from collections.abc import MutableMapping
 from pathlib import Path
 import torch
 from pcse import signals
@@ -27,6 +28,7 @@ class Engine(PcseEngine):
     """
 
     mconf = Instance(Configuration)
+    parameterprovider = Instance(MutableMapping)
 
     def __init__(
         self,
@@ -80,7 +82,6 @@ class Engine(PcseEngine):
         self.flag_terminate = False
         self.flag_crop_finish = False
         self.flag_crop_start = False
-        self.flag_crop_delete = False
         self.flag_output = False
         self.flag_summary_output = False
 
@@ -138,12 +139,15 @@ class Engine(PcseEngine):
         self.weatherdataprovider = weatherdataprovider
         self.drv = self._get_driving_variables(self.day)
 
+        # Call AgroManagement module for management actions at initialization
+        self.agromanager(self.day, None)
+
         # Component for simulation of soil processes
         if self.mconf.SOIL is not None:
             self.soil = self.mconf.SOIL(self.day, self.kiosk, parameterprovider)
-
-        # Call AgroManagement module for management actions at initialization
-        self.agromanager(self.day, self.drv)
+        # Component for crop simulation
+        if self.mconf.CROP is not None:
+            self._create_crop(self.day)
 
         # Calculate initial rates
         self.calc_rates(self.day, self.drv)
@@ -152,7 +156,7 @@ class Engine(PcseEngine):
     def _on_CROP_START(
         self, day, crop_name=None, variety_name=None, crop_start_type=None, crop_end_type=None
     ):
-        """Instantiate the crop component after a crop-start signal.
+        """Set active crop parameters for providers that support that.
 
         Args:
             day: Current simulation day.
@@ -162,34 +166,45 @@ class Engine(PcseEngine):
                 signal.
             crop_start_type: Crop start mode used by the parameter provider.
             crop_end_type: Crop end mode used by the parameter provider.
-
-        Raises:
-            RuntimeError: If a crop component is already active.
         """
         self.logger.debug(f"Received signal 'CROP_START' on day {day}")
 
-        if self.crop is not None:
-            raise RuntimeError(
-                "A CROP_START signal was received while self.cropsimulation still holds a valid "
-                "cropsimulation object. It looks like you forgot to send a CROP_FINISH signal with "
-                "option crop_delete=True"
+        if hasattr(self.parameterprovider, "set_active_crop"):
+            self.parameterprovider.set_active_crop(
+                crop_name, variety_name, crop_start_type, crop_end_type
             )
 
-        self.parameterprovider.set_active_crop(
-            crop_name, variety_name, crop_start_type, crop_end_type
-        )
+    def _create_crop(self, day):
+        """Setup crop model instance.
 
+        Args:
+            day: Current simulation day
+        """
         crop_args = [day, self.kiosk, self.parameterprovider]
         crop_kwargs = {"shape": self._shape}
 
         if self.mconf.CROP_NN_MODEL is not None:
-            # crop_nn_model initialize doesnot accpet parameterprovider
+            # crop_nn_model initialize does not accept parameterprovider
             crop_args = [day, self.kiosk, self.mconf.CROP_NN_MODEL]
 
         if self.mconf.CROP_COMPONENTS:
             crop_kwargs["component_overrides"] = self._components_overrides
 
         self.crop = self.mconf.CROP(*crop_args, **crop_kwargs)
+
+    def _on_CROP_FINISH(self, day):
+        """Flag finishing of the crop simulation.
+
+        The flag is needed because finishing the crop simulation is deferred to
+        the correct place in the processing loop and is done by the routine
+        _finish_cropsimulation().
+
+        Differently from PCSE, diffWOFOST does not delete the crop simulation instance.
+
+        Args:
+            day: Current simulation day.
+        """
+        self.flag_crop_finish = True
 
     def _finish_cropsimulation(self, day):
         """Finalize and optionally delete the active crop simulation.
@@ -201,12 +216,6 @@ class Engine(PcseEngine):
 
         self.crop.finalize(day)
         self._save_summary_output()
-
-        if self.flag_crop_delete:
-            self.flag_crop_delete = False
-            self.crop._delete()
-            self.crop = None
-            gc.collect()
 
 
 def _get_params_shape(parameterprovider):
@@ -227,7 +236,7 @@ def _get_params_shape(parameterprovider):
         ValueError: If tensor parameters do not share a common shape.
     """
     shape = ()
-    for paramname in parameterprovider._unique_parameters:
+    for paramname in parameterprovider.keys():
         param = parameterprovider[paramname]
         if isinstance(param, torch.Tensor):
             # We need to drop the last dimension from the Afgen table parameters
