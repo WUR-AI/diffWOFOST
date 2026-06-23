@@ -9,6 +9,7 @@ import gc
 from collections.abc import Iterator
 from collections.abc import MutableMapping
 from pathlib import Path
+from typing import Any
 import torch
 from pcse import signals
 from pcse.base import BaseEngine
@@ -115,7 +116,6 @@ class Engine(PcseEngine):
         self._reset_runtime_state()
 
         self.parameterprovider = parameterprovider
-        self._shape = _get_params_shape(self.parameterprovider)
 
         # Variable kiosk for registering and publishing variables
         self.kiosk = VariableKiosk(external_states)
@@ -140,6 +140,9 @@ class Engine(PcseEngine):
         # Driving variables
         self.weatherdataprovider = weatherdataprovider
         self.drv = self._get_driving_variables(self.day)
+
+        # Determine common shape for the parameters and weather data
+        self._shape = _get_shape(self.parameterprovider, self.drv)
 
         # Call AgroManagement module for management actions at initialization
         self.agromanager(self.day, None)
@@ -227,26 +230,49 @@ class Engine(PcseEngine):
         return drv
 
 
-def _get_params_shape(parameterprovider):
+def _get_shape(parameterprovider: MutableMapping, drivingvariables: dict[str, Any]) -> tuple:
+    """Infer common tensor shape from the parameter provider and the driving variables.
+
+    Args:
+        parameterprovider: Parameter provider.
+        drivingvariables: Weather data.
+
+    Raises:
+        ValueError: If non-matching shapes are found for the data providers.
+
+    Returns:
+        tuple: Shared tensor shape.
+    """
+    params_shape = _get_params_shape(parameterprovider)
+    weather_shape = _get_params_shape(drivingvariables)
+    if not params_shape and not weather_shape:
+        if params_shape != weather_shape:
+            raise ValueError(
+                "Non-matching shapes between parameter and weather data: "
+                f"{params_shape} and {weather_shape}"
+            )
+    return params_shape or weather_shape
+
+
+def _get_params_shape(provider: MutableMapping) -> tuple:
     """Infer the common tensor batch shape from a parameter provider.
 
     Afgen table parameters are expected to have an extra trailing dimension for
     table coordinates, which is ignored when determining the simulation shape.
 
     Args:
-        parameterprovider: Parameter provider containing scalar and tensor
-            parameters.
+        provider: Parameter provider containing scalar and tensor parameters.
 
     Returns:
         tuple: Shared tensor shape for all tensor-valued parameters, or an
-        empty tuple when all parameters are scalar.
+            empty tuple when all parameters are scalar.
 
     Raises:
         ValueError: If tensor parameters do not share a common shape.
     """
     shape = ()
-    for paramname in parameterprovider.keys():
-        param = parameterprovider[paramname]
+    for paramname in provider.keys():
+        param = provider[paramname]
         if isinstance(param, torch.Tensor):
             # We need to drop the last dimension from the Afgen table parameters
             param_shape = param.shape[:-1] if paramname.endswith("TB") else param.shape
