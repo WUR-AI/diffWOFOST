@@ -28,6 +28,7 @@ WEATHER_VARIABLES = dict(
     TEMP=WeatherVariable("Celsius", -50.0, 60.0),
     TMINRA=WeatherVariable("Celsius", -50.0, 60.0),
     WIND=WeatherVariable("m/s", 0.0, 100.0),
+    DTEMP=WeatherVariable("Celsius", -50.0, 60.0),
 )
 
 
