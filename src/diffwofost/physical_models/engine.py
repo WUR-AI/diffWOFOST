@@ -245,7 +245,7 @@ def _get_shape(parameterprovider: MutableMapping, drivingvariables: dict[str, An
     """
     params_shape = _get_params_shape(parameterprovider)
     weather_shape = _get_params_shape(drivingvariables)
-    if not params_shape and not weather_shape:
+    if params_shape and weather_shape:
         if params_shape != weather_shape:
             raise ValueError(
                 "Non-matching shapes between parameter and weather data: "
