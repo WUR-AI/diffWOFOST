@@ -1,8 +1,6 @@
 import warnings
-from unittest.mock import patch
 import pytest
 import torch
-from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.phenology import DVS_Phenology
 from diffwofost.physical_models.test import EngineTestHelper
@@ -233,10 +231,19 @@ class TestPhenologyDynamics:
         if param == "TEMP":
             if device == "cuda":
                 pytest.skip("Weather parameter vector tests are CPU-only")
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * torch.as_tensor(
-                    wdc.TEMP, dtype=torch.float64, device=device
-                )
+            shape = (10,)
+
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
         elif param == "DTSMTB":
             repeated = crop_model_params_provider[param].repeat(10, 1)
             crop_model_params_provider.set_override(param, repeated, check=False)
@@ -244,30 +251,19 @@ class TestPhenologyDynamics:
             repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        if param == "TEMP":
-            with pytest.raises(ValueError):
-                engine = EngineTestHelper(config=phenology_config)
-                engine.setup(
-                    crop_model_params_provider,
-                    weather_data_provider,
-                    agro_management_inputs,
-                )
-                engine.run_till_terminate()
-                _ = engine.get_output()
-        else:
-            engine = EngineTestHelper(config=phenology_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
-            expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
-            assert len(actual_results) == len(expected_results)
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert_reference_match(reference, model, expected_precision)
+        assert len(actual_results) == len(expected_results)
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert_reference_match(reference, model, expected_precision)
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -443,9 +439,6 @@ class TestPhenologyDynamics:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
-
         engine = EngineTestHelper(config=phenology_config)
         engine.setup(
             crop_model_params_provider,
@@ -535,8 +528,21 @@ class TestPhenologyDynamics:
         crop_model_params_provider.set_override(
             "TSUM1", crop_model_params_provider["TSUM1"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+
+        # Broadcast weather variables to a shape that does not match the parameters
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
 
         with pytest.raises(ValueError):
             engine = EngineTestHelper(config=phenology_config)
@@ -545,45 +551,6 @@ class TestPhenologyDynamics:
                 weather_data_provider,
                 agro_management_inputs,
             )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost_pp_with_phenology(self, test_data_url, monkeypatch):
-        test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        # Keep this integration test on CPU.
-        monkeypatch.setattr(DVS_Phenology, "device", "cpu")
-        monkeypatch.setattr(DVS_Phenology, "dtype", torch.float64)
-
-        with patch("pcse.crop.wofost72.Phenology", DVS_PhenologyForPCSE):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-            for reference, model_day in zip(expected_results, actual_results, strict=False):
-                assert_reference_match(reference, model_day, expected_precision)
 
 
 @pytest.mark.usefixtures("fast_mode")

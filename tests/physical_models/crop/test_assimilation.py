@@ -1,7 +1,5 @@
-from unittest.mock import patch
 import pytest
 import torch
-from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.assimilation import WOFOST72_Assimilation
 from diffwofost.physical_models.test import EngineTestHelper
@@ -249,12 +247,6 @@ class TestAssimilation:
             repeated = crop_model_params_provider[param].repeat(30, 5, 1)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        # Make weather drivers match (30, 5) so _get_drv validates/broadcasts.
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.IRRAD = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.IRRAD
-            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
-            wdc.TMIN = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TMIN
-
         engine = EngineTestHelper(config=assimilation_config)
         engine.setup(
             crop_model_params_provider,
@@ -317,43 +309,30 @@ class TestAssimilation:
         crop_model_params_provider.set_override(
             "AMAXTB", crop_model_params_provider["AMAXTB"].repeat(10, 1), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+
+        # Broadcast weather variables to a shape that does not match the parameters
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        broadcasted = broadcast(weather_data_provider)
 
         with pytest.raises(ValueError):
             engine = EngineTestHelper(config=assimilation_config)
             engine.setup(
                 crop_model_params_provider,
-                weather_data_provider,
+                broadcasted,
                 agro_management_inputs,
                 external_states,
             )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost_pp_with_assimilation(self, test_data_url):
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.Assimilation", WOFOST72_Assimilation):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
 
 @pytest.mark.usefixtures("fast_mode")

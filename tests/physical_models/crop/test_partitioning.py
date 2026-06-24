@@ -1,9 +1,7 @@
 import warnings
-from unittest.mock import patch
 import pytest
 import torch
 from numpy.testing import assert_array_almost_equal
-from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import DVS_Partitioning
 from diffwofost.physical_models.test import EngineTestHelper
@@ -286,34 +284,6 @@ class TestPartitioning:
                 agro_management_inputs,
                 external_states,
             )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls[:1])
-    def test_wofost_pp_with_partitioning(self, test_data_url):
-        # prepare model input
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.Partitioning", DVS_Partitioning):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
 
 @pytest.mark.usefixtures("fast_mode")

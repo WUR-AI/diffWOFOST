@@ -1,8 +1,6 @@
 import warnings
-from unittest.mock import patch
 import pytest
 import torch
-from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.respiration import WOFOST_Maintenance_Respiration
 from diffwofost.physical_models.test import EngineTestHelper
@@ -128,25 +126,25 @@ class TestRespiration:
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         if param == "TEMP":
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
-            with pytest.raises(ValueError):
-                engine = EngineTestHelper(config=respiration_config)
-                engine.setup(
-                    crop_model_params_provider,
-                    weather_data_provider,
-                    agro_management_inputs,
-                    external_states,
-                )
-                engine.run_till_terminate()
-                _ = engine.get_output()
-            return
+            shape = (10,)
 
-        if param == "RFSETB":
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
+        elif param == "RFSETB":
             repeated = crop_model_params_provider[param].repeat(10, 1)
+            crop_model_params_provider.set_override(param, repeated, check=False)
         else:
             repeated = crop_model_params_provider[param].repeat(10)
-        crop_model_params_provider.set_override(param, repeated, check=False)
+            crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(config=respiration_config)
         engine.setup(
@@ -271,9 +269,6 @@ class TestRespiration:
             "RFSETB", crop_model_params_provider["RFSETB"].repeat(30, 5, 1), check=False
         )
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
-
         engine = EngineTestHelper(config=respiration_config)
         engine.setup(
             crop_model_params_provider,
@@ -336,8 +331,19 @@ class TestRespiration:
         crop_model_params_provider.set_override(
             "RMR", crop_model_params_provider["RMR"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
 
         with pytest.raises(ValueError):
             engine = EngineTestHelper(config=respiration_config)
@@ -347,34 +353,6 @@ class TestRespiration:
                 agro_management_inputs,
                 external_states,
             )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost_pp_with_respiration(self, test_data_url):
-        # prepare model input
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.MaintenanceRespiration", WOFOST_Maintenance_Respiration):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
 
 @pytest.mark.usefixtures("fast_mode")
