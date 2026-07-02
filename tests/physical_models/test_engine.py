@@ -4,15 +4,18 @@ from unittest.mock import Mock
 import pytest
 import torch
 from pcse.base import ParameterProvider
+from pcse.base import SimulationObject
 from pcse.base.variablekiosk import VariableKiosk
+from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.phenology import DVS_Phenology
 from diffwofost.physical_models.crop.wofost72 import Wofost72
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.engine import _get_params_shape
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
-from diffwofost.physical_models.utils import get_test_data
-from diffwofost.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.test import get_test_data
+from diffwofost.physical_models.test import prepare_engine_input
+from diffwofost.physical_models.traitlets import Tensor
 from . import phy_data_folder
 
 config = Configuration(
@@ -50,6 +53,14 @@ class _DummyParameterProvider(dict):
 
     def set_active_crop(self, *args):
         self.active_crop_args = args
+
+
+class DummyCropModel(SimulationObject):
+    class Parameters(TensorParamTemplate):
+        A = Tensor(-99, dtype=int)
+
+    def initialize(self, day, kiosk, parvalues, shape):
+        self.params = self.Parameters(parvalues, shape=shape)
 
 
 @pytest.mark.usefixtures("fast_mode")
@@ -151,17 +162,7 @@ class TestEngine:
         assert returned_engine is engine
         assert engine.soil is not None
 
-    def test_on_crop_start_raises_when_crop_is_already_active(self):
-        _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            _get_engine_inputs()
-        )
-        engine = Engine(config=config)
-        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
-
-        with pytest.raises(RuntimeError, match="A CROP_START signal was received"):
-            engine._on_CROP_START(engine.day)
-
-    def test_finish_cropsimulation_deletes_crop_when_requested(self):
+    def test_finish_cropsimulation_does_not_delete_crop(self):
         _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             _get_engine_inputs()
         )
@@ -171,35 +172,11 @@ class TestEngine:
         crop.finalize = Mock()
         crop._delete = Mock()
         engine.flag_crop_finish = True
-        engine.flag_crop_delete = True
         engine._save_summary_output = Mock()
 
         engine._finish_cropsimulation(date(2000, 1, 1))
 
         assert engine.flag_crop_finish is False
-        assert engine.flag_crop_delete is False
-        crop.finalize.assert_called_once_with(date(2000, 1, 1))
-        engine._save_summary_output.assert_called_once_with()
-        crop._delete.assert_called_once_with()
-        assert engine.crop is None
-
-    def test_finish_cropsimulation_keeps_crop_when_not_deleting(self):
-        _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            _get_engine_inputs()
-        )
-        engine = Engine(config=config)
-        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
-        crop = engine.crop
-        crop.finalize = Mock()
-        crop._delete = Mock()
-        engine.flag_crop_finish = True
-        engine.flag_crop_delete = False
-        engine._save_summary_output = Mock()
-
-        engine._finish_cropsimulation(date(2000, 1, 1))
-
-        assert engine.flag_crop_finish is False
-        assert engine.flag_crop_delete is False
         crop.finalize.assert_called_once_with(date(2000, 1, 1))
         engine._save_summary_output.assert_called_once_with()
         crop._delete.assert_not_called()
@@ -258,6 +235,15 @@ class TestEngine:
         engine.parameterprovider = ParameterProvider()
         engine.kiosk = VariableKiosk()
         engine._shape = ()
-        engine._on_CROP_START(date(2000, 1, 1))
+        engine._create_crop(date(2000, 1, 1))
         assert engine.mconf.CROP_NN_MODEL == nn_model
         assert engine.crop._initialized is True
+
+    def test_engine_accept_dict_as_parameter_provider(self):
+        engine = Engine(config=Configuration(CROP=DummyCropModel))
+        engine.parameterprovider = {"A": 10}
+        engine.kiosk = VariableKiosk()
+        engine._shape = ()
+        engine._create_crop(date(2000, 1, 1))
+        assert isinstance(engine.crop.params.A, torch.Tensor)
+        assert engine.crop.params.A == 10

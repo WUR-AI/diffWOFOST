@@ -6,10 +6,10 @@ from numpy.testing import assert_array_almost_equal
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import DVS_Partitioning
-from diffwofost.physical_models.utils import EngineTestHelper
-from diffwofost.physical_models.utils import calculate_numerical_grad
-from diffwofost.physical_models.utils import get_test_data
-from diffwofost.physical_models.utils import prepare_engine_input
+from diffwofost.physical_models.test import EngineTestHelper
+from diffwofost.physical_models.test import calculate_numerical_grad
+from diffwofost.physical_models.test import get_test_data
+from diffwofost.physical_models.test import prepare_engine_input
 from .. import phy_data_folder
 
 partitioning_config = Configuration(CROP=DVS_Partitioning, OUTPUT_VARS=["FR", "FL", "FS", "FO"])

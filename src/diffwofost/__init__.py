@@ -17,7 +17,7 @@ logging.getLogger(__name__).addHandler(logging.NullHandler())
 
 __author__ = ""
 __email__ = ""
-__version__ = "0.4.0"
+__version__ = "0.5.0"
 
 __all__ = [
     "leaf_dynamics",

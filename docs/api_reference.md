@@ -38,7 +38,7 @@ hide:
 
 ::: diffwofost.physical_models.engine.Engine
 
-::: diffwofost.physical_models.utils.EngineTestHelper
+::: diffwofost.physical_models.test.EngineTestHelper
 
 ::: diffwofost.ml_models.io.save_model
 
@@ -55,3 +55,7 @@ hide:
 ::: diffwofost.physical_models.base.states_rates.TensorContainer
 
 ::: diffwofost.physical_models.traitlets.Tensor
+
+## **Crop modules (ML-Based)**
+
+::: diffwofost.ml_models.crop.partitioning.DVS_Partitioning_NN
