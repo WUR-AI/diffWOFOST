@@ -236,7 +236,7 @@ def _get_params_shape(parameterprovider):
         ValueError: If tensor parameters do not share a common shape.
     """
     shape = ()
-    for paramname in parameterprovider.keys():
+    for paramname in parameterprovider._unique_parameters:
         param = parameterprovider[paramname]
         if isinstance(param, torch.Tensor):
             # We need to drop the last dimension from the Afgen table parameters
