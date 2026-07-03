@@ -1,7 +1,7 @@
 """Save and load diffWOFOST models via safetensors.
 
-Provides a single pair of functions — :func:`save_model` and :func:`load_model` —
-that handle both **ML models** (``torch.nn.Module``) and **physical models**
+Provides the functions :func:`save_model` and :func:`load_model`
+that handle storage for both **ML models** (``torch.nn.Module``) and **physical models**
 (``Configuration`` + ``ParameterProvider``):
 
 * ML models are persisted with ``state_dict()`` and constructor metadata in a
