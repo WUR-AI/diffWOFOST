@@ -1,7 +1,11 @@
 """Documentation about diffwofost."""
 
 import logging
+from diffwofost.io import load_model
+from diffwofost.io import save_model
 from diffwofost.physical_models import utils
+
+__all__ = ["load_model", "save_model"]
 from diffwofost.physical_models.crop import assimilation
 from diffwofost.physical_models.crop import evapotranspiration
 from diffwofost.physical_models.crop import leaf_dynamics

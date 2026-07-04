@@ -1,8 +1,9 @@
 from pathlib import Path
 import torch
 from pcse.base.parameter_providers import ParameterProvider
-from diffwofost.ml_models import load_model
-from diffwofost.ml_models import save_model
+from diffwofost import load_model
+from diffwofost import save_model
+from diffwofost.ml_models.crop.partitioning import DVS_Partitioning_NN
 from diffwofost.ml_models.crop.partitioning import PartitioningMLP
 from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import ComputeConfig
@@ -13,7 +14,7 @@ from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.test import EngineTestHelper
 from diffwofost.physical_models.test import get_test_data
 from diffwofost.physical_models.test import prepare_engine_input
-from ..physical_models import phy_data_folder
+from .physical_models import phy_data_folder
 
 
 def _fill_parameters(model, scale):
@@ -55,7 +56,7 @@ def test_partitioning_mlp_uses_stable_default_save_path():
     assert isinstance(restored, PartitioningMLP)
     assert restored.hidden_size == 12
     assert first_path == second_path
-    assert first_path.parent == Path(__file__).resolve().parents[2] / ".diffwofost-ml-models"
+    assert first_path.parent == Path(__file__).resolve().parents[1] / ".diffwofost-ml-models"
     assert first_path.suffix == ".safetensors"
     _assert_same_partition_outputs(model, restored, dvs)
 
@@ -161,8 +162,6 @@ def test_save_and_load_with_soil_config(tmp_path):
 
 def test_save_and_load_with_crop_nn_model(tmp_path):
     """CROP_NN_MODEL (an nn.Module instance) should survive save→load."""
-    from diffwofost.ml_models.crop.partitioning import DVS_Partitioning_NN
-
     model = PartitioningNN(hidden_size=8)
     _fill_parameters(model, scale=10.0)
 
@@ -188,8 +187,6 @@ def test_save_and_load_with_crop_nn_model(tmp_path):
 
 def test_save_and_load_with_crop_components(tmp_path):
     """CROP_COMPONENTS with an embedded ML model should survive save→load."""
-    from diffwofost.ml_models.crop.partitioning import DVS_Partitioning_NN
-
     model = PartitioningNN(hidden_size=8)
     _fill_parameters(model, scale=10.0)
 

@@ -17,7 +17,6 @@ rather than pickle, avoiding the security and portability concerns of
 """
 
 import hashlib
-import importlib
 import json
 from pathlib import Path
 import torch
@@ -26,17 +25,7 @@ from safetensors.torch import load_file
 from safetensors.torch import save_file
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
-
-
-def _class_ref(cls):
-    """``{module, qualname}`` for a Python class."""
-    return {"module": cls.__module__, "qualname": cls.__qualname__}
-
-
-def _load_class(ref):
-    """Import and return a class from a ``_class_ref`` dict."""
-    module = importlib.import_module(ref["module"])
-    return getattr(module, ref["qualname"])
+from diffwofost.physical_models.config import load_class
 
 
 def _default_model_filename(model):
@@ -75,7 +64,7 @@ def _load_torch_model(path, model_class=None, device=None, dtype=None):
     stored_cls = metadata.get("diffwofost.model_class")
 
     if model_class is None:
-        model_class = getattr(importlib.import_module(stored_mod), stored_cls)
+        model_class = load_class({"module": stored_mod, "qualname": stored_cls})
     elif stored_mod != model_class.__module__ or stored_cls != model_class.__qualname__:
         raise ValueError(
             f"Safetensors file {path} stores {stored_mod}.{stored_cls}, "
@@ -141,48 +130,7 @@ def save_model(
         root.mkdir(parents=True, exist_ok=True)
 
         # ---- config.json ----
-        cfg = {
-            "CROP": _class_ref(config.CROP),
-            "OUTPUT_VARS": config.OUTPUT_VARS,
-            "SUMMARY_OUTPUT_VARS": config.SUMMARY_OUTPUT_VARS,
-            "TERMINAL_OUTPUT_VARS": config.TERMINAL_OUTPUT_VARS,
-            "OUTPUT_INTERVAL": config.OUTPUT_INTERVAL,
-            "OUTPUT_INTERVAL_DAYS": config.OUTPUT_INTERVAL_DAYS,
-            "OUTPUT_WEEKDAY": config.OUTPUT_WEEKDAY,
-            "model_config_file": str(config.model_config_file)
-            if config.model_config_file
-            else None,
-            "description": config.description,
-            "AGROMANAGEMENT": _class_ref(config.AGROMANAGEMENT),
-            "SOIL": _class_ref(config.SOIL) if config.SOIL is not None else None,
-        }
-        if config.CROP_NN_MODEL is not None:
-            cfg["CROP_NN_MODEL"] = _class_ref(
-                config.CROP_NN_MODEL.__class__
-                if isinstance(config.CROP_NN_MODEL, torch.nn.Module)
-                else config.CROP_NN_MODEL
-            )
-            cfg["CROP_NN_MODEL_is_instance"] = isinstance(config.CROP_NN_MODEL, torch.nn.Module)
-        else:
-            cfg["CROP_NN_MODEL"] = None
-
-        if config.CROP_COMPONENTS:
-            components = {}
-            for name, override in config.CROP_COMPONENTS.items():
-                entry: dict = {"class": _class_ref(override["class"])}
-                m = override.get("model")
-                if m is not None:
-                    entry["model"] = _class_ref(
-                        m.__class__ if isinstance(m, torch.nn.Module) else m
-                    )
-                    entry["model_is_instance"] = isinstance(m, torch.nn.Module)
-                for k, v in override.items():
-                    if k not in ("class", "model") and k not in entry:
-                        entry[k] = v
-                components[name] = entry
-            cfg["CROP_COMPONENTS"] = components
-        else:
-            cfg["CROP_COMPONENTS"] = None
+        cfg = Configuration.to_dict(config)
 
         with open(root / "config.json", "w", encoding="utf-8") as fh:
             json.dump(cfg, fh, indent=2, sort_keys=True, default=str)
@@ -258,16 +206,16 @@ def load_model(path, *, model_class=None, device=None, dtype=None):
             cfg = json.load(fh)
 
         # Rebuild Configuration
-        soil_cls = _load_class(cfg["SOIL"]) if cfg.get("SOIL") else None
-        crop_nn_model_cls = _load_class(cfg["CROP_NN_MODEL"]) if cfg.get("CROP_NN_MODEL") else None
+        soil_cls = load_class(cfg["SOIL"]) if cfg.get("SOIL") else None
+        crop_nn_model_cls = load_class(cfg["CROP_NN_MODEL"]) if cfg.get("CROP_NN_MODEL") else None
 
         crop_components = None
         if cfg.get("CROP_COMPONENTS"):
             crop_components = {}
             for name, override in cfg["CROP_COMPONENTS"].items():
-                resolved = {"class": _load_class(override["class"])}
+                resolved = {"class": load_class(override["class"])}
                 if "model" in override:
-                    resolved["model"] = _load_class(override["model"])
+                    resolved["model"] = load_class(override["model"])
                 for k, v in override.items():
                     if k not in ("class", "model", "model_is_instance") and k not in resolved:
                         resolved[k] = v
@@ -275,11 +223,11 @@ def load_model(path, *, model_class=None, device=None, dtype=None):
 
         mcf = cfg.get("model_config_file")
         config = Configuration(
-            CROP=_load_class(cfg["CROP"]),
+            CROP=load_class(cfg["CROP"]),
             CROP_COMPONENTS=crop_components,
             CROP_NN_MODEL=crop_nn_model_cls,
             SOIL=soil_cls,
-            AGROMANAGEMENT=_load_class(cfg["AGROMANAGEMENT"]),
+            AGROMANAGEMENT=load_class(cfg["AGROMANAGEMENT"]),
             OUTPUT_VARS=cfg["OUTPUT_VARS"],
             SUMMARY_OUTPUT_VARS=cfg.get("SUMMARY_OUTPUT_VARS", []),
             TERMINAL_OUTPUT_VARS=cfg.get("TERMINAL_OUTPUT_VARS", []),
