@@ -26,6 +26,8 @@ class PartitioningMLP(torch.nn.Module):
             hidden_size (int): Width of the hidden layer. Defaults to 8.
         """
         super().__init__()
+        self.hidden_size = hidden_size
+        self.init_kwargs = {"hidden_size": hidden_size}
 
         self.network = torch.nn.Sequential(
             torch.nn.Linear(1, hidden_size),
@@ -97,6 +99,8 @@ class PartitioningNN(torch.nn.Module):
             hidden_size (int): Width of the shared hidden layers. Defaults to 32.
         """
         super().__init__()
+        self.hidden_size = hidden_size
+        self.init_kwargs = {"hidden_size": hidden_size}
 
         head_hidden_size = max(hidden_size // 2, 8)
         self.trunk = torch.nn.Sequential(
