@@ -206,37 +206,7 @@ def load_model(path, *, model_class=None, device=None, dtype=None):
             cfg = json.load(fh)
 
         # Rebuild Configuration
-        soil_cls = load_class(cfg["SOIL"]) if cfg.get("SOIL") else None
-        crop_nn_model_cls = load_class(cfg["CROP_NN_MODEL"]) if cfg.get("CROP_NN_MODEL") else None
-
-        crop_components = None
-        if cfg.get("CROP_COMPONENTS"):
-            crop_components = {}
-            for name, override in cfg["CROP_COMPONENTS"].items():
-                resolved = {"class": load_class(override["class"])}
-                if "model" in override:
-                    resolved["model"] = load_class(override["model"])
-                for k, v in override.items():
-                    if k not in ("class", "model", "model_is_instance") and k not in resolved:
-                        resolved[k] = v
-                crop_components[name] = resolved
-
-        mcf = cfg.get("model_config_file")
-        config = Configuration(
-            CROP=load_class(cfg["CROP"]),
-            CROP_COMPONENTS=crop_components,
-            CROP_NN_MODEL=crop_nn_model_cls,
-            SOIL=soil_cls,
-            AGROMANAGEMENT=load_class(cfg["AGROMANAGEMENT"]),
-            OUTPUT_VARS=cfg["OUTPUT_VARS"],
-            SUMMARY_OUTPUT_VARS=cfg.get("SUMMARY_OUTPUT_VARS", []),
-            TERMINAL_OUTPUT_VARS=cfg.get("TERMINAL_OUTPUT_VARS", []),
-            OUTPUT_INTERVAL=cfg.get("OUTPUT_INTERVAL", "daily"),
-            OUTPUT_INTERVAL_DAYS=cfg.get("OUTPUT_INTERVAL_DAYS", 1),
-            OUTPUT_WEEKDAY=cfg.get("OUTPUT_WEEKDAY", 0),
-            model_config_file=Path(mcf) if mcf else None,
-            description=cfg.get("description"),
-        )
+        config = Configuration.from_dict(cfg)
 
         # Rebuild param data from safetensors + JSON
         param_data = {}
