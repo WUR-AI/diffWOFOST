@@ -56,7 +56,9 @@ def prepare_engine_input(
     weather_data = pd.DataFrame(test_data["WeatherVariables"])
     if "DTEMP" not in weather_data.columns:
         weather_data["DTEMP"] = (weather_data["TEMP"] + weather_data["TMAX"]) / 2.0
-    weather_data_provider = iterator_from_dataframe(weather_data, check=False)
+
+    # create a list out of the iterator, so that the weather data can be reused in several tests
+    weather_data_provider = list(iterator_from_dataframe(weather_data, check=False))
 
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data.get("ExternalStates") or []
