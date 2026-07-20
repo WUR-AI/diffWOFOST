@@ -58,7 +58,7 @@ def prepare_engine_input(
         weather_data["DTEMP"] = (weather_data["TEMP"] + weather_data["TMAX"]) / 2.0
 
     # create a list out of the iterator, so that the weather data can be reused in several tests
-    weather_data_provider = list(iterator_from_dataframe(weather_data, check=False))
+    weather_data_provider = list(iterator_from_dataframe(weather_data, check=meteo_range_checks))
 
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data.get("ExternalStates") or []
