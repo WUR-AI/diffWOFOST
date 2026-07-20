@@ -1,3 +1,4 @@
+import importlib
 import inspect
 from dataclasses import dataclass
 from dataclasses import field
@@ -8,6 +9,17 @@ import torch
 from pcse.agromanager import AgroManager
 from pcse.base import AncillaryObject
 from pcse.base import SimulationObject
+
+
+def class_ref(cls):
+    """``{module, qualname}`` for a Python class."""
+    return {"module": cls.__module__, "qualname": cls.__qualname__}
+
+
+def load_class(ref):
+    """Import and return a class from a ``class_ref`` dict."""
+    module = importlib.import_module(ref["module"])
+    return getattr(module, ref["qualname"])
 
 
 class ComputeConfig:
@@ -182,6 +194,102 @@ class Configuration:
             raise ValueError(f"Component override '{component_name}' must have a 'class' key")
         if override["class"] is None:
             raise ValueError(f"Component override '{component_name}' 'class' cannot be None")
+
+    @classmethod
+    def to_dict(cls, config: Self) -> dict:
+        """Serialize a Configuration instance to a JSON-compatible dict.
+
+        Args:
+            config: Configuration instance to serialize.
+
+        Returns:
+            dict: Serializable dict with class references and configuration values.
+        """
+        cfg = {
+            "CROP": class_ref(config.CROP),
+            "OUTPUT_VARS": config.OUTPUT_VARS,
+            "SUMMARY_OUTPUT_VARS": config.SUMMARY_OUTPUT_VARS,
+            "TERMINAL_OUTPUT_VARS": config.TERMINAL_OUTPUT_VARS,
+            "OUTPUT_INTERVAL": config.OUTPUT_INTERVAL,
+            "OUTPUT_INTERVAL_DAYS": config.OUTPUT_INTERVAL_DAYS,
+            "OUTPUT_WEEKDAY": config.OUTPUT_WEEKDAY,
+            "model_config_file": str(config.model_config_file)
+            if config.model_config_file
+            else None,
+            "description": config.description,
+            "AGROMANAGEMENT": class_ref(config.AGROMANAGEMENT),
+            "SOIL": class_ref(config.SOIL) if config.SOIL is not None else None,
+        }
+        if config.CROP_NN_MODEL is not None:
+            cfg["CROP_NN_MODEL"] = class_ref(
+                config.CROP_NN_MODEL.__class__
+                if isinstance(config.CROP_NN_MODEL, torch.nn.Module)
+                else config.CROP_NN_MODEL
+            )
+            cfg["CROP_NN_MODEL_is_instance"] = isinstance(config.CROP_NN_MODEL, torch.nn.Module)
+        else:
+            cfg["CROP_NN_MODEL"] = None
+
+        if config.CROP_COMPONENTS:
+            components = {}
+            for name, override in config.CROP_COMPONENTS.items():
+                entry: dict = {"class": class_ref(override["class"])}
+                m = override.get("model")
+                if m is not None:
+                    entry["model"] = class_ref(m.__class__ if isinstance(m, torch.nn.Module) else m)
+                    entry["model_is_instance"] = isinstance(m, torch.nn.Module)
+                for k, v in override.items():
+                    if k not in ("class", "model") and k not in entry:
+                        entry[k] = v
+                components[name] = entry
+            cfg["CROP_COMPONENTS"] = components
+        else:
+            cfg["CROP_COMPONENTS"] = None
+
+        return cfg
+
+    @classmethod
+    def from_dict(cls, cfg: dict) -> Self:
+        """Reconstruct a Configuration instance from a dict created by :meth:`to_dict`.
+
+        Args:
+            cfg: Dict produced by :meth:`to_dict` (or loaded from a saved config.json).
+
+        Returns:
+            Configuration: A new Configuration instance with classes resolved.
+        """
+        soil_cls = load_class(cfg["SOIL"]) if cfg.get("SOIL") else None
+        crop_nn_model_cls = load_class(cfg["CROP_NN_MODEL"]) if cfg.get("CROP_NN_MODEL") else None
+
+        crop_components = None
+        if cfg.get("CROP_COMPONENTS"):
+            crop_components = {}
+            for name, override in cfg["CROP_COMPONENTS"].items():
+                resolved = {"class": load_class(override["class"])}
+                if "model" in override:
+                    resolved["model"] = load_class(override["model"])
+                for k, v in override.items():
+                    if k not in ("class", "model", "model_is_instance") and k not in resolved:
+                        resolved[k] = v
+                crop_components[name] = resolved
+
+        mcf = cfg.get("model_config_file")
+        config = Configuration(
+            CROP=load_class(cfg["CROP"]),
+            CROP_COMPONENTS=crop_components,
+            CROP_NN_MODEL=crop_nn_model_cls,
+            SOIL=soil_cls,
+            AGROMANAGEMENT=load_class(cfg["AGROMANAGEMENT"]),
+            OUTPUT_VARS=cfg["OUTPUT_VARS"],
+            SUMMARY_OUTPUT_VARS=cfg.get("SUMMARY_OUTPUT_VARS", []),
+            TERMINAL_OUTPUT_VARS=cfg.get("TERMINAL_OUTPUT_VARS", []),
+            OUTPUT_INTERVAL=cfg.get("OUTPUT_INTERVAL", "daily"),
+            OUTPUT_INTERVAL_DAYS=cfg.get("OUTPUT_INTERVAL_DAYS", 1),
+            OUTPUT_WEEKDAY=cfg.get("OUTPUT_WEEKDAY", 0),
+            model_config_file=Path(mcf) if mcf else None,
+            description=cfg.get("description"),
+        )
+        return config
 
     @classmethod
     def from_pcse_config_file(cls, filename: str | Path) -> Self:

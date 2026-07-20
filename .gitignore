@@ -25,6 +25,7 @@ share/python-wheels/
 # jupyter notebook
 .ipynb_checkpoints
 docs/notebooks/test*
+.diffwofost-ml-models/
 
 # Unit test / coverage reports
 htmlcov/
@@ -47,6 +48,9 @@ docs/_build
 #.idea/
 .spyderproject
 .spyproject
+# VsCode
+.vscode/
+.github/workflows/copilot-instructions.md
 
 # Mac
 .DS_Store
@@ -63,7 +67,6 @@ venv3
 ENV/
 env.bak/
 venv.bak/
-.vscode/
 
 # vim
 *.swp
