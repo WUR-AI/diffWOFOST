@@ -103,8 +103,8 @@ class Engine(PcseEngine):
 
         Args:
             parameterprovider: Provider with crop and soil parameter values.
-            weatherdataprovider: Iterator used to provide daily driving
-                weather variables.
+            weatherdataprovider: Daily driving weather variables. It can be an provided as an
+                iterable or iterator.
             agromanagement: AgroManagement definition passed to the configured
                 agromanagement component.
             external_states (list[dict] | None): Optional list of day-keyed
@@ -138,7 +138,7 @@ class Engine(PcseEngine):
         self.kiosk(self.day)
 
         # Driving variables
-        self.weatherdataprovider = weatherdataprovider
+        self.weatherdataprovider = _to_iterator(weatherdataprovider)
         self.drv = self._get_driving_variables(self.day)
 
         # Determine common shape for the parameters and weather data
@@ -283,3 +283,17 @@ def _get_params_shape(provider: MutableMapping) -> tuple:
             else:
                 raise ValueError("Non-matching shapes found in parameter provider!")
     return shape
+
+
+def _to_iterator(weatherdata):
+    """Transform input weather data to an iterator."""
+    # if already an iterator, return as is
+    if hasattr(weatherdata, "__iter__") and hasattr(weatherdata, "__next__"):
+        return weatherdata
+    # if iterable, return iterator
+    elif hasattr(weatherdata, "__iter__"):
+        return iter(weatherdata)
+    else:
+        raise ValueError(
+            f"Weather data should be provided as an iterable or iterator - got {type(weatherdata)}."
+        )
