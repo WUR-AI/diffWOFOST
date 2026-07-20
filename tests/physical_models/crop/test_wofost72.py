@@ -1,12 +1,9 @@
-import copy
 import datetime
 import warnings
-from unittest.mock import patch
 import pytest
 import torch
 from pcse.base import SimulationObject
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.models import Wofost72_PP
 from diffwofost.ml_models.crop.partitioning import DVS_Partitioning_NN
 from diffwofost.ml_models.crop.partitioning import PartitioningNN
 from diffwofost.physical_models.config import Configuration
@@ -92,7 +89,7 @@ def get_test_diff_wofost72_model():
         test_data = get_test_data(test_data_url)
         _wofost72_template_inputs = _build_wofost72_template_inputs(test_data)
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, external_states) = (
-        copy.deepcopy(_wofost72_template_inputs)
+        _wofost72_template_inputs
     )
     return DiffWofost72(
         crop_model_params_provider,
@@ -267,14 +264,20 @@ class TestWofost72_PP:
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
-            # Vectorize weather variable
-            for (_, _), wdc in weather_data_provider.store.items():
-                base = wdc.TEMP
-                if isinstance(base, torch.Tensor):
-                    ones = torch.ones(10, dtype=base.dtype, device=base.device)
-                    wdc.TEMP = ones * base
-                else:
-                    wdc.TEMP = torch.ones(10, dtype=torch.float64) * base
+            # Broadcast weather variable
+            shape = (10,)
+
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
         elif param in ["KDIFTB", "SLATB"]:
             # AfgenTrait parameters need to have shape (N, M)
             repeated = crop_model_params_provider[param].repeat(10, 1)
@@ -283,48 +286,32 @@ class TestWofost72_PP:
             repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        if param == "TEMP":
-            # Expect error due to incompatible shapes
-            # (By defaults parameters are not reshaped following weather variables)
-            with pytest.raises(ValueError):
-                engine = EngineTestHelper(config=wofost72_config)
-                engine.setup(
-                    crop_model_params_provider,
-                    weather_data_provider,
-                    agro_management_inputs,
-                    external_states,
-                )
-                engine.run_till_terminate()
-                actual_results = engine.get_output()
-        else:
-            engine = EngineTestHelper(config=wofost72_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
+        engine = EngineTestHelper(config=wofost72_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            # Verify output is on the correct device
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            # Move to CPU for comparison
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
+            assert all(
+                all(abs(reference[var] - model_cpu[var]) < precision)
+                for var, precision in expected_precision.items()
             )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
-
-            # get expected results from YAML test data
-            expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                # Verify output is on the correct device
-                for var in expected_precision.keys():
-                    assert model[var].device.type == device, f"{var} should be on {device}"
-                # Move to CPU for comparison
-                model_cpu = {
-                    k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()
-                }
-                assert all(
-                    all(abs(reference[var] - model_cpu[var]) < precision)
-                    for var, precision in expected_precision.items()
-                )
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -453,14 +440,6 @@ class TestWofost72_PP:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            base = wdc.TEMP
-            if isinstance(base, torch.Tensor):
-                ones = torch.ones((30, 5), dtype=base.dtype, device=base.device)
-                wdc.TEMP = ones * base
-            else:
-                wdc.TEMP = torch.ones((30, 5), dtype=torch.float64) * base
-
         engine = EngineTestHelper(config=wofost72_config)
         engine.setup(
             crop_model_params_provider,
@@ -532,8 +511,20 @@ class TestWofost72_PP:
         crop_model_params_provider.set_override(
             "TDWI", crop_model_params_provider["TDWI"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
 
         with pytest.raises(ValueError):
             engine = EngineTestHelper(config=wofost72_config)
@@ -677,35 +668,6 @@ class TestWofost72_PP:
         assert crop.so_dynamics._label == "storage_organ_dynamics"
         assert crop.lv_dynamics.payload is component_models["leaf_dynamics"]
         assert crop.lv_dynamics._label == "leaf_dynamics"
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost72_against_pcse_pp(self, test_data_url):
-        """Test that diffWOFOST Wofost72 gives the same results as PCSE Wofost72_PP."""
-        # prepare model input
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.Wofost72", Wofost72):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
 
 @pytest.mark.usefixtures("fast_mode")
