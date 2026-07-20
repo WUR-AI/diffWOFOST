@@ -47,13 +47,13 @@ def _prepare_common_stem_inputs(test_data_url, device, meteo_range_checks=True):
     if "RDRSTB" not in crop_model_params_provider:
         crop_model_params_provider.set_override(
             "RDRSTB",
-            torch.tensor([[0.0, 0.0, 2.5, 0.0]], dtype=torch.float64, device=device),
+            torch.tensor([0.0, 0.0, 2.5, 0.0], dtype=torch.float64, device=device),
             check=False,
         )
     if "SSATB" not in crop_model_params_provider:
         crop_model_params_provider.set_override(
             "SSATB",
-            torch.tensor([[0.0, 0.0003, 2.5, 0.0003]], dtype=torch.float64, device=device),
+            torch.tensor([0.0, 0.0003, 2.5, 0.0003], dtype=torch.float64, device=device),
             check=False,
         )
     if "TDWI" not in crop_model_params_provider:
@@ -253,8 +253,7 @@ class TestStemDynamics:
         if param in {"RDRSTB", "SSATB"}:
             # AfgenTrait parameters need to have shape (N, M)
             non_zeros_mask = test_value != 0
-            # Use cat to get (2, 4) instead of stack (2, 1, 4)
-            param_vec = torch.cat([test_value + non_zeros_mask * delta, test_value], dim=0)
+            param_vec = torch.stack([test_value + non_zeros_mask * delta, test_value])
             target_batch_size = 2
         else:
             param_vec = torch.tensor(
