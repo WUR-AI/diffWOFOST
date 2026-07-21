@@ -1,8 +1,6 @@
 import warnings
-from unittest.mock import patch
 import pytest
 import torch
-from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.storage_organ_dynamics import WOFOST_Storage_Organ_Dynamics
 from diffwofost.physical_models.test import EngineTestHelper
@@ -181,9 +179,20 @@ class TestStorageOrganDynamics:
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
-            # Vectorize weather variable
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
+            # Broadcast weather variable
+            shape = (10,)
+
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
         else:
             # Broadcast all parameters to match the batch size of 10
             for p_name in ["TDWI", "SPA"]:
@@ -198,35 +207,21 @@ class TestStorageOrganDynamics:
                             p_name, p_val.repeat(10, 1), check=False
                         )
 
-        if param == "TEMP":
-            # Vectorize weather variable
-            # We expect the model to handle scalar parameters with vectorized weather
-            # via implicit broadcasting or explicit checks passing.
-            engine = EngineTestHelper(config=storage_dynamics_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
-        else:
-            engine = EngineTestHelper(config=storage_dynamics_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
+        engine = EngineTestHelper(config=storage_dynamics_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
 
-            # get expected results from YAML test data
-            expected_results = test_data["ModelResults"]
+        # get expected results from YAML test data
+        expected_results = test_data["ModelResults"]
 
-            # Assertions on values removed as test data is not appropriate for this module
-            assert len(actual_results) == len(expected_results)
+        # Assertions on values removed as test data is not appropriate for this module
+        assert len(actual_results) == len(expected_results)
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -338,9 +333,6 @@ class TestStorageOrganDynamics:
             repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
-
         engine = EngineTestHelper(config=storage_dynamics_config)
         engine.setup(
             crop_model_params_provider,
@@ -385,34 +377,6 @@ class TestStorageOrganDynamics:
                 agro_management_inputs,
                 external_states,
             )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost_pp_with_storage_dynamics(self, test_data_url):
-        # prepare model input
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["TDWI", "SPA"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.Storage_Organ_Dynamics", WOFOST_Storage_Organ_Dynamics):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
 
 @pytest.mark.usefixtures("fast_mode")

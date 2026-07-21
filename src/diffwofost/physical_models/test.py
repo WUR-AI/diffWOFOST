@@ -1,12 +1,11 @@
+import pandas as pd
 import torch
 import yaml
 from pcse import signals
-from pcse.base.weather import WeatherDataContainer
-from pcse.base.weather import WeatherDataProvider
-from pcse.settings import settings
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.parameter_providers import ParameterProvider
+from diffwofost.physical_models.weather import iterator_from_dataframe
 
 
 class EngineTestHelper(Engine):
@@ -41,22 +40,6 @@ class EngineTestHelper(Engine):
             self._terminate_simulation(self.day)
 
 
-class WeatherDataProviderTestHelper(WeatherDataProvider):
-    """It stores the weatherdata contained within the YAML tests."""
-
-    def __init__(self, yaml_weather, meteo_range_checks=True):
-        super().__init__()
-        # This is a temporary workaround. The `METEO_RANGE_CHECKS` logic in
-        # `__setattr__` method in `WeatherDataContainer` is not vector compatible
-        # yet. So we can disable it here when creating the `WeatherDataContainer`
-        # instances with arrays.
-        settings.METEO_RANGE_CHECKS = meteo_range_checks
-        for weather in yaml_weather:
-            weather_inputs = {k: v for k, v in weather.items() if k != "SNOWDEPTH"}
-            wdc = WeatherDataContainer(**weather_inputs)
-            self._store_WeatherDataContainer(wdc, wdc.DAY)
-
-
 def prepare_engine_input(
     test_data, crop_model_params, device=None, dtype=None, meteo_range_checks=True
 ):
@@ -70,33 +53,13 @@ def prepare_engine_input(
     agro_management_inputs = test_data["AgroManagement"]
     cropd = test_data["ModelParameters"]
 
-    weather_data_provider = WeatherDataProviderTestHelper(
-        test_data["WeatherVariables"], meteo_range_checks=meteo_range_checks
-    )
+    weather_data = pd.DataFrame(test_data["WeatherVariables"])
+    if "DTEMP" not in weather_data.columns:
+        weather_data["DTEMP"] = (weather_data["TEMP"] + weather_data["TMAX"]) / 2.0
 
-    # The PCSE WeatherDataContainer stores required variables as Python floats.
-    # Some of our tests rely on weather inputs being torch.Tensors (e.g. to
-    # broadcast/batch weather variables). We only do this conversion when
-    # METEO_RANGE_CHECKS is disabled because the PCSE range checks assume
-    # scalar floats.
-    if not meteo_range_checks:
-        for (_, _), wdc in weather_data_provider.store.items():
-            for varname in (
-                "IRRAD",
-                "TMIN",
-                "TMAX",
-                "TEMP",
-                "VAP",
-                "RAIN",
-                "WIND",
-                "E0",
-                "ES0",
-                "ET0",
-            ):
-                if hasattr(wdc, varname):
-                    value = getattr(wdc, varname)
-                    if not isinstance(value, torch.Tensor):
-                        setattr(wdc, varname, torch.tensor(value, dtype=dtype, device=device))
+    # create a list out of the iterator, so that the weather data can be reused in several tests
+    weather_data_provider = list(iterator_from_dataframe(weather_data, check=meteo_range_checks))
+
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data.get("ExternalStates") or []
 

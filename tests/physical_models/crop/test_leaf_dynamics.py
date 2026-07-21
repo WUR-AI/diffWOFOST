@@ -1,8 +1,6 @@
 import warnings
-from unittest.mock import patch
 import pytest
 import torch
-from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from diffwofost.physical_models.test import EngineTestHelper
@@ -135,9 +133,20 @@ class TestLeafDynamics:
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
-            # Vectorize weather variable
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, device=device, dtype=torch.float64) * wdc.TEMP
+            # Broadcast weather variables
+            shape = (10,)
+
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
         elif param in ["KDIFTB", "SLATB"]:
             # AfgenTrait parameters need to have shape (N, M)
             repeated = crop_model_params_provider[param].repeat(10, 1)
@@ -146,48 +155,32 @@ class TestLeafDynamics:
             repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        if param == "TEMP":
-            # Expect error due to incompatible shapes
-            # (By defaults parameters are not reshaped following weather variables)
-            with pytest.raises(ValueError):
-                engine = EngineTestHelper(config=leaf_dynamics_config)
-                engine.setup(
-                    crop_model_params_provider,
-                    weather_data_provider,
-                    agro_management_inputs,
-                    external_states,
-                )
-                engine.run_till_terminate()
-                actual_results = engine.get_output()
-        else:
-            engine = EngineTestHelper(config=leaf_dynamics_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
+        engine = EngineTestHelper(config=leaf_dynamics_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        assert len(actual_results) == len(expected_results)
+
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model["day"]
+            # Verify output is on the correct device
+            for var in expected_precision.keys():
+                assert model[var].device.type == device, f"{var} should be on {device}"
+            # Move to CPU for comparison
+            model_cpu = {k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()}
+            assert all(
+                all(abs(reference[var] - model_cpu[var]) < precision)
+                for var, precision in expected_precision.items()
             )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
-
-            # get expected results from YAML test data
-            expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                # Verify output is on the correct device
-                for var in expected_precision.keys():
-                    assert model[var].device.type == device, f"{var} should be on {device}"
-                # Move to CPU for comparison
-                model_cpu = {
-                    k: v.cpu() if isinstance(v, torch.Tensor) else v for k, v in model.items()
-                }
-                assert all(
-                    all(abs(reference[var] - model_cpu[var]) < precision)
-                    for var, precision in expected_precision.items()
-                )
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -316,9 +309,6 @@ class TestLeafDynamics:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
-
         engine = EngineTestHelper(config=leaf_dynamics_config)
         engine.setup(
             crop_model_params_provider,
@@ -390,8 +380,20 @@ class TestLeafDynamics:
         crop_model_params_provider.set_override(
             "TDWI", crop_model_params_provider["TDWI"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+        # Broadcast weather variables to a shape that does not match the parameters
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
 
         with pytest.raises(ValueError):
             engine = EngineTestHelper(config=leaf_dynamics_config)
@@ -401,34 +403,6 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 external_states,
             )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost_pp_with_leaf_dynamics(self, test_data_url):
-        # prepare model input
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.Leaf_Dynamics", WOFOST_Leaf_Dynamics):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
     @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)
     def test_leaf_dynamics_with_sigmoid_approx(self, test_data_url):

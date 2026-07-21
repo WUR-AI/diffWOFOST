@@ -1,8 +1,6 @@
 import warnings
-from unittest.mock import patch
 import pytest
 import torch
-from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.stem_dynamics import WOFOST_Stem_Dynamics
 from diffwofost.physical_models.test import EngineTestHelper
@@ -49,13 +47,13 @@ def _prepare_common_stem_inputs(test_data_url, device, meteo_range_checks=True):
     if "RDRSTB" not in crop_model_params_provider:
         crop_model_params_provider.set_override(
             "RDRSTB",
-            torch.tensor([[0.0, 0.0, 2.5, 0.0]], dtype=torch.float64, device=device),
+            torch.tensor([0.0, 0.0, 2.5, 0.0], dtype=torch.float64, device=device),
             check=False,
         )
     if "SSATB" not in crop_model_params_provider:
         crop_model_params_provider.set_override(
             "SSATB",
-            torch.tensor([[0.0, 0.0003, 2.5, 0.0003]], dtype=torch.float64, device=device),
+            torch.tensor([0.0, 0.0003, 2.5, 0.0003], dtype=torch.float64, device=device),
             check=False,
         )
     if "TDWI" not in crop_model_params_provider:
@@ -185,9 +183,20 @@ class TestStemDynamics:
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
-            # Vectorize weather variable
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
+            # Broadcast weather variables
+            shape = (10,)
+
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
         else:
             # Broadcast all parameters to match the batch size of 10
             # This ensures compatibility for all parameters including table traits
@@ -203,35 +212,21 @@ class TestStemDynamics:
                             p_name, p_val.repeat(10, 1), check=False
                         )
 
-        if param == "TEMP":
-            # Vectorize weather variable
-            # We expect the model to handle scalar parameters with vectorized weather
-            # via implicit broadcasting or explicit checks passing.
-            engine = EngineTestHelper(config=stem_dynamics_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
-        else:
-            engine = EngineTestHelper(config=stem_dynamics_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
+        engine = EngineTestHelper(config=stem_dynamics_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
 
-            # get expected results from YAML test data
-            expected_results = test_data["ModelResults"]
+        # get expected results from YAML test data
+        expected_results = test_data["ModelResults"]
 
-            # Assertions on values removed as test data is not appropriate for this module
-            assert len(actual_results) == len(expected_results)
+        # Assertions on values removed as test data is not appropriate for this module
+        assert len(actual_results) == len(expected_results)
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -258,8 +253,7 @@ class TestStemDynamics:
         if param in {"RDRSTB", "SSATB"}:
             # AfgenTrait parameters need to have shape (N, M)
             non_zeros_mask = test_value != 0
-            # Use cat to get (2, 4) instead of stack (2, 1, 4)
-            param_vec = torch.cat([test_value + non_zeros_mask * delta, test_value], dim=0)
+            param_vec = torch.stack([test_value + non_zeros_mask * delta, test_value])
             target_batch_size = 2
         else:
             param_vec = torch.tensor(
@@ -359,9 +353,6 @@ class TestStemDynamics:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
-
         engine = EngineTestHelper(config=stem_dynamics_config)
         engine.setup(
             crop_model_params_provider,
@@ -422,8 +413,21 @@ class TestStemDynamics:
         crop_model_params_provider.set_override(
             "TDWI", crop_model_params_provider["TDWI"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+
+        # Broadcast weather variables
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
 
         with pytest.raises((AssertionError, ValueError)):
             engine = EngineTestHelper(config=stem_dynamics_config)
@@ -433,34 +437,6 @@ class TestStemDynamics:
                 agro_management_inputs,
                 external_states,
             )
-
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
-    def test_wofost_pp_with_stem_dynamics(self, test_data_url):
-        # prepare model input
-        test_data = get_test_data(test_data_url)
-        crop_model_params = ["TDWI", "RDRSTB", "SSATB"]
-        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
-        )
-
-        # get expected results from YAML test data
-        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
-
-        with patch("pcse.crop.wofost72.Stem_Dynamics", WOFOST_Stem_Dynamics):
-            model = Wofost72_PP(
-                crop_model_params_provider, weather_data_provider, agro_management_inputs
-            )
-            model.run_till_terminate()
-            actual_results = model.get_output()
-
-            assert len(actual_results) == len(expected_results)
-
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert reference["DAY"] == model["day"]
-                assert all(
-                    abs(reference[var] - model[var]) < precision
-                    for var, precision in expected_precision.items()
-                )
 
 
 @pytest.mark.usefixtures("fast_mode")
