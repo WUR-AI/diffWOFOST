@@ -32,7 +32,7 @@ WEATHER_VARIABLES = dict(
 )
 
 
-def iterator_from_dataframe(df: pd.DataFrame, check: bool = True) -> Iterator:
+def iterator_from_dataframe(df: pd.DataFrame, check: bool = True, skipna: bool = True) -> Iterator:
     """Weather data generator from a Pandas DataFrame.
 
     This utility function transforms weather data from tabular format to an iterator of torch
@@ -46,6 +46,12 @@ def iterator_from_dataframe(df: pd.DataFrame, check: bool = True) -> Iterator:
             corresponding dates).
         check (bool, optional): Optionally carry out validity checks for the dataset. Defaults to
             True.
+        skipna (bool, optional): How to handle NaN values when `check` is True. If True, allow NaN
+            values as part of the weather data.
+
+    Raises:
+        ValueError: When checking weather data (`check=True`), if values are outside the expected
+            validity range. If `skipna=False`, also check that no NaN values are present.
 
     Yields:
         dict[str, typing.Any]: Weather variables as key-value pairs. Variables will be converted
@@ -61,10 +67,17 @@ def iterator_from_dataframe(df: pd.DataFrame, check: bool = True) -> Iterator:
         for var_name, var in WEATHER_VARIABLES.items():
             if var_name in df.columns:
                 col = df[var_name]
-                assert ((var.min <= col) & (col <= var.max)).all(), (
-                    f"Values for `{var_name}` outside the range [{var.min}, {var.max}]"
-                    f"(expected unit is {var.unit})."
-                )
+                is_nan = col.isna()
+                if skipna:
+                    col = col[~is_nan]
+                else:
+                    if is_nan.any():
+                        raise ValueError(f"{var_name} includes {is_nan.sum()} NaN values.")
+                if ((col < var.min) | (col > var.max)).any():
+                    raise ValueError(
+                        f"Values for `{var_name}` outside the range [{var.min}, {var.max}]"
+                        f"(expected unit is {var.unit})."
+                    )
 
         # Check dates
         if days is not None:
