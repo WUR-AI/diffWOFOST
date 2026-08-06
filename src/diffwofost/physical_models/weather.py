@@ -112,9 +112,10 @@ def _check_range_of_weather_variables(df: pd.DataFrame, skipna: bool = True) -> 
 
 def _check_dates(dates: pd.Series) -> None:
     expected = pd.date_range(start=dates.iloc[0], periods=len(dates), freq="D")
-    assert (dates == expected).all(), (
-        "Column `DAY` must contain consecutive daily dates with no gaps or duplicates."
-    )
+    if not (dates == expected).all():
+        raise ValueError(
+            "Column `DAY` must contain consecutive daily dates with no gaps or duplicates."
+        )
 
 
 def _to_dict_of_tensors(df: pd.DataFrame) -> dict[str, torch.Tensor]:
