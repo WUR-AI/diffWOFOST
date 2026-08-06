@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
+from typing import Any
 import pandas as pd
 import torch
 from diffwofost.physical_models.config import ComputeConfig
@@ -49,13 +50,26 @@ def iterator_from_dataframe(df: pd.DataFrame, check: bool = True, skipna: bool =
         skipna (bool, optional): How to handle NaN values when `check` is True. If True, allow NaN
             values as part of the weather data.
 
-    Raises:
-        ValueError: When checking weather data (`check=True`), if values are outside the expected
-            validity range. If `skipna=False`, also check that no NaN values are present.
-
     Yields:
         dict[str, typing.Any]: Weather variables as key-value pairs. Variables will be converted
             to torch tensors, using dtype and device as configured in `ComputeConfig`.
+
+    Examples:
+        >>> import pandas as pd
+        >>> weather_data = pd.DataFrame({
+        ...     "DAY": ["2020-04-01", "2020-04-02", "2020-04-03", "2020-04-04"],
+        ...     "TEMP": [10., 11., 9., 12.],
+        ... })
+        >>> weather_data_iter = iterator_from_dataframe(weather_data)
+        >>> next(weather_data_iter)
+        {'DAY': datetime.date(2020, 4, 1), 'TEMP': tensor(10.)}
+        >>> weather_data_faulty = pd.DataFrame({
+        ...     "DAY": ["2020-04-01", "2020-04-02", "2020-04-03", "2020-04-04"],
+        ...     "TEMP": [10., 1000., 9., 12.], # unrealistic temperature
+        ... })
+        >>> iterator_from_dataframe(weather_data_faulty)
+        ValueError: Values for `TEMP` outside the range [-50.0, 60.0] (expected unit is Celsius).
+
     """
     dates = _extract_dates_if_present(df)
 
@@ -72,8 +86,7 @@ def iterator_from_dataframe(df: pd.DataFrame, check: bool = True, skipna: bool =
 
     variables.update(_to_dict_of_tensors(df))
 
-    for n in range(len(df)):
-        yield {k: v[n] for k, v in variables.items()}
+    return _iterate(variables, length=len(df))
 
 
 def _extract_dates_if_present(df: pd.DataFrame) -> pd.Series | None:
@@ -92,7 +105,7 @@ def _check_range_of_weather_variables(df: pd.DataFrame, skipna: bool = True) -> 
                     raise ValueError(f"{var_name} includes {is_nan.sum()} NaN values.")
             if ((col < var.min) | (col > var.max)).any():
                 raise ValueError(
-                    f"Values for `{var_name}` outside the range [{var.min}, {var.max}]"
+                    f"Values for `{var_name}` outside the range [{var.min}, {var.max}] "
                     f"(expected unit is {var.unit})."
                 )
 
@@ -112,3 +125,8 @@ def _to_dict_of_tensors(df: pd.DataFrame) -> dict[str, torch.Tensor]:
         for var_name in WEATHER_VARIABLES.keys()
         if var_name in df.columns
     }
+
+
+def _iterate(variables: dict[str, Any], length):
+    for n in range(length):
+        yield {k: v[n] for k, v in variables.items()}
