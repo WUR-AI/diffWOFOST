@@ -389,8 +389,8 @@ class TestStemDynamics:
             "RDRSTB", crop_model_params_provider["RDRSTB"].repeat(5, 1), check=False
         )
 
+        engine = EngineTestHelper(config=stem_dynamics_config)
         with pytest.raises((AssertionError, ValueError)):
-            engine = EngineTestHelper(config=stem_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -429,8 +429,8 @@ class TestStemDynamics:
 
         weather_data_provider = broadcast(weather_data_provider)
 
+        engine = EngineTestHelper(config=stem_dynamics_config)
         with pytest.raises((AssertionError, ValueError)):
-            engine = EngineTestHelper(config=stem_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,

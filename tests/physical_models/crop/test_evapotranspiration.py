@@ -503,8 +503,8 @@ class TestEvapotranspiration:
             "DEPNR", crop_model_params_provider["DEPNR"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=evapotranspiration_config)
         with pytest.raises(ValueError, match="Non-matching shapes found in parameter provider!"):
-            engine = EngineTestHelper(config=evapotranspiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -552,8 +552,8 @@ class TestEvapotranspiration:
 
         weather_data_provider = broadcast(weather_data_provider)
 
+        engine = EngineTestHelper(config=evapotranspiration_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=evapotranspiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,

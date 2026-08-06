@@ -286,8 +286,8 @@ class TestAssimilation:
             "EFFTB", crop_model_params_provider["EFFTB"].repeat(5, 1), check=False
         )
 
+        engine = EngineTestHelper(config=assimilation_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=assimilation_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -325,8 +325,8 @@ class TestAssimilation:
 
         broadcasted = broadcast(weather_data_provider)
 
+        engine = EngineTestHelper(config=assimilation_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=assimilation_config)
             engine.setup(
                 crop_model_params_provider,
                 broadcasted,

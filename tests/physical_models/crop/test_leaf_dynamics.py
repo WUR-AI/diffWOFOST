@@ -355,8 +355,8 @@ class TestLeafDynamics:
             "SPAN", crop_model_params_provider["SPAN"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=leaf_dynamics_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=leaf_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -395,8 +395,8 @@ class TestLeafDynamics:
 
         weather_data_provider = broadcast(weather_data_provider)
 
+        engine = EngineTestHelper(config=leaf_dynamics_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=leaf_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,

@@ -12,24 +12,24 @@ class WeatherVariable:
     max: float
 
 
-WEATHER_VARIABLES = dict(
-    LAT=WeatherVariable("Degrees", -90.0, 90.0),
-    LON=WeatherVariable("Degrees", -180.0, 180.0),
-    ELEV=WeatherVariable("m", -300, 6000),
-    IRRAD=WeatherVariable("J/m2/day", 0.0, 40e6),
-    TMIN=WeatherVariable("Celsius", -50.0, 60.0),
-    TMAX=WeatherVariable("Celsius", -50.0, 60.0),
-    VAP=WeatherVariable("hPa", 0.06, 199.3),
-    RAIN=WeatherVariable("cm/day", 0, 25),
-    E0=WeatherVariable("cm/day", 0.0, 2.5),
-    ES0=WeatherVariable("cm/day", 0.0, 2.5),
-    ET0=WeatherVariable("cm/day", 0.0, 2.5),
-    SNOWDEPTH=WeatherVariable("cm", 0.0, 250.0),
-    TEMP=WeatherVariable("Celsius", -50.0, 60.0),
-    TMINRA=WeatherVariable("Celsius", -50.0, 60.0),
-    WIND=WeatherVariable("m/s", 0.0, 100.0),
-    DTEMP=WeatherVariable("Celsius", -50.0, 60.0),
-)
+WEATHER_VARIABLES = {
+    "LAT": WeatherVariable("Degrees", -90.0, 90.0),
+    "LON": WeatherVariable("Degrees", -180.0, 180.0),
+    "ELEV": WeatherVariable("m", -300, 6000),
+    "IRRAD": WeatherVariable("J/m2/day", 0.0, 40e6),
+    "TMIN": WeatherVariable("Celsius", -50.0, 60.0),
+    "TMAX": WeatherVariable("Celsius", -50.0, 60.0),
+    "VAP": WeatherVariable("hPa", 0.06, 199.3),
+    "RAIN": WeatherVariable("cm/day", 0, 25),
+    "E0": WeatherVariable("cm/day", 0.0, 2.5),
+    "ES0": WeatherVariable("cm/day", 0.0, 2.5),
+    "ET0": WeatherVariable("cm/day", 0.0, 2.5),
+    "SNOWDEPTH": WeatherVariable("cm", 0.0, 250.0),
+    "TEMP": WeatherVariable("Celsius", -50.0, 60.0),
+    "TMINRA": WeatherVariable("Celsius", -50.0, 60.0),
+    "WIND": WeatherVariable("m/s", 0.0, 100.0),
+    "DTEMP": WeatherVariable("Celsius", -50.0, 60.0),
+}
 
 
 def iterator_from_dataframe(df: pd.DataFrame, check: bool = True, skipna: bool = True) -> Iterator:
@@ -57,45 +57,58 @@ def iterator_from_dataframe(df: pd.DataFrame, check: bool = True, skipna: bool =
         dict[str, typing.Any]: Weather variables as key-value pairs. Variables will be converted
             to torch tensors, using dtype and device as configured in `ComputeConfig`.
     """
-    if "DAY" in df:
-        days = pd.to_datetime(df["DAY"])
-    else:
-        days = None
+    dates = _extract_dates_if_present(df)
 
     if check:
-        # Check range of weather variables
-        for var_name, var in WEATHER_VARIABLES.items():
-            if var_name in df.columns:
-                col = df[var_name]
-                is_nan = col.isna()
-                if skipna:
-                    col = col[~is_nan]
-                else:
-                    if is_nan.any():
-                        raise ValueError(f"{var_name} includes {is_nan.sum()} NaN values.")
-                if ((col < var.min) | (col > var.max)).any():
-                    raise ValueError(
-                        f"Values for `{var_name}` outside the range [{var.min}, {var.max}]"
-                        f"(expected unit is {var.unit})."
-                    )
+        _check_range_of_weather_variables(df, skipna=skipna)
+        if dates is not None:
+            _check_dates(dates)
 
-        # Check dates
-        if days is not None:
-            expected = pd.date_range(start=days.iloc[0], periods=len(days), freq="D")
-            assert (days == expected).all(), (
-                "Column `DAY` must contain consecutive daily dates with no gaps or duplicates."
-            )
+    variables = {}
 
+    # if dates are present, add them to the returned variables, converting them to datetime objects
+    if dates is not None:
+        variables["DAY"] = dates.dt.date.to_numpy()
+
+    variables.update(_to_dict_of_tensors(df))
+
+    for n in range(len(df)):
+        yield {k: v[n] for k, v in variables.items()}
+
+
+def _extract_dates_if_present(df: pd.DataFrame) -> pd.Series | None:
+    return pd.to_datetime(df["DAY"]) if "DAY" in df else None
+
+
+def _check_range_of_weather_variables(df: pd.DataFrame, skipna: bool = True) -> None:
+    for var_name, var in WEATHER_VARIABLES.items():
+        if var_name in df.columns:
+            col = df[var_name]
+            is_nan = col.isna()
+            if skipna:
+                col = col[~is_nan]
+            else:
+                if is_nan.any():
+                    raise ValueError(f"{var_name} includes {is_nan.sum()} NaN values.")
+            if ((col < var.min) | (col > var.max)).any():
+                raise ValueError(
+                    f"Values for `{var_name}` outside the range [{var.min}, {var.max}]"
+                    f"(expected unit is {var.unit})."
+                )
+
+
+def _check_dates(dates: pd.Series) -> None:
+    expected = pd.date_range(start=dates.iloc[0], periods=len(dates), freq="D")
+    assert (dates == expected).all(), (
+        "Column `DAY` must contain consecutive daily dates with no gaps or duplicates."
+    )
+
+
+def _to_dict_of_tensors(df: pd.DataFrame) -> dict[str, torch.Tensor]:
     device = ComputeConfig.get_device()
     dtype = ComputeConfig.get_dtype()
-
-    vars = {
+    return {
         var_name: torch.tensor(df[var_name].to_numpy(), device=device, dtype=dtype)
         for var_name in WEATHER_VARIABLES.keys()
         if var_name in df.columns
     }
-    if days is not None:
-        vars["DAY"] = days.dt.date.to_numpy()
-
-    for n in range(len(df)):
-        yield {k: v[n] for k, v in vars.items()}

@@ -308,8 +308,8 @@ class TestRespiration:
             "RML", crop_model_params_provider["RML"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=respiration_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=respiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -345,8 +345,8 @@ class TestRespiration:
 
         weather_data_provider = broadcast(weather_data_provider)
 
+        engine = EngineTestHelper(config=respiration_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=respiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,

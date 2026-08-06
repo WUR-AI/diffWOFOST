@@ -369,8 +369,8 @@ class TestStorageOrganDynamics:
             "SPA", crop_model_params_provider["SPA"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=storage_dynamics_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=storage_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,

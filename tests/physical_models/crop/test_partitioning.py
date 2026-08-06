@@ -276,8 +276,8 @@ class TestPartitioning:
         crop_model_params_provider.set_override("FRTB", [[0.0, 0.3, 2.0, 0.1]] * 4, check=False)
         crop_model_params_provider.set_override("FLTB", [[0.0, 0.3, 2.0, 0.1]] * 2, check=False)
 
+        engine = EngineTestHelper(config=partitioning_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=partitioning_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,

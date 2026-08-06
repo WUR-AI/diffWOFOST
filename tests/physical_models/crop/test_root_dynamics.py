@@ -334,8 +334,8 @@ class TestRootDynamics:
             "RRI", crop_model_params_provider["RRI"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=root_dynamics_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=root_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
