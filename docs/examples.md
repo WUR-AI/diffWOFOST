@@ -32,12 +32,14 @@ learning (ML) models with physical crop models, enabling the creation of hybrid
 models that leverage the strengths of both approaches. In a hybrid modeling
 framework, crop models are `SimulationObjects` and the computations can be
 either physics-based or ML-based, see section [How to run a model](./run_model.md).
-Here we provide an example notebook to show how to replace the `partitioning`
-model in WOFOST72.
+Here we provide example notebooks that replace a WOFOST72 component with a
+neural network: carbon `partitioning`, and a learned stress factor (`RFTRA`)
+trained end-to-end on a public potato field trial.
 
 | Model | Open the notebook | Access the source | View the notebook |
 |-------|-------------------|-------------------|-------------------|
 | Hybrid partitioning in WOFOST72 | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][hybrid_partitioning_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][hybrid_partitioning_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/hybrid_partitioning_wofost72.ipynb) |
+| Hybrid stress correction | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][hybrid_stress_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][hybrid_stress_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/hybrid_stress_correction.ipynb) |
 
 !!! note
 
@@ -47,6 +49,12 @@ model in WOFOST72.
     learning model. They are not trained and are not evaluated against the
     original wofost model results. The purpose is to show how to run a ml-based
     model in diffWOFOST and how to integrate it with the physics-based models.
+
+    The hybrid stress notebook is a fuller worked example: it trains a small
+    network on real field-trial data. `StressNN` and `NNStressFactor` live next
+    to that notebook in [`hybrid_stress.py`](./notebooks/hybrid_stress.py), not
+    in the library package. Field data and pretrained weights are CC BY-NC-SA
+    4.0; see [`DATA_LICENSE.md`](./notebooks/DATA_LICENSE.md).
     
 ## Variational data assimilation with diffWOFOST
 
@@ -105,5 +113,7 @@ for more details.
 [wofost_72_pp_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/optimization_wofost72_pp.ipynb
 [hybrid_partitioning_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb
 [hybrid_partitioning_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_partitioning_wofost72.ipynb
+[hybrid_stress_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_stress_correction.ipynb
+[hybrid_stress_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_stress_correction.ipynb
 [variational_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
 [variational_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
