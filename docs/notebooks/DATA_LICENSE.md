@@ -1,12 +1,13 @@
 # Data and model-weight licensing
 
-The hybrid stress notebook downloads field data and crop-parameter files at
-runtime. Those files are **not** part of the diffwofost package distribution
-and are licensed separately from the EUPL-1.1 library code.
+The hybrid stress notebook ships field data and pretrained weights next to
+the notebook. Crop-parameter files are still fetched at runtime. None of
+these files are part of the diffwofost package distribution; they are licensed
+separately from the EUPL-1.1 library code.
 
 ## Field-trial data — CC BY-NC-SA 4.0
 
-The notebook downloads three files:
+Three files live in [`field_data/`](field_data/):
 
 - `Plotspecific_processed.csv`
 - `Weatherfile_lelystad.xlsx`
@@ -22,11 +23,10 @@ These are part of the dataset:
 Licensed under [Creative Commons Attribution-NonCommercial-ShareAlike 4.0
 International (CC BY-NC-SA 4.0)](https://creativecommons.org/licenses/by-nc-sa/4.0/).
 
-The notebook fetches a public GitHub mirror of those files rather than hitting
-Dataverse from Colab (Dataverse can be flaky). The mirroring is permitted by
-CC BY-NC-SA 4.0 provided attribution and the same licence are preserved. Any
-further use must comply with the upstream licence (attribute the authors, no
-commercial use, derivative works share alike).
+Redistributing them here is permitted by CC BY-NC-SA 4.0 provided
+attribution and the same licence are preserved. Any further use must comply
+with the upstream licence (attribute the authors, no commercial use,
+derivative works share alike).
 
 ## Pre-trained model weights — CC BY-NC-SA 4.0
 
