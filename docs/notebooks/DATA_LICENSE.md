@@ -1,6 +1,6 @@
 # Data and model-weight licensing
 
-The hybrid stress notebook downloads field data and pretrained weights at
+The hybrid stress notebook downloads field data and crop-parameter files at
 runtime. Those files are **not** part of the diffwofost package distribution
 and are licensed separately from the EUPL-1.1 library code.
 
@@ -30,18 +30,17 @@ commercial use, derivative works share alike).
 
 ## Pre-trained model weights — CC BY-NC-SA 4.0
 
-`stress_nn_random.pt` and `pure_lstm_random.pt` (shipped as
-`models_bundle.zip`) were trained on the field-trial dataset above and are
-therefore derivative works. They are released under the same
-[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) licence
-as the source data.
+Checkpoints in [`pretrained/`](pretrained/) (`stress_nn_year.pt` and
+`pure_lstm_year.pt`) are trained on the field-trial dataset above and are
+therefore derivative works under the same
+[CC BY-NC-SA 4.0](https://creativecommons.org/licenses/by-nc-sa/4.0/) licence.
 
-## PCSE stock files — Apache-2.0
+## PCSE and WOFOST crop files — Apache-2.0
 
-`Wofost72_PP.conf`, `crops.yaml`, `potato.yaml`, and `AGMT_C2_2020.agro` are
-fetched at runtime from the [`ajwdewit/pcse`](https://github.com/ajwdewit/pcse)
-and [`ajwdewit/pcse_notebooks`](https://github.com/ajwdewit/pcse_notebooks)
-repositories. Both are licensed under Apache License 2.0.
+`Wofost72_PP.conf` is fetched from [`ajwdewit/pcse`](https://github.com/ajwdewit/pcse).
+Per-cultivar potato parameters (`potato.yaml`) come from the `wofost72` branch of
+[`ajwdewit/WOFOST_crop_parameters`](https://github.com/ajwdewit/WOFOST_crop_parameters).
+Both are licensed under Apache License 2.0.
 
 ## Code (notebook + `hybrid_stress.py`) — EUPL-1.1
 

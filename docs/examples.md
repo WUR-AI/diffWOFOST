@@ -53,8 +53,9 @@ trained end-to-end on a public potato field trial.
     The hybrid stress notebook is a fuller worked example: it trains a small
     network on real field-trial data. `StressNN` and `NNStressFactor` live next
     to that notebook in [`hybrid_stress.py`](./notebooks/hybrid_stress.py), not
-    in the library package. Field data and pretrained weights are CC BY-NC-SA
-    4.0; see [`DATA_LICENSE.md`](./notebooks/DATA_LICENSE.md).
+    in the library package. Pretrained weights ship in
+    [`pretrained/`](./notebooks/pretrained/). Field data and weights are
+    CC BY-NC-SA 4.0; see [`DATA_LICENSE.md`](./notebooks/DATA_LICENSE.md).
     
 ## Variational data assimilation with diffWOFOST
 
