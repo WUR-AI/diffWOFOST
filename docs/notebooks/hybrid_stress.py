@@ -78,15 +78,19 @@ class NNStressFactor(Evapotranspiration):
 
     The feature builder is supplied as a callable rather than baked in,
     so the same engine class can be used with different feature sets.
-
-    **Inputs from kiosk** (read indirectly by the parent's calc_rates and
-    by the supplied `feature_builder`):
+    This tutorial's builder reads crop state from the kiosk:
 
     | Name | Description                              |
     |------|------------------------------------------|
     | DVS  | Crop development stage                   |
     | LAI  | Leaf area index                          |
-    | SM   | Soil moisture content                    |
+    | TAGP | Total above-ground production            |
+
+    The parent `calc_rates` still reads `DVS`, `LAI`, and `SM` to compute
+    `TRAMX`. Under potential production, `SM` is held at field capacity and
+    the parent water-stress factors are discarded; the NN does not take
+    `SM` as an input. Learned `RFTRA` is a lumped assimilate reduction,
+    not a soil-water diagnosis.
 
     **Outputs to kiosk** (overridden):
 
