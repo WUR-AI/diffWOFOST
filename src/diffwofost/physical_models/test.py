@@ -5,7 +5,7 @@ from pcse import signals
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.parameter_providers import ParameterProvider
-from diffwofost.physical_models.weather import iterator_from_dataframe
+from diffwofost.physical_models.weather import to_weather_data_iterator
 
 
 class EngineTestHelper(Engine):
@@ -58,7 +58,7 @@ def prepare_engine_input(
         weather_data["DTEMP"] = (weather_data["TEMP"] + weather_data["TMAX"]) / 2.0
 
     # create a list out of the iterator, so that the weather data can be reused in several tests
-    weather_data_provider = list(iterator_from_dataframe(weather_data, check=meteo_range_checks))
+    weather_data_provider = list(to_weather_data_iterator(weather_data, check=meteo_range_checks))
 
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data.get("ExternalStates") or []

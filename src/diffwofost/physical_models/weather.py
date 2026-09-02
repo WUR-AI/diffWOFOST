@@ -1,8 +1,10 @@
 from collections.abc import Iterator
 from dataclasses import dataclass
 from typing import Any
+import numpy as np
 import pandas as pd
 import torch
+import xarray as xr
 from diffwofost.physical_models.config import ComputeConfig
 
 
@@ -32,23 +34,36 @@ WEATHER_VARIABLES = {
     "DTEMP": WeatherVariable("Celsius", -50.0, 60.0),
 }
 
+TIME_DIM_NAMES = {"day", "time", "dates"}
 
-def iterator_from_dataframe(df: pd.DataFrame, check: bool = True, skipna: bool = True) -> Iterator:
-    """Weather data generator from a Pandas DataFrame.
 
-    This utility function transforms weather data from tabular format to an iterator of torch
-    tensors that can be fed to diffWOFOST's engine.
+def to_weather_data_iterator(
+    data: pd.DataFrame | xr.Dataset,
+    check: bool = True,
+    skipna: bool = True,
+    time_dim: str | None = None,
+) -> Iterator:
+    """Weather data generator from a Pandas DataFrame or an xarray Dataset.
+
+    This utility function transforms weather data from tabular or nd-array format to an iterator of
+    torch tensors that can be fed to diffWOFOST's engine.
 
     Args:
-        df (pd.DataFrame): DataFrame containing weather data. Weather variables should be listed
-            along columns. In order to be interpreted as weather variables, columns should be named
-            as the keys of `diffwofost.physical_models.weather.WEATHER_VARIABLES`. Rows are expected
-            to represent daily time steps (an optional column named "DAY" should list the
+        data (pd.DataFrame | xr.Dataset): DataFrame or Dataset containing weather data. Weather
+            variables should be listed as columns (DataFrame) or data variables (Dataset). In order
+            to be interpreted as weather variables, they should be named as the keys of
+            `diffwofost.physical_models.weather.WEATHER_VARIABLES`. Rows/elements are expected to
+            represent daily time steps (an optional column/1D-coordinate named "DAY" should list the
             corresponding dates).
         check (bool, optional): Optionally carry out validity checks for the dataset. Defaults to
             True.
         skipna (bool, optional): How to handle NaN values when `check` is True. If True, allow NaN
             values as part of the weather data.
+        time_dim (str, optional): name of the dimension to iterate over. Only relevant if `data` is
+            a xr.Dataset object. If not provided, the function will try to guess it from:
+            * the name of the dimension of the "DAY" coordinate (if present).
+            * the first element of `diffwofost.physical_models.weather.TIME_DIM_NAMES` in
+                `data.dims`.
 
     Yields:
         dict[str, typing.Any]: Weather variables as key-value pairs. Variables will be converted
@@ -71,61 +86,128 @@ def iterator_from_dataframe(df: pd.DataFrame, check: bool = True, skipna: bool =
         ValueError: Values for `TEMP` outside the range [-50.0, 60.0] (expected unit is Celsius).
 
     """
-    dates = _extract_dates_if_present(df)
+    _check_weather_variable_keys(data)
+
+    iter_dim = _get_iterator_dimension(data, time_dim)
+    iter_length = _get_iterator_length(data, iter_dim)
+
+    dates = _extract_dates_if_present(data)
 
     if check:
-        _check_range_of_weather_variables(df, skipna=skipna)
+        _check_weather_variables_range(data, skipna=skipna)
         if dates is not None:
             _check_dates(dates)
 
     variables = {}
 
-    # if dates are present, add them to the returned variables, converting them to datetime objects
+    # if present, include the dates to the returned variables
     if dates is not None:
-        variables["DAY"] = dates.dt.date.to_numpy()
+        variables["DAY"] = dates
 
-    variables.update(_to_dict_of_tensors(df))
+    variables.update(_to_dict_of_tensors(data, iter_dim))
 
-    return _iterate(variables, length=len(df))
-
-
-def _extract_dates_if_present(df: pd.DataFrame) -> pd.Series | None:
-    return pd.to_datetime(df["DAY"]) if "DAY" in df else None
+    return _iterate(variables, length=iter_length)
 
 
-def _check_range_of_weather_variables(df: pd.DataFrame, skipna: bool = True) -> None:
-    for var_name, var in WEATHER_VARIABLES.items():
-        if var_name in df.columns:
-            col = df[var_name]
-            is_nan = col.isna()
-            if skipna:
-                col = col[~is_nan]
-            else:
-                if is_nan.any():
-                    raise ValueError(f"{var_name} includes {is_nan.sum()} NaN values.")
-            if ((col < var.min) | (col > var.max)).any():
+def _check_weather_variable_keys(data: pd.DataFrame | xr.Dataset) -> None:
+    num_variables = len([var_name for var_name in WEATHER_VARIABLES if var_name in data])
+    if num_variables < 1:
+        raise ValueError(
+            "No weather variable found. Variables should be named as the keys of "
+            "`diffwofost.physical_models.weather.WEATHER_VARIABLES`."
+        )
+
+
+def _get_iterator_dimension(
+    data: pd.DataFrame | xr.Dataset, time_dim: str | None = None
+) -> str | None:
+    """Determine the dimension to iterate over.
+
+    This is only relevant for xr.Dataset objects whose variables have >= 2 dimensions: if the
+    weather variables are 1D, the only available dimension will be used for iteration.
+    """
+    if isinstance(data, pd.DataFrame) or _are_all_weather_variables_less_than_2d(data):
+        # there is only one dimension to iterate over.
+        return None
+    elif time_dim:
+        # if the time dimension is provided, only check if it's a valid dimension name
+        assert time_dim in data.dims, f"Dimension {time_dim} missing from dimensions {data.dims}."
+        return time_dim
+    elif "DAY" in data:
+        # if the time dimension is not provided, check the dimension of the "DAY" coordinate
+        # (if present)
+        day = data["DAY"]
+        assert day.ndim == 1, "Daily dates should be provided as a 1D-coordinate."
+        return day.dims[0]
+    else:
+        # if none of the above, check sensible names for the time dimension
+        for guess in TIME_DIM_NAMES:
+            if guess in data.dims:
+                return guess
+    raise ValueError(
+        f"Cannot determine which dimension to iterate over for dataset with dims: {data.dims}."
+    )
+
+
+def _get_iterator_length(data: pd.DataFrame | xr.Dataset, iter_dim: str | None) -> int:
+    return len(data[iter_dim]) if iter_dim is not None else len(data)
+
+
+def _are_all_weather_variables_less_than_2d(data: xr.Dataset) -> bool:
+    return all(
+        [var.ndim < 2 for var_name, var in data.variables.items() if var_name in WEATHER_VARIABLES]
+    )
+
+
+def _extract_dates_if_present(data: pd.DataFrame | xr.Dataset) -> np.ndarray | None:
+    if "DAY" not in data:
+        return None
+    else:
+        day = data["DAY"].values
+        return pd.to_datetime(day).date
+
+
+def _check_weather_variables_range(data: pd.DataFrame | xr.Dataset, skipna: bool = True) -> None:
+    for var_name, var_range in WEATHER_VARIABLES.items():
+        if var_name in data:
+            var = data[var_name]
+            is_null = var.isnull()
+            if not skipna and is_null.any():
+                raise ValueError(f"{var_name} includes {int(is_null.sum())} NaN values.")
+            outside_range = (var < var_range.min) | (var > var_range.max)
+            is_invalid = outside_range.where(~is_null, other=False)
+            if is_invalid.any():
                 raise ValueError(
-                    f"Values for `{var_name}` outside the range [{var.min}, {var.max}] "
-                    f"(expected unit is {var.unit})."
+                    f"Values for `{var_name}` outside the range [{var_range.min}, {var_range.max}] "
+                    f"(expected unit is {var_range.unit})."
                 )
 
 
-def _check_dates(dates: pd.Series) -> None:
-    expected = pd.date_range(start=dates.iloc[0], periods=len(dates), freq="D")
+def _check_dates(dates: np.ndarray) -> None:
+    expected = pd.date_range(start=dates[0], periods=len(dates), freq="D")
     if not (dates == expected).all():
         raise ValueError(
             "Column `DAY` must contain consecutive daily dates with no gaps or duplicates."
         )
 
 
-def _to_dict_of_tensors(df: pd.DataFrame) -> dict[str, torch.Tensor]:
+def _to_dict_of_tensors(
+    data: pd.DataFrame | xr.Dataset,
+    iter_dim: str | None = None,
+) -> dict[str, torch.Tensor]:
+    return {
+        var_name: _to_tensor(data[var_name], iter_dim)
+        for var_name in WEATHER_VARIABLES
+        if var_name in data
+    }
+
+
+def _to_tensor(data: pd.Series | xr.DataArray, iter_dim: str | None = None) -> torch.Tensor:
     device = ComputeConfig.get_device()
     dtype = ComputeConfig.get_dtype()
-    return {
-        var_name: torch.tensor(df[var_name].to_numpy(), device=device, dtype=dtype)
-        for var_name in WEATHER_VARIABLES.keys()
-        if var_name in df.columns
-    }
+    if isinstance(data, xr.DataArray) and iter_dim is not None:
+        data = data.transpose(iter_dim, ...)
+    return torch.tensor(data.to_numpy(), device=device, dtype=dtype)
 
 
 def _iterate(variables: dict[str, Any], length):

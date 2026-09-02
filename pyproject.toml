@@ -28,6 +28,7 @@ dependencies = [
     "safetensors",
     "torch",
     "pcse",
+    "xarray",
 ]
 description = "Differentiable WOFOST"
 keywords = ["wofost", "pytorch", "differentiable", "crop", "optimization"]
