@@ -181,7 +181,6 @@ class Vernalisation(SimulationObject):
         DVS = self.kiosk["DVS"]
 
         TEMP = drv["TEMP"]
-        print(TEMP)
 
         # Operate elementwise only on elements not yet vernalised
         not_vernalised = ~self.states.ISVERNALISED
