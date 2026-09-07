@@ -463,9 +463,6 @@ class DVS_Phenology(SimulationObject):
             DOS = -1  # Not applicable
             DVS = p.DVSI
 
-            # send signal to indicate crop emergence
-            self._send_signal(signals.crop_emerged)
-
         elif p.CROP_START_TYPE == "sowing":
             STAGE = 0  # 0 = emerging
             DOS = day_ordinal
@@ -580,7 +577,6 @@ class DVS_Phenology(SimulationObject):
                 reproductive -> mature (DVS >= DVSEND)
 
         Side Effects:
-            - Emits crop_emerged signal on emergence.
             - Emits crop_finish signal at maturity if end type matches.
 
         Notes:
@@ -635,10 +631,6 @@ class DVS_Phenology(SimulationObject):
         s.STAGE = torch.where(should_emerge, 1.0, s.STAGE)
         s.DOE = torch.where(should_emerge, day_ordinal, s.DOE)
         s.DVS = torch.where(should_emerge, torch.clamp(s.DVS, max=0.0), s.DVS)
-
-        # Send signal if any crop emerged (only once per day)
-        if torch.any(should_emerge):
-            self._send_signal(signals.crop_emerged)
 
         # Check transitions for vegetative -> reproductive (STAGE 1 -> 2)
         is_vegetative = s.STAGE == 1
