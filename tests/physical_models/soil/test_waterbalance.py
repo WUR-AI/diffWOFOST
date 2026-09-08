@@ -1,7 +1,9 @@
 import warnings
+from unittest.mock import patch
 import pytest
 import torch
 from numpy.testing import assert_array_almost_equal
+from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.wofost72 import Wofost72
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalanceFD
@@ -285,7 +287,34 @@ class TestWaterbalancePP:
 
     @pytest.mark.parametrize("test_data_url", waterbalance_data_urls)
     def test_wofost72_pp_with_waterbalance(self, test_data_url):
-        """WaterbalancePP with Wofost72 reproduces PCSE reference results."""
+        """WaterbalancePP plugged into Wofost72_PP reproduces PCSE reference results."""
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SMFCF"]
+        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
+        )
+
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        with patch("pcse.crop.wofost72.Wofost72", Wofost72):
+            model = Wofost72_PP(
+                crop_model_params_provider, weather_data_provider, agro_management_inputs
+            )
+            model.run_till_terminate()
+            actual_results = model.get_output()
+
+            assert len(actual_results) == len(expected_results)
+
+            for reference, model_out in zip(expected_results, actual_results, strict=False):
+                assert reference["DAY"] == model_out["day"]
+                assert all(
+                    abs(reference[var] - model_out[var]) < precision
+                    for var, precision in expected_precision.items()
+                )
+
+    @pytest.mark.parametrize("test_data_url", waterbalance_data_urls)
+    def test_diffwofost_wofost72_pp_with_waterbalance(self, test_data_url):
+        """WaterbalancePP with diffWOFOST's Wofost72 reproduces PCSE reference results."""
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SMFCF"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
