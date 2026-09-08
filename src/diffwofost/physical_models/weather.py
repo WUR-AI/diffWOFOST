@@ -15,6 +15,8 @@ class WeatherVariable:
     max: float
 
 
+# These are the weather variables recognized by diffWOFOST internally, along
+# with their units and valid ranges.
 WEATHER_VARIABLES = {
     "LAT": WeatherVariable("Degrees", -90.0, 90.0),
     "LON": WeatherVariable("Degrees", -180.0, 180.0),
