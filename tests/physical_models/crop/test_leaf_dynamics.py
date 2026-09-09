@@ -1,6 +1,8 @@
 import warnings
+from unittest.mock import patch
 import pytest
 import torch
+from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
 from diffwofost.physical_models.test import EngineTestHelper
@@ -403,6 +405,34 @@ class TestLeafDynamics:
                 agro_management_inputs,
                 external_states,
             )
+
+    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
+    def test_wofost_pp_with_leaf_dynamics(self, test_data_url):
+        # prepare model input
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SPAN", "TDWI", "TBASE", "PERDL", "RGRLAI", "KDIFTB", "SLATB"]
+        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
+        )
+
+        # get expected results from YAML test data
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        with patch("pcse.crop.wofost72.Leaf_Dynamics", WOFOST_Leaf_Dynamics):
+            model = Wofost72_PP(
+                crop_model_params_provider, weather_data_provider, agro_management_inputs
+            )
+            model.run_till_terminate()
+            actual_results = model.get_output()
+
+            assert len(actual_results) == len(expected_results)
+
+            for reference, model in zip(expected_results, actual_results, strict=False):
+                assert reference["DAY"] == model["day"]
+                assert all(
+                    abs(reference[var] - model[var]) < precision
+                    for var, precision in expected_precision.items()
+                )
 
     @pytest.mark.parametrize("test_data_url", leafdynamics_data_urls)
     def test_leaf_dynamics_with_sigmoid_approx(self, test_data_url):

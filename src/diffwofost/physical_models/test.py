@@ -2,6 +2,9 @@ import pandas as pd
 import torch
 import yaml
 from pcse import signals
+from pcse.base.weather import WeatherDataContainer
+from pcse.base.weather import WeatherDataProvider
+from pcse.settings import settings
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.parameter_providers import ParameterProvider
@@ -40,8 +43,44 @@ class EngineTestHelper(Engine):
             self._terminate_simulation(self.day)
 
 
+class WeatherDataContainerTestHelper(WeatherDataContainer):
+    """A helper class for creating WeatherDataContainer instances.
+
+    It adds support for dict-like indexing of weather data, to provide compatibility with the
+    interface used within diffWOFOST.
+    """
+
+    def __getitem__(self, key):
+        return getattr(self, key)
+
+
+class WeatherDataProviderTestHelper(WeatherDataProvider):
+    """A helper class for creating a WeatherDataProvider instance.
+
+    Needed to provide a data structure that can be used by both PCSE and diffWOFOST, useful for
+    verifying the compatibility of diffWOFOST modules within PCSE.
+    """
+
+    def __init__(self, yaml_weather, meteo_range_checks=True):
+        super().__init__()
+        # This is a temporary workaround. The `METEO_RANGE_CHECKS` logic in
+        # `__setattr__` method in `WeatherDataContainer` is not vector compatible
+        # yet. So we can disable it here when creating the `WeatherDataContainer`
+        # instances with arrays.
+        settings.METEO_RANGE_CHECKS = meteo_range_checks
+        for weather in yaml_weather:
+            weather_inputs = {k: v for k, v in weather.items() if k != "SNOWDEPTH"}
+            wdc = WeatherDataContainerTestHelper(**weather_inputs)
+            self._store_WeatherDataContainer(wdc, wdc.DAY)
+
+
 def prepare_engine_input(
-    test_data, crop_model_params, device=None, dtype=None, meteo_range_checks=True
+    test_data,
+    crop_model_params,
+    device=None,
+    dtype=None,
+    return_weather_data_provider=False,  # set True for tests that patch PCSE
+    meteo_range_checks=True,
 ):
     """Prepare the inputs for the engine from the YAML file."""
     # If not specified, use default dtype and device
@@ -53,12 +92,20 @@ def prepare_engine_input(
     agro_management_inputs = test_data["AgroManagement"]
     cropd = test_data["ModelParameters"]
 
-    weather_data = pd.DataFrame(test_data["WeatherVariables"])
-    if "DTEMP" not in weather_data.columns:
-        weather_data["DTEMP"] = (weather_data["TEMP"] + weather_data["TMAX"]) / 2.0
+    weather_data = test_data["WeatherVariables"]
+    if return_weather_data_provider:
+        # If required, return the PCSE-compatible data structure for weather data
+        weather_data_provider = WeatherDataProviderTestHelper(
+            weather_data, meteo_range_checks=meteo_range_checks
+        )
+    else:
+        weather_data_df = pd.DataFrame(weather_data)
+        if "DTEMP" not in weather_data_df.columns:
+            weather_data_df["DTEMP"] = (weather_data_df["TEMP"] + weather_data_df["TMAX"]) / 2.0
+        weather_data_iterator = to_weather_data_iterator(weather_data_df, check=meteo_range_checks)
 
-    # create a list out of the iterator, so that the weather data can be reused in several tests
-    weather_data_provider = list(to_weather_data_iterator(weather_data, check=meteo_range_checks))
+        # create a list out of the iterator, so that the weather data can be reused in several tests
+        weather_data_provider = list(weather_data_iterator)
 
     crop_model_params_provider = ParameterProvider(cropdata=cropd)
     external_states = test_data.get("ExternalStates") or []

@@ -224,9 +224,9 @@ class _BaseEvapotranspirationNonLayered(_BaseEvapotranspiration):
         # TODO see #22
         dvs = _broadcast_to(k["DVS"], self.params_shape, dtype=self.dtype, device=self.device)
 
-        et0 = drv["ET0"]
-        e0 = drv["E0"]
-        es0 = drv["ES0"]
+        et0 = torch.as_tensor(drv["ET0"])
+        e0 = torch.as_tensor(drv["E0"])
+        es0 = torch.as_tensor(drv["ES0"])
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
         # If DVS < 0, the crop has not yet emerged, so we zero the rates using a mask
@@ -655,9 +655,9 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
 
         n_layers = self._n_layers
 
-        et0 = drv["ET0"]
-        e0 = drv["E0"]
-        es0 = drv["ES0"]
+        et0 = torch.as_tensor(drv["ET0"])
+        e0 = torch.as_tensor(drv["E0"])
+        es0 = torch.as_tensor(drv["ES0"])
 
         # reduction factor for CO2 on TRAMX
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
