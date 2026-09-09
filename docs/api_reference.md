@@ -40,6 +40,8 @@ hide:
 
 ::: diffwofost.physical_models.test.EngineTestHelper
 
+::: diffwofost.physical_models.weather.to_weather_data_iterator
+
 ::: diffwofost.io.save_model
 
 ::: diffwofost.io.load_model
