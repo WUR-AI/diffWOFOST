@@ -278,8 +278,8 @@ class TestPartitioning:
         crop_model_params_provider.set_override("FRTB", [[0.0, 0.3, 2.0, 0.1]] * 4, check=False)
         crop_model_params_provider.set_override("FLTB", [[0.0, 0.3, 2.0, 0.1]] * 2, check=False)
 
+        engine = EngineTestHelper(config=partitioning_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=partitioning_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -287,13 +287,13 @@ class TestPartitioning:
                 external_states,
             )
 
-    @pytest.mark.parametrize("test_data_url", wofost72_data_urls[:1])
+    @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost_pp_with_partitioning(self, test_data_url):
         # prepare model input
         test_data = get_test_data(test_data_url)
         crop_model_params = ["FRTB", "FLTB", "FSTB", "FOTB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
         )
 
         # get expected results from YAML test data

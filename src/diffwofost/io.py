@@ -27,6 +27,10 @@ from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.config import load_class
 
+# Use the temporary ParameterProvider. The original PCSE ParameterProvider could be used when
+# https://github.com/ajwdewit/pcse/pull/121 is merged an a new version of PCSE released.
+from diffwofost.physical_models.parameter_providers import ParameterProvider
+
 
 def _default_model_filename(model):
     """Stable filename from class name + init_kwargs hash."""
@@ -224,8 +228,6 @@ def load_model(path, *, model_class=None, device=None, dtype=None):
                     param_data[group_name]["nontensor_params"] = params
 
         # Reconstruct ParameterProvider
-        from pcse.base.parameter_providers import ParameterProvider
-
         init_kwargs = {}
         for group_name in ("sitedata", "timerdata", "soildata", "cropdata"):
             key = f"_{group_name}"

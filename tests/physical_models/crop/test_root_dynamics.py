@@ -336,8 +336,8 @@ class TestRootDynamics:
             "RRI", crop_model_params_provider["RRI"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=root_dynamics_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=root_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -351,7 +351,7 @@ class TestRootDynamics:
         test_data = get_test_data(test_data_url)
         crop_model_params = ["RDI", "RRI", "RDMCR", "RDMSOL", "TDWI", "IAIRDU", "RDRRTB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
         )
 
         # get expected results from YAML test data

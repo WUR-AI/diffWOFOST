@@ -268,23 +268,25 @@ class TestEvapotranspiration:
         )
 
         if param == "ET0":
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.ET0 = torch.ones(10, dtype=torch.float64, device=wdc.ET0.device) * wdc.ET0
-            with pytest.raises(ValueError):
-                engine = EngineTestHelper(config=evapotranspiration_config)
-                engine.setup(
-                    crop_model_params_provider,
-                    weather_data_provider,
-                    agro_management_inputs,
-                    external_states,
-                )
-            return
+            shape = (10,)
 
-        if param == "KDIFTB":
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
+        elif param == "KDIFTB":
             repeated = crop_model_params_provider[param].repeat(10, 1)
+            crop_model_params_provider.set_override(param, repeated, check=False)
         else:
             repeated = crop_model_params_provider[param].repeat(10)
-        crop_model_params_provider.set_override(param, repeated, check=False)
+            crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(config=evapotranspiration_config)
         engine.setup(
@@ -455,11 +457,6 @@ class TestEvapotranspiration:
                 repeated = crop_model_params_provider[param].broadcast_to(batch_shape)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.ET0 = torch.ones(batch_shape, dtype=torch.float64, device=wdc.ET0.device) * wdc.ET0
-            wdc.E0 = torch.ones(batch_shape, dtype=torch.float64, device=wdc.E0.device) * wdc.E0
-            wdc.ES0 = torch.ones(batch_shape, dtype=torch.float64, device=wdc.ES0.device) * wdc.ES0
-
         engine = EngineTestHelper(config=evapotranspiration_config)
         engine.setup(
             crop_model_params_provider,
@@ -508,8 +505,8 @@ class TestEvapotranspiration:
             "DEPNR", crop_model_params_provider["DEPNR"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=evapotranspiration_config)
         with pytest.raises(ValueError, match="Non-matching shapes found in parameter provider!"):
-            engine = EngineTestHelper(config=evapotranspiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -541,11 +538,24 @@ class TestEvapotranspiration:
         crop_model_params_provider.set_override(
             "CFET", crop_model_params_provider["CFET"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.ET0 = torch.ones(5, dtype=torch.float64, device=wdc.ET0.device) * wdc.ET0
 
+        # Broadcast weather variables to a shape that does not match the parameters
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
+
+        engine = EngineTestHelper(config=evapotranspiration_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=evapotranspiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -568,7 +578,12 @@ class TestEvapotranspiration:
             "SMFCF",
         ]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
+            prepare_engine_input(
+                test_data,
+                crop_model_params,
+                return_weather_data_provider=True,
+                meteo_range_checks=False,
+            )
         )
 
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
@@ -659,7 +674,7 @@ class TestEvapotranspirationVariants:
             kiosk.set_variable(oid, "SM", torch.tensor(0.25, dtype=torch.float64, device=device))
             return kiosk
 
-        drv = SimpleNamespace(
+        drv = dict(
             ET0=torch.tensor(0.5, dtype=torch.float64, device=device),
             E0=torch.tensor(0.6, dtype=torch.float64, device=device),
             ES0=torch.tensor(0.55, dtype=torch.float64, device=device),

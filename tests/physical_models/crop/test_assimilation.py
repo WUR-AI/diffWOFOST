@@ -249,12 +249,6 @@ class TestAssimilation:
             repeated = crop_model_params_provider[param].repeat(30, 5, 1)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        # Make weather drivers match (30, 5) so _get_drv validates/broadcasts.
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.IRRAD = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.IRRAD
-            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
-            wdc.TMIN = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TMIN
-
         engine = EngineTestHelper(config=assimilation_config)
         engine.setup(
             crop_model_params_provider,
@@ -294,8 +288,8 @@ class TestAssimilation:
             "EFFTB", crop_model_params_provider["EFFTB"].repeat(5, 1), check=False
         )
 
+        engine = EngineTestHelper(config=assimilation_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=assimilation_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -317,14 +311,27 @@ class TestAssimilation:
         crop_model_params_provider.set_override(
             "AMAXTB", crop_model_params_provider["AMAXTB"].repeat(10, 1), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
+        # Broadcast weather variables to a shape that does not match the parameters
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        broadcasted = broadcast(weather_data_provider)
+
+        engine = EngineTestHelper(config=assimilation_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=assimilation_config)
             engine.setup(
                 crop_model_params_provider,
-                weather_data_provider,
+                broadcasted,
                 agro_management_inputs,
                 external_states,
             )
@@ -334,7 +341,7 @@ class TestAssimilation:
         test_data = get_test_data(test_data_url)
         crop_model_params = ["AMAXTB", "EFFTB", "KDIFTB", "TMPFTB", "TMNFTB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
         )
 
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]

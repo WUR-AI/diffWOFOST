@@ -181,9 +181,20 @@ class TestStorageOrganDynamics:
 
         # Setting a vector (with one value) for the selected parameter
         if param == "TEMP":
-            # Vectorize weather variable
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
+            # Broadcast weather variable
+            shape = (10,)
+
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
         else:
             # Broadcast all parameters to match the batch size of 10
             for p_name in ["TDWI", "SPA"]:
@@ -198,35 +209,21 @@ class TestStorageOrganDynamics:
                             p_name, p_val.repeat(10, 1), check=False
                         )
 
-        if param == "TEMP":
-            # Vectorize weather variable
-            # We expect the model to handle scalar parameters with vectorized weather
-            # via implicit broadcasting or explicit checks passing.
-            engine = EngineTestHelper(config=storage_dynamics_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
-        else:
-            engine = EngineTestHelper(config=storage_dynamics_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-                external_states,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
+        engine = EngineTestHelper(config=storage_dynamics_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            external_states,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
 
-            # get expected results from YAML test data
-            expected_results = test_data["ModelResults"]
+        # get expected results from YAML test data
+        expected_results = test_data["ModelResults"]
 
-            # Assertions on values removed as test data is not appropriate for this module
-            assert len(actual_results) == len(expected_results)
+        # Assertions on values removed as test data is not appropriate for this module
+        assert len(actual_results) == len(expected_results)
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -338,9 +335,6 @@ class TestStorageOrganDynamics:
             repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
-
         engine = EngineTestHelper(config=storage_dynamics_config)
         engine.setup(
             crop_model_params_provider,
@@ -377,8 +371,8 @@ class TestStorageOrganDynamics:
             "SPA", crop_model_params_provider["SPA"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=storage_dynamics_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=storage_dynamics_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -392,7 +386,7 @@ class TestStorageOrganDynamics:
         test_data = get_test_data(test_data_url)
         crop_model_params = ["TDWI", "SPA"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
         )
 
         # get expected results from YAML test data

@@ -128,25 +128,25 @@ class TestRespiration:
         ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
 
         if param == "TEMP":
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * wdc.TEMP
-            with pytest.raises(ValueError):
-                engine = EngineTestHelper(config=respiration_config)
-                engine.setup(
-                    crop_model_params_provider,
-                    weather_data_provider,
-                    agro_management_inputs,
-                    external_states,
-                )
-                engine.run_till_terminate()
-                _ = engine.get_output()
-            return
+            shape = (10,)
 
-        if param == "RFSETB":
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
+        elif param == "RFSETB":
             repeated = crop_model_params_provider[param].repeat(10, 1)
+            crop_model_params_provider.set_override(param, repeated, check=False)
         else:
             repeated = crop_model_params_provider[param].repeat(10)
-        crop_model_params_provider.set_override(param, repeated, check=False)
+            crop_model_params_provider.set_override(param, repeated, check=False)
 
         engine = EngineTestHelper(config=respiration_config)
         engine.setup(
@@ -271,9 +271,6 @@ class TestRespiration:
             "RFSETB", crop_model_params_provider["RFSETB"].repeat(30, 5, 1), check=False
         )
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), dtype=torch.float64, device=device) * wdc.TEMP
-
         engine = EngineTestHelper(config=respiration_config)
         engine.setup(
             crop_model_params_provider,
@@ -313,8 +310,8 @@ class TestRespiration:
             "RML", crop_model_params_provider["RML"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=respiration_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=respiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -336,11 +333,22 @@ class TestRespiration:
         crop_model_params_provider.set_override(
             "RMR", crop_model_params_provider["RMR"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
+        shape = (5,)
 
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
+
+        engine = EngineTestHelper(config=respiration_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=respiration_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -354,7 +362,7 @@ class TestRespiration:
         test_data = get_test_data(test_data_url)
         crop_model_params = ["Q10", "RMR", "RML", "RMS", "RMO", "RFSETB"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
         )
 
         # get expected results from YAML test data

@@ -3,7 +3,6 @@ import torch
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.weather import WeatherDataContainer
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
@@ -160,14 +159,13 @@ class WOFOST_Stem_Dynamics(SimulationObject):
             kiosk, publish=["TWST", "WST", "SAI"], WST=WST, DWST=DWST, TWST=TWST, SAI=SAI
         )
 
-    def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
+    def calc_rates(self, day: datetime.date, drv: dict) -> None:
         """Calculate the rates of change of the state variables.
 
         Args:
             day (datetime.date, optional): The current date of the simulation.
-            drv (WeatherDataContainer, optional): A dictionary-like container holding
-                weather data elements as key/value. The values are
-                arrays or scalars. See PCSE documentation for details.
+            drv (dict, optional): A container holding weather data elements as key/value. The values
+                are arrays or scalars.
         """
         r = self.rates
         s = self.states
@@ -196,11 +194,11 @@ class WOFOST_Stem_Dynamics(SimulationObject):
 
         r.GWST = r.GRST - r.DRST - REALLOC_ST
 
-    def integrate(self, day: datetime.date = None, delt=1.0) -> None:
+    def integrate(self, day: datetime.date, delt: float = 1.0) -> None:
         """Integrate the state variables using the rates of change.
 
         Args:
-            day (datetime.date, optional): The current date of the simulation.
+            day (datetime.date): The current date of the simulation.
             delt (float, optional): The time step for integration. Defaults to 1.0.
         """
         p = self.params

@@ -5,14 +5,12 @@ import torch
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.weather import WeatherDataContainer
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
-from diffwofost.physical_models.utils import _get_drv
 
 
 class WOFOST_Leaf_Dynamics(SimulationObject):
@@ -248,14 +246,13 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         total_LAI = self.states.LASUM + SAI + PAI
         return total_LAI
 
-    def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
+    def calc_rates(self, day: datetime.date, drv: dict) -> None:
         """Calculate the rates of change for the leaf dynamics.
 
         Args:
-            day (datetime.date, optional): The current date of the simulation.
-            drv (WeatherDataContainer, optional): A dictionary-like container holding
-                weather data elements as key/value. The values are
-                arrays or scalars. See PCSE documentation for details.
+            day (datetime.date): The current date of the simulation.
+            drv (dict): A container holding weather data elements as key/value. The values are
+                arrays or scalars.
         """
         r = self.rates
         s = self.states
@@ -326,7 +323,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         r.DRLV = torch.maximum(r.DSLV, r.DALV)
 
         # Get the temperature from the drv
-        TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
+        TEMP = drv["TEMP"]
 
         # physiologic ageing of leaves per time step
         FYSAGE = (TEMP - p.TBASE) / (35.0 - p.TBASE)
