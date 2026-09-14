@@ -58,6 +58,25 @@ trained end-to-end on a public potato field trial.
     [`pretrained/`](./notebooks/pretrained/). Both are CC BY-NC-SA 4.0; see
     [`DATA_LICENSE.md`](./notebooks/DATA_LICENSE.md).
     
+## Differentiable irrigation control with diffWOFOST
+
+Management actions such as irrigation are part of the system dynamics of
+WOFOST. Because those dynamics are differentiable in `diffWOFOST`, a policy
+that maps crop states and weather to a daily irrigation *event* can be
+optimized by backpropagating an economic objective through the water
+balance and the crop.
+
+This notebook inserts irrigation into water-limited WOFOST 7.2 and trains two
+controllers on beet revenue minus event-plus-volume irrigation cost
+(€ ha$^{-1}$): a closed-loop soil-moisture policy that fires 15–35 mm
+events, and an open-loop vector of daily amounts started from near zero.
+A no-stress rule that keeps `RFTRA` at 1 is the physiological baseline.
+All are compared with rainfed and potential production.
+
+| Model | Open the notebook | Access the source | View the notebook |
+|-------|-------------------|-------------------|-------------------|
+| Differentiable irrigation control | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][irrigation_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][irrigation_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/differentiable_irrigation_control.ipynb) |
+
 ## Variational data assimilation with diffWOFOST
 
 The differentiable implementation of `diffWOFOST` also makes it possible to formulate data assimilation as a gradient-based optimization problem. In this example notebook, synthetic `LAI` and soil-moisture observations are combined with the crop model to estimate a parameter set that improves the simulated seasonal trajectory.
@@ -119,3 +138,5 @@ for more details.
 [hybrid_stress_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_stress_correction.ipynb
 [variational_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
 [variational_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
+[irrigation_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/differentiable_irrigation_control.ipynb
+[irrigation_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/differentiable_irrigation_control.ipynb
