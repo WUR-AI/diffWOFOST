@@ -69,7 +69,7 @@ balance and the crop.
 This notebook inserts irrigation into water-limited WOFOST 7.2 and trains two
 controllers on beet revenue minus event-plus-volume irrigation cost
 (€ ha$^{-1}$): a closed-loop soil-moisture policy that fires 15–35 mm
-events, and an open-loop vector of daily amounts started from near zero.
+events, and an open-loop vector of daily on/off events started off.
 A no-stress rule that keeps `RFTRA` at 1 is the physiological baseline.
 All are compared with rainfed and potential production.
 
