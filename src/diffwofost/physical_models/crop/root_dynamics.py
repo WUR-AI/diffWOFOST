@@ -3,7 +3,6 @@ import torch
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.weather import WeatherDataContainer
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
@@ -193,14 +192,13 @@ class WOFOST_Root_Dynamics(SimulationObject):
             shape=shape,
         )
 
-    def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
+    def calc_rates(self, day: datetime.date, drv: dict) -> None:
         """Calculate the rates of change of the state variables.
 
         Args:
-            day (datetime.date, optional): The current date of the simulation.
-            drv (WeatherDataContainer, optional): A dictionary-like container holding
-                weather data elements as key/value. The values are
-                arrays or scalars. See PCSE documentation for details.
+            day (datetime.date): The current date of the simulation.
+            drv (dict): A container holding weather data elements as key/value. The values are
+                arrays or scalars.
         """
         p = self.params
         r = self.rates

@@ -291,7 +291,7 @@ class TestWaterbalancePP:
         test_data = get_test_data(test_data_url)
         crop_model_params = ["SMFCF"]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
         )
 
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
@@ -311,6 +311,38 @@ class TestWaterbalancePP:
                     abs(reference[var] - model_out[var]) < precision
                     for var, precision in expected_precision.items()
                 )
+
+    @pytest.mark.parametrize("test_data_url", waterbalance_data_urls)
+    def test_diffwofost_wofost72_pp_with_waterbalance(self, test_data_url):
+        """WaterbalancePP with diffWOFOST's Wofost72 reproduces PCSE reference results."""
+        test_data = get_test_data(test_data_url)
+        crop_model_params = ["SMFCF"]
+        (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            prepare_engine_input(test_data, crop_model_params)
+        )
+
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        waterbalance_config = Configuration(
+            CROP=Wofost72,
+            SOIL=WaterbalancePP,
+            OUTPUT_VARS=[key for key in expected_results[0].keys() if key != "DAY"],
+        )
+        engine = EngineTestHelper(config=waterbalance_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+
+        for reference, model_out in zip(expected_results, actual_results, strict=False):
+            assert reference["DAY"] == model_out["day"]
+            assert all(
+                abs(reference[var] - model_out[var]) < precision
+                for var, precision in expected_precision.items()
+            )
 
 
 @pytest.mark.usefixtures("fast_mode")

@@ -5,14 +5,12 @@ import torch
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.weather import WeatherDataContainer
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import _get_drv
 
 
 class WOFOST_Maintenance_Respiration(SimulationObject):
@@ -112,7 +110,7 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
 
-    def calc_rates(self, day: datetime.date, drv: WeatherDataContainer):
+    def calc_rates(self, day: datetime.date, drv: dict):
         """Calculate maintenance respiration rates.
 
         Args:
@@ -138,7 +136,7 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         # TODO see #22
         DVS = _broadcast_to(kk["DVS"], p.shape, self.dtype, self.device)
 
-        TEMP = _get_drv(drv.TEMP, p.shape, self.dtype, self.device)
+        TEMP = drv["TEMP"]
 
         RMRES = RMR * WRT + RML * WLV + RMS * WST + RMO * WSO
         RMRES = RMRES * p.RFSETB(DVS)
@@ -148,7 +146,7 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         # No maintenance respiration before emergence (DVS < 0).
         r.PMRES = torch.where(DVS < 0, torch.zeros_like(PMRES), PMRES)
 
-    def __call__(self, day: datetime.date, drv: WeatherDataContainer):
+    def __call__(self, day: datetime.date, drv: dict):
         """Calculate and return maintenance respiration (PMRES)."""
         self.calc_rates(day, drv)
         return self.rates.PMRES
