@@ -5,7 +5,6 @@ from pcse import signals
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.weather import WeatherDataContainer
 from pcse.traitlets import Instance
 from pcse.traitlets import Unicode
 from diffwofost.physical_models.base import TensorParamTemplate
@@ -239,14 +238,13 @@ class Wofost72(SimulationObject):
             )
             raise exc.CarbonBalanceError(msg)
 
-    def calc_rates(self, day: datetime.date, drv: WeatherDataContainer) -> None:
+    def calc_rates(self, day: datetime.date, drv: dict) -> None:
         """Calculate the rates of change of the state variables.
 
         Args:
             day (datetime.date): The current date of the simulation.
-            drv (WeatherDataContainer): A dictionary-like container holding
-                weather data elements as key/value. The values are
-                arrays or scalars. See PCSE documentation for details.
+            drv (dict): A container holding weather data elements as key/value. The values are
+                arrays or scalars.
         """
         p = self.params
         r = self.rates

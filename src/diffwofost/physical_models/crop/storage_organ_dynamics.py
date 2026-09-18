@@ -4,7 +4,6 @@ from pcse.base import RatesTemplate
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
-from pcse.base.weather import WeatherDataContainer
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
@@ -144,13 +143,12 @@ class WOFOST_Storage_Organ_Dynamics(SimulationObject):
             kiosk, publish=["TWSO", "WSO", "PAI"], WSO=WSO, DWSO=DWSO, TWSO=TWSO, PAI=PAI
         )
 
-    def calc_rates(self, day: datetime.date = None, drv: WeatherDataContainer = None) -> None:
+    def calc_rates(self, day: datetime.date, drv: dict) -> None:
         """Calculate the rates of change of the state variables.
 
         Args:
             day (datetime.date, optional): The current date of the simulation.
-            drv (WeatherDataContainer, optional): A dictionary-like container holding
-                weather data elements as key/value.
+            drv (dict, optional): A container holding weather data elements as key/value.
         """
         rates = self.rates
         k = self.kiosk

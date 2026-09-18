@@ -233,10 +233,19 @@ class TestPhenologyDynamics:
         if param == "TEMP":
             if device == "cuda":
                 pytest.skip("Weather parameter vector tests are CPU-only")
-            for (_, _), wdc in weather_data_provider.store.items():
-                wdc.TEMP = torch.ones(10, dtype=torch.float64, device=device) * torch.as_tensor(
-                    wdc.TEMP, dtype=torch.float64, device=device
-                )
+            shape = (10,)
+
+            def broadcast(wdp):
+                for weather_data in wdp:
+                    out = {}
+                    for k, v in weather_data.items():
+                        if isinstance(v, torch.Tensor):
+                            out[k] = torch.broadcast_to(v, shape)
+                        else:
+                            out[k] = v
+                    yield out
+
+            weather_data_provider = broadcast(weather_data_provider)
         elif param == "DTSMTB":
             repeated = crop_model_params_provider[param].repeat(10, 1)
             crop_model_params_provider.set_override(param, repeated, check=False)
@@ -244,30 +253,19 @@ class TestPhenologyDynamics:
             repeated = crop_model_params_provider[param].repeat(10)
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        if param == "TEMP":
-            with pytest.raises(ValueError):
-                engine = EngineTestHelper(config=phenology_config)
-                engine.setup(
-                    crop_model_params_provider,
-                    weather_data_provider,
-                    agro_management_inputs,
-                )
-                engine.run_till_terminate()
-                _ = engine.get_output()
-        else:
-            engine = EngineTestHelper(config=phenology_config)
-            engine.setup(
-                crop_model_params_provider,
-                weather_data_provider,
-                agro_management_inputs,
-            )
-            engine.run_till_terminate()
-            actual_results = engine.get_output()
-            expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+        engine = EngineTestHelper(config=phenology_config)
+        engine.setup(
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+        )
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
-            assert len(actual_results) == len(expected_results)
-            for reference, model in zip(expected_results, actual_results, strict=False):
-                assert_reference_match(reference, model, expected_precision)
+        assert len(actual_results) == len(expected_results)
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert_reference_match(reference, model, expected_precision)
 
     @pytest.mark.parametrize(
         "param,delta",
@@ -443,9 +441,6 @@ class TestPhenologyDynamics:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
             crop_model_params_provider.set_override(param, repeated, check=False)
 
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones((30, 5), device=device, dtype=torch.float64) * wdc.TEMP
-
         engine = EngineTestHelper(config=phenology_config)
         engine.setup(
             crop_model_params_provider,
@@ -498,8 +493,8 @@ class TestPhenologyDynamics:
             "TSUM2", crop_model_params_provider["TSUM2"].repeat(5), check=False
         )
 
+        engine = EngineTestHelper(config=phenology_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=phenology_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -535,11 +530,24 @@ class TestPhenologyDynamics:
         crop_model_params_provider.set_override(
             "TSUM1", crop_model_params_provider["TSUM1"].repeat(10), check=False
         )
-        for (_, _), wdc in weather_data_provider.store.items():
-            wdc.TEMP = torch.ones(5, dtype=torch.float64) * wdc.TEMP
 
+        # Broadcast weather variables to a shape that does not match the parameters
+        shape = (5,)
+
+        def broadcast(wdp):
+            for weather_data in wdp:
+                out = {}
+                for k, v in weather_data.items():
+                    if isinstance(v, torch.Tensor):
+                        out[k] = torch.broadcast_to(v, shape)
+                    else:
+                        out[k] = v
+                yield out
+
+        weather_data_provider = broadcast(weather_data_provider)
+
+        engine = EngineTestHelper(config=phenology_config)
         with pytest.raises(ValueError):
-            engine = EngineTestHelper(config=phenology_config)
             engine.setup(
                 crop_model_params_provider,
                 weather_data_provider,
@@ -566,7 +574,7 @@ class TestPhenologyDynamics:
             "VERNDVS",
         ]
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params)
+            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
         )
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
