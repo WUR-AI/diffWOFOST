@@ -278,36 +278,51 @@ class DVS_Phenology(SimulationObject):
 
     **Simulation parameters**
 
-    | Name    | Description                                               | Type | Unit |
-    |---------|-----------------------------------------------------------|------|------|
-    | TSUMEM  | Temperature sum from sowing to emergence                  | SCr  | |C| day  |
-    | TBASEM  | Base temperature for emergence                            | SCr  | |C|      |
-    | TEFFMX  | Maximum effective temperature for emergence               | SCr  | |C|      |
-    | TSUM1   | Temperature sum from emergence to anthesis                | SCr  | |C| day  |
-    | TSUM2   | Temperature sum from anthesis to maturity                 | SCr  | |C| day  |
-    | IDSL    | Switch for development options: temp only (0), +daylength | SCr  | - |
-    |         | (1), +vernalization (>=2)                                 |      |   |
-    | DLO     | Optimal daylength for phenological development            | SCr  | hr       |
-    | DLC     | Critical daylength for phenological development           | SCr  | hr       |
-    | DVSI    | Initial development stage at emergence (may be >0 for     | SCr  | -        |
-    |         | transplanted crops)                                       |      |          |
-    | DVSEND  | Final development stage                                   | SCr  | -        |
-    | DTSMTB  | Daily increase in temperature sum as a function of daily  | TCr  | |C|      |
-    |         | mean temperature                                          |      |          |
+    | Name            | Description                                               | Type | Unit    |
+    |-----------------|-----------------------------------------------------------|------|---------|
+    | TSUMEM          | Temperature sum from sowing to emergence                  | SCr  | |C| day |
+    | TBASEM          | Base temperature for emergence                            | SCr  | |C|     |
+    | TEFFMX          | Maximum effective temperature for emergence               | SCr  | |C|     |
+    | TSUM2           | Temperature sum from anthesis to maturity                 | SCr  | |C| day |
+    | IDSL            | Switch for development options: temp only (0), +daylength | SCr  | -       |
+    |                 | (1), +vernalization (>=2)                                 |      |         |
+    | DLO             | Optimal daylength for phenological development            | SCr  | hr      |
+    | DLC             | Critical daylength for phenological development           | SCr  | hr      |
+    | DVSI            | Initial development stage at emergence (may be >0 for     | SCr  | -       |
+    |                 | transplanted crops)                                       |      |         |
+    | DVSEND          | Final development stage                                   | SCr  | -       |
+    | DTSMTB          | Daily increase in temperature sum as a function of daily  | TCr  | |C|     |
+    |                 | mean temperature                                          |      |         |
+    | CROP_START_DATE | Per-element override day (ordinal) for this element's     | SCr  | day     |
+    |                 | crop start (sowing/emergence date, per CROP_START_TYPE);  |      | ordinal |
+    |                 | -1 (default) uses the simulation's own start day for that |      |         |
+    |                 | element, i.e. the current single-start-date behaviour     |      |         |
 
     **State variables**
 
-    | Name  | Description                                              | Pbl | Unit    |
-    |-------|----------------------------------------------------------|-----|---------|
-    | DVS   | Development stage                                        | Y   | -       |
-    | TSUM  | Temperature sum                                          | N   | |C| day |
-    | TSUME | Temperature sum for emergence                            | N   | |C| day |
-    | DOS   | Day of sowing                                            | N   | -       |
-    | DOE   | Day of emergence                                         | N   | -       |
-    | DOA   | Day of Anthesis                                          | N   | -       |
-    | DOM   | Day of maturity                                          | N   | -       |
-    | DOH   | Day of harvest                                           | N   | -       |
-    | STAGE | Current stage (`emerging|vegetative|reproductive|mature`) | N  | -       |
+    | Name      | Description                                       | Pbl | Unit    |
+    |-----------|---------------------------------------------------|-----|---------|
+    | DVS       | Development stage                                 | Y   | -       |
+    | TSUM      | Temperature sum                                   | N   | |C| day |
+    | TSUME     | Temperature sum for emergence                     | N   | |C| day |
+    | DOS       | Day of sowing                                     | N   | -       |
+    | DOE       | Day of emergence                                  | N   | -       |
+    | DOA       | Day of Anthesis                                   | N   | -       |
+    | DOM       | Day of maturity                                   | N   | -       |
+    | DOH       | Day of harvest                                    | N   | -       |
+    | STAGE     | Stage (`not_started`/`emerging`/`vegetative`/     | N   | -       |
+    |           | `reproductive`/`mature`)                          |     |         |
+    | IS_ACTIVE | Whether this element has started (see note below) | Y   | -       |
+
+    An element whose CROP_START_DATE lies in the future starts with
+    STAGE=-1 ("not started"). The state and rate variables DVS/TSUM/TSUME/
+    DTSUME/DTSUM/DVR are set NaN, until the simulation day reaches its own
+    start date; IS_ACTIVE is False for as long as this is the case. Once an
+    element has started, IS_ACTIVE stays True for the rest of the run,
+    including after the element individually reaches maturity: a matured
+    element keeps reporting its frozen final DVS/TSUM/TSUME and zero rates
+    (other batch elements may keep progressing in the meantime). DOS/DOE/
+    DOA/DOM/DOH are historical markers and are never masked to NaN by IS_ACTIVE.
 
     **Rate variables**
 
@@ -340,6 +355,7 @@ class DVS_Phenology(SimulationObject):
 
     [!NOTE]
     The parameter IDSL it is not differentiable since it is a switch.
+    Similarly, CROP_START_DATE is not differentiable (it is a day-ordinal index).
     """
 
     # Placeholder for start/stop types and vernalisation module
@@ -369,6 +385,7 @@ class DVS_Phenology(SimulationObject):
         DTSMTB = AfgenTrait()
         CROP_START_TYPE = Enum(["sowing", "emergence"])
         CROP_END_TYPE = Enum(["maturity", "harvest", "earliest"])
+        CROP_START_DATE = Tensor(-1.0)
 
     class RateVariables(TensorRatesTemplate):
         DTSUME = Tensor(0.0)
@@ -379,12 +396,13 @@ class DVS_Phenology(SimulationObject):
         DVS = Tensor(-99.0)
         TSUM = Tensor(-99.0)
         TSUME = Tensor(-99.0)
-        DOS = Tensor(-99, dtype=int)
-        DOE = Tensor(-99, dtype=int)
-        DOA = Tensor(-99, dtype=int)
-        DOM = Tensor(-99, dtype=int)
-        DOH = Tensor(-99, dtype=int)
-        STAGE = Tensor(-99, dtype=int)
+        DOS = Tensor(-99.0)
+        DOE = Tensor(-99.0)
+        DOA = Tensor(-99.0)
+        DOM = Tensor(-99.0)
+        DOH = Tensor(-99.0)
+        STAGE = Tensor(-99.0)
+        IS_ACTIVE = Tensor(True, dtype=bool)
 
     def initialize(self, day, kiosk, parvalues, shape=None):
         """Initialize the DVS_Phenology module.
@@ -399,6 +417,11 @@ class DVS_Phenology(SimulationObject):
         self._device = ComputeConfig.get_device()
         self._dtype = ComputeConfig.get_dtype()
 
+        # CROP_START_DATE is optional: we inject here the "not provided" sentinel.
+        if "CROP_START_DATE" not in parvalues:
+            parvalues = dict(parvalues)
+            parvalues["CROP_START_DATE"] = -1.0
+
         self.params = self.Parameters(parvalues, shape=shape)
 
         # Initialize vernalisation for IDSL>=2
@@ -410,6 +433,7 @@ class DVS_Phenology(SimulationObject):
         # Create scalar constants once at the beginning to avoid recreating them
         self._ones = torch.ones(self.params.shape, dtype=self.dtype, device=self.device)
         self._zeros = torch.zeros(self.params.shape, dtype=self.dtype, device=self.device)
+        self._nan = torch.full(self.params.shape, torch.nan, dtype=self.dtype, device=self.device)
         self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
 
         # Initialize rates and kiosk
@@ -420,13 +444,13 @@ class DVS_Phenology(SimulationObject):
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
 
         # Define initial states
-        DVS, DOS, DOE, STAGE = self._get_initial_stage(day)
+        DVS, DOS, DOE, STAGE, TSUM, TSUME, IS_ACTIVE = self._get_initial_stage(day)
 
         self.states = self.StateVariables(
             kiosk,
-            publish="DVS",
-            TSUM=0.0,
-            TSUME=0.0,
+            publish=["DVS", "IS_ACTIVE"],
+            TSUM=TSUM,
+            TSUME=TSUME,
             DVS=DVS,
             DOS=DOS,
             DOE=DOE,
@@ -434,45 +458,69 @@ class DVS_Phenology(SimulationObject):
             DOM=-1,  # not yet occurred
             DOH=-1,  # not yet occurred
             STAGE=STAGE,
+            IS_ACTIVE=IS_ACTIVE,
             shape=shape,
         )
 
     def _get_initial_stage(self, day):
         """Determine initial phenological state at simulation start.
 
+        Elements whose CROP_START_DATE lies after the simulation's own start day
+        are not yet active: STAGE is set to -1 ("not started") and DVS/TSUM/TSUME
+        are set to NaN until their own start day is reached (see `integrate`).
+
         Args:
             day (datetime.date): Simulation start day.
 
         Returns:
-            tuple: (DVS, DOS, DOE, STAGE)
+            tuple: (DVS, DOS, DOE, STAGE, TSUM, TSUME, IS_ACTIVE)
                 DVS (Tensor): Initial development stage (-0.1 if sowing start,
-                    or DVSI if emergence start).
+                    or DVSI if emergence start; NaN if not yet active).
                 DOS (Tensor): Sowing date ordinal (or -1 if not applicable).
                 DOE (Tensor): Emergence date ordinal (or -1 if not applicable).
-                STAGE (Tensor): Integer stage code (0=emerging, 1=vegetative).
+                STAGE (Tensor): Integer stage code (-1=not started, 0=emerging, 1=vegetative).
+                TSUM (Tensor): Initial temperature sum (0.0, or NaN if not active).
+                TSUME (Tensor): Initial temperature sum for emergence (0.0, or NaN if not active).
+                IS_ACTIVE (Tensor): Whether the element has already started.
         """
         p = self.params
-        day_ordinal = day.toordinal()
+        day0 = torch.full(p.shape, day.toordinal(), dtype=self.dtype, device=self.device)
+
+        # Per-element effective start day: CROP_START_DATE if provided (>=0) and
+        # not in the past relative to day0, otherwise day0 (current date).
+        has_override = p.CROP_START_DATE >= 0
+        effective_start = torch.where(has_override, p.CROP_START_DATE, day0)
+        effective_start = torch.maximum(effective_start, day0)
+        self._start_ordinal = effective_start
+
+        is_active = effective_start <= day0
 
         # Define initial stage type (emergence/sowing) and fill the
         # respective day of sowing/emergence (DOS/DOE)
         if p.CROP_START_TYPE == "emergence":
-            STAGE = 1  # 1 = vegetative
-            DOE = day_ordinal
-            DOS = -1  # Not applicable
-            DVS = p.DVSI
+            stage_today = 1.0  # 1 = vegetative
+            doe_today = day0
+            dos_today = -self._ones  # Not applicable
+            dvs_today = p.DVSI
 
         elif p.CROP_START_TYPE == "sowing":
-            STAGE = 0  # 0 = emerging
-            DOS = day_ordinal
-            DOE = -1  # Not yet occurred
-            DVS = -0.1
+            stage_today = 0.0  # 0 = emerging
+            dos_today = day0
+            doe_today = -self._ones  # Not yet occurred
+            dvs_today = -0.1 * self._ones
 
         else:
             msg = f"Unknown start type: {p.CROP_START_TYPE}"
             raise exc.PCSEError(msg)
 
-        return DVS, DOS, DOE, STAGE
+        DVS = torch.where(is_active, dvs_today, self._nan)
+        STAGE = torch.where(is_active, stage_today, -1.0)
+        DOS = torch.where(is_active, dos_today, -1.0)
+        DOE = torch.where(is_active, doe_today, -1.0)
+        TSUM = torch.where(is_active, self._zeros, self._nan)
+        TSUME = torch.where(is_active, self._zeros, self._nan)
+
+        return DVS, DOS, DOE, STAGE, TSUM, TSUME, is_active
 
     def calc_rates(self, day, drv):
         """Compute daily phenological development rates.
@@ -509,7 +557,9 @@ class DVS_Phenology(SimulationObject):
         dvred_active = torch.clamp((DAYLP - p.DLC) / safe_den, 0.0, 1.0)
         DVRED = torch.where(p.IDSL >= 1, dvred_active, self._ones)
 
-        # Vernalisation factor - always compute if module exists
+        # Vernalisation factor - always computed if module exists, even before CROP_START_DATE is
+        # reached; harmless since VERNFAC is unused outside STAGE==1.
+        # Revisit if per-element vernalisation timing matters.
         VERNFAC = self._ones
         if self.vernalisation is not None:
             # Always call calc_rates (it handles stage internally now)
@@ -555,7 +605,12 @@ class DVS_Phenology(SimulationObject):
         r.DTSUM = torch.where(is_reproductive, dtsum_reproductive, r.DTSUM)
         r.DVR = torch.where(is_reproductive, dvr_reproductive, r.DVR)
 
-        # Mature stage (STAGE == 3) keeps zeros (already initialised)
+        # Mature stage (STAGE == 3) keeps zeros (already initialised).
+        # Not-yet-started (STAGE == -1) elements report invalid rates rather than
+        # the (physically meaningless) zeros above.
+        r.DTSUME = torch.where(s.IS_ACTIVE, r.DTSUME, self._nan)
+        r.DTSUM = torch.where(s.IS_ACTIVE, r.DTSUM, self._nan)
+        r.DVR = torch.where(s.IS_ACTIVE, r.DVR, self._nan)
 
         msg = "Finished rate calculation for %s"
         self.logger.debug(msg % day)
@@ -624,6 +679,23 @@ class DVS_Phenology(SimulationObject):
 
         day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
 
+        # Check transition for not started -> emerging/vegetative (STAGE -1 -> 0/1)
+        is_pending = s.STAGE == -1
+        should_start = is_pending & (day_ordinal >= self._start_ordinal)
+        if p.CROP_START_TYPE == "emergence":
+            start_stage = 1.0
+            start_dvs = p.DVSI
+        else:
+            start_stage = 0.0
+            start_dvs = -0.1 * self._ones
+
+        s.STAGE = torch.where(should_start, start_stage, s.STAGE)
+        s.DOE = torch.where(should_start & (p.CROP_START_TYPE == "emergence"), day_ordinal, s.DOE)
+        s.DOS = torch.where(should_start & (p.CROP_START_TYPE == "sowing"), day_ordinal, s.DOS)
+        s.DVS = torch.where(should_start, start_dvs, s.DVS)
+        s.TSUM = torch.where(should_start, self._zeros, s.TSUM)
+        s.TSUME = torch.where(should_start, self._zeros, s.TSUME)
+
         # Check transitions for emerging -> vegetative (STAGE 0 -> 1)
         is_emerging = s.STAGE == 0
         should_emerge = is_emerging & (s.DVS >= 0.0)
@@ -645,7 +717,20 @@ class DVS_Phenology(SimulationObject):
         s.DOM = torch.where(should_mature, day_ordinal, s.DOM)
         s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
 
-        # Send crop_finish signal if maturity reached for all.
+        # An element is active from the day it starts onwards, including after it
+        # individually reaches maturity: a matured element keeps reporting its
+        # frozen final DVS/TSUM/TSUME and zero rates. Only an element that has not
+        # yet reached its own start date is inactive. DOS/DOE/DOA/DOM/DOH are
+        # historical markers and are not masked here.
+        IS_ACTIVE = s.STAGE != -1
+        s.DVS = torch.where(IS_ACTIVE, s.DVS, self._nan)
+        s.TSUM = torch.where(IS_ACTIVE, s.TSUM, self._nan)
+        s.TSUME = torch.where(IS_ACTIVE, s.TSUME, self._nan)
+        s.IS_ACTIVE = IS_ACTIVE
+
+        # Send crop_finish signal if maturity reached for all elements that have
+        # started (elements still pending a future start have STAGE == -1, which
+        # keeps this condition False, so the run is not terminated early).
         if torch.all(s.STAGE == 3) and p.CROP_END_TYPE in ["maturity", "earliest"]:
             self._send_signal(
                 signal=signals.crop_finish,
