@@ -91,7 +91,7 @@ def to_weather_data_iterator(
     _check_weather_variable_keys(data)
 
     iter_dim = _get_iterator_dimension(data, time_dim)
-    iter_length = _get_iterator_length(data, iter_dim)
+    dim_sizes = _get_dimension_sizes(data, iter_dim)
 
     dates = _extract_dates_if_present(data)
 
@@ -106,9 +106,11 @@ def to_weather_data_iterator(
     if dates is not None:
         variables["DAY"] = dates
 
-    variables.update(_to_dict_of_tensors(data, iter_dim))
+    variables.update(_to_dict_of_tensors(data, dim_sizes))
 
-    return _iterate(variables, length=iter_length)
+    # variables without the iterating dimension are yielded as they are at every step
+    static = {k for k in variables if iter_dim and iter_dim not in getattr(data[k], "dims", ())}
+    return _iterate(variables, dim_sizes[iter_dim], static)
 
 
 def _check_weather_variable_keys(data: pd.DataFrame | xr.Dataset) -> None:
@@ -128,7 +130,7 @@ def _get_iterator_dimension(
     This is only relevant for xr.Dataset objects whose variables have >= 2 dimensions: if the
     weather variables are 1D, the only available dimension will be used for iteration.
     """
-    if isinstance(data, pd.DataFrame) or _are_all_weather_variables_less_than_2d(data):
+    if isinstance(data, pd.DataFrame):
         # there is only one dimension to iterate over.
         return None
     elif time_dim:
@@ -143,22 +145,37 @@ def _get_iterator_dimension(
         return day.dims[0]
     else:
         # if none of the above, check sensible names for the time dimension
-        for guess in TIME_DIM_NAMES:
-            if guess in data.dims:
-                return guess
+        for dim in data.dims:
+            if dim.lower() in TIME_DIM_NAMES:
+                return dim
     raise ValueError(
         f"Cannot determine which dimension to iterate over for dataset with dims: {data.dims}."
     )
 
 
-def _get_iterator_length(data: pd.DataFrame | xr.Dataset, iter_dim: str | None) -> int:
-    return len(data[iter_dim]) if iter_dim is not None else len(data)
+def _get_dimension_sizes(
+    data: pd.DataFrame | xr.Dataset, iter_dim: str | None
+) -> dict[str | None, int]:
+    dimension_sizes_after_iteration = None
 
+    # First, determine the size of all the dimensions excluding the iterating dimension. After
+    # iteration, all variables are expected to have identical dimensions and shapes or no dimension
+    # and shape.
+    for var_name in WEATHER_VARIABLES:
+        if var_name in data:
+            var = data[var_name]
+            var_dim_sizes = dict(var.sizes) if isinstance(var, xr.DataArray) else {}
+            var_dim_sizes.pop(iter_dim, None)
+            if dimension_sizes_after_iteration is None:
+                dimension_sizes_after_iteration = var_dim_sizes
+            assert not var_dim_sizes or var_dim_sizes == dimension_sizes_after_iteration, (
+                f"After iterating, the expected dimensions for variable {var_name} is "
+                f"{dimension_sizes_after_iteration}, got {var_dim_sizes} instead"
+            )
 
-def _are_all_weather_variables_less_than_2d(data: xr.Dataset) -> bool:
-    return all(
-        [var.ndim < 2 for var_name, var in data.variables.items() if var_name in WEATHER_VARIABLES]
-    )
+    # Finally, add the iterating dimension
+    iter_dim_size = len(data[iter_dim]) if iter_dim is not None else len(data)
+    return {iter_dim: iter_dim_size, **dimension_sizes_after_iteration}
 
 
 def _extract_dates_if_present(data: pd.DataFrame | xr.Dataset) -> np.ndarray | None:
@@ -195,23 +212,23 @@ def _check_dates(dates: np.ndarray) -> None:
 
 def _to_dict_of_tensors(
     data: pd.DataFrame | xr.Dataset,
-    iter_dim: str | None = None,
+    dim_sizes: dict[str | None, int],
 ) -> dict[str, torch.Tensor]:
     return {
-        var_name: _to_tensor(data[var_name], iter_dim)
+        var_name: _to_tensor(data[var_name], dim_sizes)
         for var_name in WEATHER_VARIABLES
         if var_name in data
     }
 
 
-def _to_tensor(data: pd.Series | xr.DataArray, iter_dim: str | None = None) -> torch.Tensor:
+def _to_tensor(data: pd.Series | xr.DataArray, dim_sizes: dict[str | None, int]) -> torch.Tensor:
     device = ComputeConfig.get_device()
     dtype = ComputeConfig.get_dtype()
-    if isinstance(data, xr.DataArray) and iter_dim is not None:
-        data = data.transpose(iter_dim, ...)
+    if isinstance(data, xr.DataArray):
+        data = data.transpose(*[d for d in dim_sizes if d in data.dims])
     return torch.tensor(data.to_numpy(), device=device, dtype=dtype)
 
 
-def _iterate(variables: dict[str, Any], length):
-    for n in range(length):
-        yield {k: v[n] for k, v in variables.items()}
+def _iterate(variables: dict[str, Any], iter_size: int, static: set[str]):
+    for n in range(iter_size):
+        yield {k: v if k in static else v[n] for k, v in variables.items()}
