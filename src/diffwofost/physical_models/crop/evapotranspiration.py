@@ -16,7 +16,12 @@ from diffwofost.physical_models.utils import _broadcast_to
 
 
 def _stack_layer_property(values, dtype, device) -> torch.Tensor:
-    """Stack per-layer soil properties without dropping autograd history."""
+    """Stack per-layer soil properties without dropping autograd history.
+
+    Each layer property must be a Python number or a single-element tensor
+    (reshaped to ``()``). ``torch.tensor([...])`` would break the graph when a
+    value already requires grad; ``stack`` of ``.to()`` tensors keeps it.
+    """
     columns = []
     for value in values:
         if isinstance(value, torch.Tensor):

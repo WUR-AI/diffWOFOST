@@ -178,11 +178,16 @@ class SNOMIN(SimulationObject):
             orgmat.append(organic)
             corg.append(carbon)
             norg.append(carbon / layer.CNRatioSOMI)
-        # Amendment axis first, layer axis second: (1, n_layers, *batch)
-        age = torch.stack(age, dim=0).unsqueeze(0)
-        orgmat = torch.stack(orgmat, dim=0).unsqueeze(0)
-        corg = torch.stack(corg, dim=0).unsqueeze(0)
-        norg = torch.stack(norg, dim=0).unsqueeze(0)
+        # Amendment axis first, layer axis second: (1, n_layers, *batch).
+        # Layer properties are identical for every batch member; parameters
+        # such as A0SOM already carry the batch axis.
+        batch = tuple(params.shape)
+        age = _with_batch(torch.stack(age, dim=0).unsqueeze(0), batch)
+        orgmat = _with_batch(torch.stack(orgmat, dim=0).unsqueeze(0), batch)
+        corg = _with_batch(torch.stack(corg, dim=0).unsqueeze(0), batch)
+        norg = _with_batch(torch.stack(norg, dim=0).unsqueeze(0), batch)
+        nh4 = _with_batch(nh4, batch)
+        no3 = _with_batch(no3, batch)
         zeros = params.A0SOM.new_zeros(params.shape)
         self.states = self.StateVariables(
             kiosk,
@@ -499,6 +504,17 @@ class SNOMIN(SimulationObject):
             raise exc.SoilNitrateBalanceError(f"NO3 balance on {day}: {nitrate}")
 
 
+def _with_batch(value: torch.Tensor, batch: tuple) -> torch.Tensor:
+    """Repeat a per-layer tensor along a trailing batch axis."""
+    if not batch or value.shape[-len(batch) :] == batch:
+        return value
+    target = value.shape + batch
+    expanded = value
+    while expanded.dim() < len(target):
+        expanded = expanded.unsqueeze(-1)
+    return expanded.expand(target).clone()
+
+
 def _moisture_response(pf: torch.Tensor) -> torch.Tensor:
     return torch.where(pf < 2.7, 1.0, torch.where(pf < 4.2, (4.2 - pf) / (4.2 - 2.7), 0.0))
 
@@ -521,20 +537,35 @@ def _ph_response(ph: torch.Tensor) -> torch.Tensor:
     return 1.0 / (1.0 + torch.exp(-1.5 * (ph - 4)))
 
 
-def _relative_dissimilation(age, pf, ph, temperature):
-    response = _ph_response(ph) * _temperature_response(temperature) * _moisture_response(pf)
-    # Broadcast layer responses (n_layers,) onto amendments (n_amendments, n_layers).
-    while response.dim() < age.dim():
+def _layer_response(pf, ph, temperature):
+    """pH, temperature and moisture factors, with a trailing batch axis when present.
+
+    ``ph`` is one value per layer. ``pf`` is per layer, or per layer and batch
+    member when soil moisture is batched. The pH factor is expanded on the
+    right so it lines up with that batch axis.
+    """
+    moisture = _moisture_response(pf)
+    acidity = _ph_response(ph)
+    while acidity.dim() < moisture.dim():
+        acidity = acidity.unsqueeze(-1)
+    return acidity * _temperature_response(temperature) * moisture
+
+
+def _align_to(response, reference):
+    """Add leading axes so a layer response broadcasts onto an amendment tensor."""
+    while response.dim() < reference.dim():
         response = response.unsqueeze(0)
+    return response
+
+
+def _relative_dissimilation(age, pf, ph, temperature):
+    response = _align_to(_layer_response(pf, ph, temperature), age)
     safe_age = torch.clamp(age, min=1e-6)
     return response * 2.82 * torch.pow(safe_age / _Y_TO_D, -1.6) / _Y_TO_D
 
 
 def _age_increase(age, delt, pf, ph, temperature):
-    response = _ph_response(ph) * _temperature_response(temperature) * _moisture_response(pf)
-    while response.dim() < age.dim():
-        response = response.unsqueeze(0)
-    return response * delt
+    return _align_to(_layer_response(pf, ph, temperature), age) * delt
 
 
 def _dissimilation(

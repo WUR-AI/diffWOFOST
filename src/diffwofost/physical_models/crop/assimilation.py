@@ -343,8 +343,6 @@ def assim8(
     refs = refh * 2.0 / (one + 1.6 * sinb_safe)
     kdirbl = (0.5 / sinb_safe) * kdif / (0.8 * torch.sqrt(one - scv))
     kdir_t = kdirbl * torch.sqrt(one - scv)
-    lai_safe = torch.clamp(lai, min=epsilon)
-    canopy_denominator = torch.clamp(1.0 - torch.exp(-kn * lai_safe), min=epsilon)
 
     ndim = lai.dim()
     if ndim > 0:
@@ -396,11 +394,19 @@ def assim8(
         vispp = (one - scv) * pardir / sinb_safe
         vispp_b = vispp
 
+    # ``torch.where`` evaluates both branches, so keep the denominators finite
+    # even when LAI is zero. The selected SLN still follows PCSE: the nitrogen
+    # profile when LAI >= 0.01, otherwise NLV / LAI.
+    safe_lai = torch.clamp(lai_b, min=epsilon)
     use_profile = lai_b >= 0.01
-    sln_profile = nlv_b * kn_b * torch.exp(-kn_b * laic) / canopy_denominator
-    sln_uniform = nlv_b / torch.clamp(lai_b, min=epsilon)
+    sln_profile = nlv_b * kn_b * torch.exp(-kn_b * laic) / (1.0 - torch.exp(-kn_b * safe_lai))
+    sln_uniform = nlv_b / safe_lai
     sln = torch.where(use_profile, sln_profile, sln_uniform)
-    amax = co2_b * tmpf_b * torch.clamp(slp_b * (sln - lnb_b), min=0.0, max=ref_b)
+    # minimum/maximum broadcast a batched AMAX_REF; clamp rejects a tensor
+    # bound mixed with a Python float.
+    leaf_response = slp_b * (sln - lnb_b)
+    leaf_response = torch.minimum(torch.maximum(leaf_response, torch.zeros_like(leaf_response)), ref_b)
+    amax = co2_b * tmpf_b * leaf_response
     amax_denom = torch.maximum(consts["two"], amax)
 
     exp_kdirbl_laic = torch.exp(-kdirbl_b * laic)
@@ -667,6 +673,9 @@ class WOFOST81_Assimilation(SimulationObject):
         temp = drv["TEMP"]
         dtemp = drv["DTEMP"]
         tmin = drv["TMIN"]
+        # PCSE starts filling this window only once Wofost81 leaves the emerging
+        # stage and calls assimilation. Pre-emergence days are excluded from the
+        # average so a mixed batch does not pollute emerged members.
         emerged = dvs >= 0
         self._tmn_window.appendleft(tmin * emerged)
         self._tmn_window_mask.appendleft(emerged)
@@ -676,14 +685,16 @@ class WOFOST81_Assimilation(SimulationObject):
         dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(
             day, drv["LAT"], drv["IRRAD"], dtype=self.dtype, device=self.device
         )
+        tmpf = params.TMPFTB(temp)
+        eff = params.EFFTB(dtemp) * params.CO2EFFTB(params.CO2)
         dtga = totass8(
             params.AMAX_LNB,
             params.AMAX_REF,
             params.AMAX_SLP,
             dayl,
             params.CO2AMAXTB(params.CO2),
-            params.TMPFTB(temp),
-            params.EFFTB(dtemp) * params.CO2EFFTB(params.CO2),
+            tmpf,
+            eff,
             params.KN,
             lai,
             nlv,
@@ -698,7 +709,9 @@ class WOFOST81_Assimilation(SimulationObject):
             device=self.device,
         )
         dtga = dtga * params.TMNFTB(tminra)
-        rates.PGASS = dtga * (30.0 / 44.0) * emerged
+        # Same as PCSE: no DVS factor here. Wofost81 skips this module while
+        # STAGE is emerging for the whole batch.
+        rates.PGASS = dtga * (30.0 / 44.0)
         return rates.PGASS
 
     def __call__(self, day: datetime.date, drv: dict) -> torch.Tensor:

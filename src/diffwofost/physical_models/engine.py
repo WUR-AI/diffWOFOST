@@ -149,7 +149,9 @@ class Engine(PcseEngine):
 
         # Component for simulation of soil processes
         if self.mconf.SOIL is not None:
-            self.soil = self.mconf.SOIL(self.day, self.kiosk, parameterprovider)
+            self.soil = self.mconf.SOIL(
+                self.day, self.kiosk, parameterprovider, shape=self._shape
+            )
         # Component for crop simulation
         if self.mconf.CROP is not None:
             self._create_crop(self.day)

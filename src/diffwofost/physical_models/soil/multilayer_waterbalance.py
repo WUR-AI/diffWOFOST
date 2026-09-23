@@ -280,10 +280,11 @@ class WaterBalanceLayered(SimulationObject):
         )
 
         pf, conductivity, matric_flux = self._hydraulic_state(states.SM)
-        if params.IFUNRN == 0:
-            rin_pre = (1.0 - params.NOTINF) * rain
-        else:
-            rin_pre = (1.0 - params.NOTINF * self.NINFTB(rain)) * rain
+        # IFUNRN is 0 or 1 per batch element. torch.where keeps both formulas
+        # defined when members disagree, matching the classic water balance.
+        rin_fixed = (1.0 - params.NOTINF) * rain
+        rin_storm = (1.0 - params.NOTINF * self.NINFTB(rain)) * rain
+        rin_pre = torch.where(params.IFUNRN == 0, rin_fixed, rin_storm)
         rin_pre = rin_pre + rates.RIRR + states.SS
         available = rin_pre + rates.RIRR - rates.EVW
         rin_pre = torch.where(

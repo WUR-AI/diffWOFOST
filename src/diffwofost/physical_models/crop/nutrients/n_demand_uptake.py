@@ -137,16 +137,28 @@ class N_Demand_Uptake(SimulationObject):
         rates.RNtranslocation = torch.minimum(
             rates.NdemandSO / delt, states.Ntranslocatable / params.TCNT
         )
-        share_ready = states.Ntranslocatable > 0
-        safe_total = torch.clamp(states.Ntranslocatable, min=1e-12)
+        # PCSE divides by the total only when it is not zero. Each organ pool is
+        # clamped at zero, so the total cannot be negative and ``> 0`` matches
+        # that test. ``torch.where`` still evaluates the division, so the
+        # denominator is clamped; above the floor it equals the total.
+        total_translocatable = states.Ntranslocatable
+        share_ready = total_translocatable > 0
+        safe_total = torch.clamp(total_translocatable, min=1e-12)
+        no_share = torch.zeros_like(rates.RNtranslocation)
         rates.RNtranslocationLV = torch.where(
-            share_ready, rates.RNtranslocation * states.NtranslocatableLV / safe_total, 0.0
+            share_ready,
+            rates.RNtranslocation * states.NtranslocatableLV / safe_total,
+            no_share,
         )
         rates.RNtranslocationST = torch.where(
-            share_ready, rates.RNtranslocation * states.NtranslocatableST / safe_total, 0.0
+            share_ready,
+            rates.RNtranslocation * states.NtranslocatableST / safe_total,
+            no_share,
         )
         rates.RNtranslocationRT = torch.where(
-            share_ready, rates.RNtranslocation * states.NtranslocatableRT / safe_total, 0.0
+            share_ready,
+            rates.RNtranslocation * states.NtranslocatableRT / safe_total,
+            no_share,
         )
 
         soil_limited = torch.minimum(
