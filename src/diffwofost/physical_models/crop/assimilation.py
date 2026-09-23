@@ -238,6 +238,190 @@ def assim7(
     return fgros * LAI
 
 
+def totass8(
+    amax_lnb,
+    amax_ref,
+    amax_slp,
+    dayl,
+    co2amax,
+    tmpf,
+    eff,
+    kn,
+    lai,
+    nlv,
+    kdif,
+    avrad,
+    difpp,
+    dsinbe,
+    sinld,
+    cosld,
+    *,
+    epsilon,
+    dtype,
+    device,
+):
+    """Daily gross CO2 assimilation with a leaf-nitrogen profile through the canopy."""
+    consts = _get_tensor_constants(dtype, device)
+    xgauss = consts["xgauss"]
+    wgauss = consts["wgauss"]
+    pi = consts["pi"]
+    mask = (lai > 0) & (dayl > 0)
+    dsinbe_safe = torch.where(dsinbe > epsilon, dsinbe, torch.ones_like(dsinbe))
+    ndim = dayl.dim()
+    if ndim > 0:
+        xg_v = xgauss.view(3, *([1] * ndim))
+        dayl_q = dayl.unsqueeze(0)
+        sinld_q = sinld.unsqueeze(0) if sinld.dim() > 0 else sinld
+        cosld_q = cosld.unsqueeze(0) if cosld.dim() > 0 else cosld
+        avrad_q = avrad.unsqueeze(0) if avrad.dim() > 0 else avrad
+        difpp_q = difpp.unsqueeze(0) if difpp.dim() > 0 else difpp
+        dsinbe_q = dsinbe_safe.unsqueeze(0) if dsinbe_safe.dim() > 0 else dsinbe_safe
+    else:
+        xg_v = xgauss
+        dayl_q = dayl
+        sinld_q = sinld
+        cosld_q = cosld
+        avrad_q = avrad
+        difpp_q = difpp
+        dsinbe_q = dsinbe_safe
+    hour = 12.0 + 0.5 * dayl_q * xg_v
+    sinb = torch.maximum(
+        torch.zeros_like(hour),
+        sinld_q + cosld_q * torch.cos(2.0 * pi * (hour + 12.0) / 24.0),
+    )
+    par = 0.5 * avrad_q * sinb * (1.0 + 0.4 * sinb) / dsinbe_q
+    pardif = torch.minimum(par, sinb * difpp_q)
+    pardir = par - pardif
+    dtga = torch.zeros_like(lai)
+    for i in range(3):
+        fgros = assim8(
+            amax_lnb,
+            amax_ref,
+            amax_slp,
+            co2amax,
+            tmpf,
+            eff,
+            kn,
+            lai,
+            nlv,
+            kdif,
+            sinb[i],
+            pardir[i],
+            pardif[i],
+            epsilon=epsilon,
+        )
+        dtga = dtga + fgros * wgauss[i]
+    dtga = dtga * dayl
+    return torch.where(mask, dtga, torch.zeros_like(dtga))
+
+
+def assim8(
+    amax_lnb,
+    amax_ref,
+    amax_slp,
+    co2amax,
+    tmpf,
+    eff,
+    kn,
+    lai,
+    nlv,
+    kdif,
+    sinb,
+    pardir,
+    pardif,
+    *,
+    epsilon,
+):
+    """Canopy assimilation with AMAX declining through the canopy with leaf nitrogen."""
+    consts = _get_tensor_constants(amax_ref.dtype, amax_ref.device)
+    xgauss = consts["xgauss"]
+    wgauss = consts["wgauss"]
+    scv = consts["scv"]
+    one = consts["one"]
+    sinb_safe = torch.where(sinb > epsilon, sinb, torch.ones_like(sinb))
+    refh = (one - torch.sqrt(one - scv)) / (one + torch.sqrt(one - scv))
+    refs = refh * 2.0 / (one + 1.6 * sinb_safe)
+    kdirbl = (0.5 / sinb_safe) * kdif / (0.8 * torch.sqrt(one - scv))
+    kdir_t = kdirbl * torch.sqrt(one - scv)
+    lai_safe = torch.clamp(lai, min=epsilon)
+    canopy_denominator = torch.clamp(1.0 - torch.exp(-kn * lai_safe), min=epsilon)
+
+    ndim = lai.dim()
+    if ndim > 0:
+        xg_v = xgauss.view(3, *([1] * ndim))
+        wg_v = wgauss.view(3, *([1] * ndim))
+        laic = lai.unsqueeze(0) * xg_v
+
+        def _batch(value):
+            if isinstance(value, torch.Tensor) and value.dim() > 0:
+                return value.unsqueeze(0)
+            return value
+
+        refs_b = _batch(refs)
+        pardif_b = _batch(pardif)
+        kdif_b = _batch(kdif)
+        pardir_b = _batch(pardir)
+        kdir_t_b = _batch(kdir_t)
+        kdirbl_b = _batch(kdirbl)
+        eff_b = _batch(eff)
+        kn_b = _batch(kn)
+        nlv_b = _batch(nlv)
+        lai_b = _batch(lai)
+        co2_b = _batch(co2amax)
+        tmpf_b = _batch(tmpf)
+        slp_b = _batch(amax_slp)
+        lnb_b = _batch(amax_lnb)
+        ref_b = _batch(amax_ref)
+        vispp = (one - scv) * pardir / sinb_safe
+        vispp_b = _batch(vispp)
+    else:
+        xg_v = xgauss
+        wg_v = wgauss
+        laic = lai * xgauss
+        refs_b = refs
+        pardif_b = pardif
+        kdif_b = kdif
+        pardir_b = pardir
+        kdir_t_b = kdir_t
+        kdirbl_b = kdirbl
+        eff_b = eff
+        kn_b = kn
+        nlv_b = nlv
+        lai_b = lai
+        co2_b = co2amax
+        tmpf_b = tmpf
+        slp_b = amax_slp
+        lnb_b = amax_lnb
+        ref_b = amax_ref
+        vispp = (one - scv) * pardir / sinb_safe
+        vispp_b = vispp
+
+    use_profile = lai_b >= 0.01
+    sln_profile = nlv_b * kn_b * torch.exp(-kn_b * laic) / canopy_denominator
+    sln_uniform = nlv_b / torch.clamp(lai_b, min=epsilon)
+    sln = torch.where(use_profile, sln_profile, sln_uniform)
+    amax = co2_b * tmpf_b * torch.clamp(slp_b * (sln - lnb_b), min=0.0, max=ref_b)
+    amax_denom = torch.maximum(consts["two"], amax)
+
+    exp_kdirbl_laic = torch.exp(-kdirbl_b * laic)
+    visdf = (one - refs_b) * pardif_b * kdif_b * torch.exp(-kdif_b * laic)
+    vist = (one - refs_b) * pardir_b * kdir_t_b * torch.exp(-kdir_t_b * laic)
+    visd = (one - scv) * pardir_b * kdirbl_b * exp_kdirbl_laic
+    visshd = visdf + vist - visd
+    fgrsh = amax * (one - torch.exp(-visshd * eff_b / amax_denom))
+    exp_term = one - torch.exp(-vispp_b * eff_b / amax_denom)
+    eff_vispp = eff_b * vispp_b
+    eff_vispp_safe = torch.where(
+        torch.abs(eff_vispp) > epsilon, eff_vispp, torch.ones_like(eff_vispp)
+    )
+    fgrsun_formula = amax * (one - (amax - fgrsh) * exp_term / eff_vispp_safe)
+    fgrsun = torch.where(vispp_b <= 0.0, fgrsh, fgrsun_formula)
+    fslla = exp_kdirbl_laic
+    fgl = fslla * fgrsun + (one - fslla) * fgrsh
+    fgros = (fgl * wg_v).sum(0)
+    return fgros * lai
+
+
 class WOFOST72_Assimilation(SimulationObject):
     """Class implementing a WOFOST/SUCROS style assimilation routine.
 
@@ -420,3 +604,107 @@ def _exist_required_external_variables(kiosk):
     for var in required_external_vars:
         if var not in kiosk:
             raise ValueError(f"Required external variable '{var}' not found in kiosk.")
+
+
+class WOFOST81_Assimilation(SimulationObject):
+    """WOFOST 8.1 assimilation with CO2 and a leaf-nitrogen effect on AMAX.
+
+    Maximum leaf photosynthesis declines with depth in the canopy following
+    the specific leaf nitrogen. CO2 corrections come from ``CO2AMAXTB`` and
+    ``CO2EFFTB``.
+    """
+
+    @property
+    def device(self):
+        """Get device from ComputeConfig."""
+        return getattr(self, "_device", ComputeConfig.get_device())
+
+    @property
+    def dtype(self):
+        """Get dtype from ComputeConfig."""
+        return getattr(self, "_dtype", ComputeConfig.get_dtype())
+
+    class Parameters(TensorParamTemplate):
+        AMAX_LNB = Tensor(-99.0)
+        AMAX_REF = Tensor(-99.0)
+        AMAX_SLP = Tensor(-99.0)
+        EFFTB = AfgenTrait()
+        KDIFTB = AfgenTrait()
+        TMPFTB = AfgenTrait()
+        TMNFTB = AfgenTrait()
+        CO2AMAXTB = AfgenTrait()
+        CO2EFFTB = AfgenTrait()
+        CO2 = Tensor(-99.0)
+        KN = Tensor(-99.0)
+
+    class RateVariables(TensorRatesTemplate):
+        PGASS = Tensor(0.0)
+
+    def initialize(self, day, kiosk, parvalues, shape=None):
+        """Store parameters and the 7-day minimum-temperature window."""
+        self._device = ComputeConfig.get_device()
+        self._dtype = ComputeConfig.get_dtype()
+        self.kiosk = kiosk
+        self.params = self.Parameters(parvalues, shape=shape)
+        self.rates = self.RateVariables(kiosk, publish=["PGASS"], shape=shape)
+        self._tmn_window = deque(maxlen=7)
+        self._tmn_window_mask = deque(maxlen=7)
+        self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
+
+    def calc_rates(self, day: datetime.date, drv: dict) -> torch.Tensor:
+        """Potential gross assimilation in kg CH2O ha-1 d-1."""
+        params = self.params
+        rates = self.rates
+        kiosk = self.kiosk
+        dvs = _broadcast_to(kiosk["DVS"], self.params.shape, dtype=self.dtype, device=self.device)
+        lai = _broadcast_to(kiosk["LAI"], self.params.shape, dtype=self.dtype, device=self.device)
+        nlv = _broadcast_to(
+            kiosk["NamountLV"], self.params.shape, dtype=self.dtype, device=self.device
+        )
+        irrad = drv["IRRAD"]
+        # TMPFTB uses the daily mean temperature. EFFTB uses the daytime
+        # temperature, matching PCSE's WOFOST 8.1 assimilation.
+        temp = drv["TEMP"]
+        dtemp = drv["DTEMP"]
+        tmin = drv["TMIN"]
+        emerged = dvs >= 0
+        self._tmn_window.appendleft(tmin * emerged)
+        self._tmn_window_mask.appendleft(emerged)
+        tmin_stack = torch.stack(list(self._tmn_window), dim=0)
+        mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
+        tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
+        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(
+            day, drv["LAT"], drv["IRRAD"], dtype=self.dtype, device=self.device
+        )
+        dtga = totass8(
+            params.AMAX_LNB,
+            params.AMAX_REF,
+            params.AMAX_SLP,
+            dayl,
+            params.CO2AMAXTB(params.CO2),
+            params.TMPFTB(temp),
+            params.EFFTB(dtemp) * params.CO2EFFTB(params.CO2),
+            params.KN,
+            lai,
+            nlv,
+            params.KDIFTB(dvs),
+            irrad,
+            difpp,
+            dsinbe,
+            sinld,
+            cosld,
+            epsilon=self._epsilon,
+            dtype=self.dtype,
+            device=self.device,
+        )
+        dtga = dtga * params.TMNFTB(tminra)
+        rates.PGASS = dtga * (30.0 / 44.0) * emerged
+        return rates.PGASS
+
+    def __call__(self, day: datetime.date, drv: dict) -> torch.Tensor:
+        """PCSE calls the assimilation module directly."""
+        return self.calc_rates(day, drv)
+
+    def integrate(self, day: datetime.date, delt: float = 1.0) -> None:
+        """Assimilation has no states to integrate."""
+        return

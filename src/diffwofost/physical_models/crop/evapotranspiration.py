@@ -15,6 +15,17 @@ from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 
 
+def _stack_layer_property(values, dtype, device) -> torch.Tensor:
+    """Stack per-layer soil properties without dropping autograd history."""
+    columns = []
+    for value in values:
+        if isinstance(value, torch.Tensor):
+            columns.append(value.to(dtype=dtype, device=device).reshape(()))
+        else:
+            columns.append(torch.tensor(value, dtype=dtype, device=device))
+    return torch.stack(columns)
+
+
 def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
     """Soil Water Easily Available Fraction (SWEAF).
 
@@ -607,23 +618,24 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             shape=shape,
         )
 
-        # Pre-stack layer soil properties as tensors
+        # Pre-stack layer soil properties as tensors. ``stack`` keeps the
+        # autograd history when a layer property is already a tensor.
         n_layers = len(self.soil_profile)
         self._n_layers = n_layers
-        self._layer_smw = torch.tensor(
-            [layer.SMW for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_smw = _stack_layer_property(
+            [layer.SMW for layer in self.soil_profile], self.dtype, self.device
         )
-        self._layer_smfcf = torch.tensor(
-            [layer.SMFCF for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_smfcf = _stack_layer_property(
+            [layer.SMFCF for layer in self.soil_profile], self.dtype, self.device
         )
-        self._layer_sm0 = torch.tensor(
-            [layer.SM0 for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_sm0 = _stack_layer_property(
+            [layer.SM0 for layer in self.soil_profile], self.dtype, self.device
         )
-        self._layer_crairc = torch.tensor(
-            [layer.CRAIRC for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_crairc = _stack_layer_property(
+            [layer.CRAIRC for layer in self.soil_profile], self.dtype, self.device
         )
-        thicknesses = torch.tensor(
-            [layer.Thickness for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        thicknesses = _stack_layer_property(
+            [layer.Thickness for layer in self.soil_profile], self.dtype, self.device
         )
         self._layer_depth_hi = torch.cumsum(thicknesses, dim=0)
         self._layer_depth_lo = self._layer_depth_hi - thicknesses
