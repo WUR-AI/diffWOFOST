@@ -28,6 +28,7 @@ from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.wofost81 import Wofost81
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.parameter_providers import ParameterProvider
+from diffwofost.physical_models.soil.snomin import _sum_soil
 from diffwofost.physical_models.soil.soil_wrappers import SoilModuleWrapper_NWLP_MLWB_SNOMIN
 from diffwofost.physical_models.test import calculate_numerical_grad
 from diffwofost.physical_models.test import get_test_data
@@ -57,6 +58,7 @@ _DAILY = (
     "NamountSO",
 )
 _LAYERED = ("SM", "NH4", "NO3")
+_PROFILE = ("ORGMATT", "CORGT", "NORGT")
 
 
 @lru_cache(maxsize=1)
@@ -98,18 +100,8 @@ def _example_soil():
     return {"RDMSOL": float(rootable), "SoilProfileDescription": profile}
 
 
-def _providers():
-    crop = YAMLCropDataProvider(Wofost81_NWLP_MLWB_SNOMIN)
-    soil = _example_soil()
-    n_layers = len(soil["SoilProfileDescription"]["SoilLayers"])
-    # WAV, CO2, NH4I and NO3I have no default. The amounts sit inside the
-    # ranges checked by WOFOST81SiteDataProvider_SNOMIN.
-    site = WOFOST81SiteDataProvider_SNOMIN(
-        WAV=20.0,
-        CO2=360.0,
-        NH4I=[10.0] * n_layers,
-        NO3I=[1.0] * n_layers,
-    )
+def _agro(timed_events="null"):
+    """Campaign for the weather month. ``timed_events`` is a YAML fragment."""
     start, _end = _period()
     harvest = start + dt.timedelta(days=300)
     agro_path = Path("/tmp/wofost81_snomin_agro.yaml")
@@ -125,19 +117,33 @@ AgroManagement:
         crop_end_date: {harvest.isoformat()}
         crop_end_type: harvest
         max_duration: 300
-    TimedEvents: null
+    TimedEvents: {timed_events}
     StateEvents: null
 """
     )
-    agro = YAMLAgroManagementReader(str(agro_path))
-    return crop, soil, site, agro
+    return YAMLAgroManagementReader(str(agro_path))
+
+
+def _providers(timed_events="null"):
+    crop = YAMLCropDataProvider(Wofost81_NWLP_MLWB_SNOMIN)
+    soil = _example_soil()
+    n_layers = len(soil["SoilProfileDescription"]["SoilLayers"])
+    # WAV, CO2, NH4I and NO3I have no default. The amounts sit inside the
+    # ranges checked by WOFOST81SiteDataProvider_SNOMIN.
+    site = WOFOST81SiteDataProvider_SNOMIN(
+        WAV=20.0,
+        CO2=360.0,
+        NH4I=[10.0] * n_layers,
+        NO3I=[1.0] * n_layers,
+    )
+    return crop, soil, site, _agro(timed_events)
 
 
 def _config():
     return Configuration(
         CROP=Wofost81,
         SOIL=SoilModuleWrapper_NWLP_MLWB_SNOMIN,
-        OUTPUT_VARS=[*_DAILY, *_LAYERED],
+        OUTPUT_VARS=[*_DAILY, *_LAYERED, *_PROFILE],
     )
 
 
@@ -165,9 +171,10 @@ def _close(actual, expected, tol=1e-4):
     return abs(actual - expected) <= tol + tol * abs(expected)
 
 
-def _assert_series(reference, model, tol=1e-4):
+def _assert_series(reference, model, tol=1e-4, names=None):
     assert len(reference) == len(model)
-    names = (*_DAILY, *_LAYERED)
+    if names is None:
+        names = (*_DAILY, *_LAYERED)
     for day_index, (ref_day, diff_day) in enumerate(zip(reference, model, strict=True)):
         assert ref_day["day"] == diff_day["day"]
         for name in names:
@@ -187,8 +194,8 @@ def _assert_series(reference, model, tol=1e-4):
                 )
 
 
-def _run_pcse(output_vars, site_overrides=None):
-    crop, soil, site, agro = _providers()
+def _run_pcse(output_vars, site_overrides=None, timed_events="null"):
+    crop, soil, site, agro = _providers(timed_events)
     if site_overrides:
         site = {**site, **site_overrides}
     reference = Wofost81_NWLP_MLWB_SNOMIN(
@@ -202,8 +209,8 @@ def _run_pcse(output_vars, site_overrides=None):
     return reference.get_output()
 
 
-def _run_diff(overrides=None):
-    crop, soil, site, agro = _providers()
+def _run_diff(overrides=None, timed_events="null"):
+    crop, soil, site, agro = _providers(timed_events)
     params = ParameterProvider(cropdata=crop, soildata=soil, sitedata=site)
     params.set_active_crop(_CROP_NAME, _VARIETY_NAME, "sowing", "harvest")
     for name, value in (overrides or {}).items():
@@ -222,6 +229,71 @@ def _member(value, index):
             return value
         return value.select(-1, index)
     return value
+
+
+def _application_events():
+    """Two amendments inside the weather month.
+
+    The first is deeper than the top layer, so it is split across layers.
+    The second sits on the top-layer boundary. Both carry mineral nitrogen
+    and organic matter, which is what ``apply_n_snomin`` expects.
+    """
+    start, _end = _period()
+    first = start + dt.timedelta(days=8)
+    second = start + dt.timedelta(days=21)
+    return f"""
+      - event_signal: apply_n_snomin
+        name: Test nitrogen amendments
+        comment: amount in kg material/ha, depth in cm, age in years
+        events_table:
+        - {first.isoformat()}:
+            amount: 100
+            application_depth: 25
+            cnratio: 10
+            initial_age: 1
+            f_NH4N: 0.15
+            f_NO3N: 0.05
+            f_orgmat: 0.4
+        - {second.isoformat()}:
+            amount: 80
+            application_depth: 10
+            cnratio: 20
+            initial_age: 0.5
+            f_NH4N: 0.05
+            f_NO3N: 0.2
+            f_orgmat: 0.6
+"""
+
+
+def _series_diverges(left, right, name):
+    """First day on which one output series leaves the other."""
+    for left_day, right_day in zip(left, right, strict=True):
+        left_values = _numbers(left_day[name])
+        right_values = _numbers(right_day[name])
+        if any(not _close(got, want) for got, want in zip(left_values, right_values, strict=True)):
+            return left_day["day"]
+    return None
+
+
+def test_nitrogen_application_matches_pcse():
+    """Timed apply_n_snomin events match PCSE on every following day.
+
+    The signal queues the amendment during that day's rate calculation. The
+    layer pools change when those rates are integrated, which is the next day.
+    """
+    ComputeConfig.set_dtype(torch.float64)
+    ComputeConfig.set_device("cpu")
+    events = _application_events()
+    names = (*_DAILY, *_LAYERED, *_PROFILE)
+    reference = _run_pcse(list(names), timed_events=events)
+    model = _run_diff(timed_events=events)
+    _assert_series(reference, model, names=names)
+
+    untouched = _run_pcse(["NH4", "NO3", "NAVAIL", *_PROFILE])
+    start, _end = _period()
+    integrated = start + dt.timedelta(days=9)
+    assert _series_diverges(reference, untouched, "NH4") == integrated
+    assert _series_diverges(reference, untouched, "ORGMATT") == integrated
 
 
 def test_daily_outputs_match_pcse():
@@ -275,6 +347,20 @@ def test_autograd_matches_numerical_gradient(parameter, output_name):
     torch.testing.assert_close(numerical_grad, autograd, rtol=1e-3, atol=1e-3)
 
 
+def test_soil_sums_keep_the_batch_axis():
+    """Profile totals sum amendments and layers, and leave each batch member."""
+    organic = torch.tensor(
+        [
+            [[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]],
+            [[4.0, 40.0], [5.0, 50.0], [6.0, 60.0]],
+        ]
+    )
+    mineral = torch.tensor([[1.0, 10.0], [2.0, 20.0], [3.0, 30.0]])
+    torch.testing.assert_close(_sum_soil(organic, batch_ndim=1), torch.tensor([21.0, 210.0]))
+    torch.testing.assert_close(_sum_soil(mineral, batch_ndim=1), torch.tensor([6.0, 60.0]))
+    torch.testing.assert_close(_sum_soil(mineral[:, 0], batch_ndim=0), torch.tensor(6.0))
+
+
 def test_batched_trajectories_match_independent_runs():
     """Batch members keep separate emergence, water and nitrogen histories.
 
@@ -306,7 +392,18 @@ def test_batched_trajectories_match_independent_runs():
         }
         scalar_outputs.append(_run_diff(overrides))
 
-    names = ("DVS", "LAI", "TAGP", "TRA", "NAVAIL", "NuptakeTotal", "SM", "NH4", "NO3")
+    names = (
+        "DVS",
+        "LAI",
+        "TAGP",
+        "TRA",
+        "NAVAIL",
+        "NuptakeTotal",
+        "SM",
+        "NH4",
+        "NO3",
+        *_PROFILE,
+    )
     for index, scalar in enumerate(scalar_outputs):
         assert len(scalar) == len(batch_output)
         for ref_day, batch_day in zip(scalar, batch_output, strict=True):

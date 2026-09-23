@@ -182,6 +182,7 @@ class SNOMIN(SimulationObject):
         # Layer properties are identical for every batch member; parameters
         # such as A0SOM already carry the batch axis.
         batch = tuple(params.shape)
+        self._batch_ndim = len(batch)
         age = _with_batch(torch.stack(age, dim=0).unsqueeze(0), batch)
         orgmat = _with_batch(torch.stack(orgmat, dim=0).unsqueeze(0), batch)
         corg = _with_batch(torch.stack(corg, dim=0).unsqueeze(0), batch)
@@ -220,12 +221,12 @@ class SNOMIN(SimulationObject):
             RNH4OUTTT=zeros,
             RNH4AMTT=zeros,
             RNH4DEPOSTT=zeros,
-            CORGT=corg.sum(dim=(0, 1)) / _M2_TO_HA,
-            NORGT=norg.sum(dim=(0, 1)) / _M2_TO_HA,
-            ORGMATT=orgmat.sum(dim=(0, 1)) / _M2_TO_HA,
+            CORGT=_sum_soil(corg, self._batch_ndim) / _M2_TO_HA,
+            NORGT=_sum_soil(norg, self._batch_ndim) / _M2_TO_HA,
+            ORGMATT=_sum_soil(orgmat, self._batch_ndim) / _M2_TO_HA,
             RMINT=zeros,
-            NH4T=nh4.sum(dim=0) / _M2_TO_HA,
-            NO3T=no3.sum(dim=0) / _M2_TO_HA,
+            NH4T=_sum_soil(nh4, self._batch_ndim) / _M2_TO_HA,
+            NO3T=_sum_soil(no3, self._batch_ndim) / _M2_TO_HA,
             NAVAIL=zeros,
             NH4LEACHCUM=zeros,
             NO3LEACHCUM=zeros,
@@ -306,21 +307,14 @@ class SNOMIN(SimulationObject):
         )
         nh4_pre = states.NH4 - rates.RNH4UP * delt
         no3_pre = states.NO3 - rates.RNO3UP * delt
+        # Amendment axis only. The result stays one mineralization rate per layer.
         rates.RNH4MIN = rates.RNORGDIS.sum(dim=0)
         rates.RNH4NITR = _nitrification(
             profile, params.KNIT_REF, params.KSORP, nh4_pre, soil_moisture, temperature
         )
-        immobilised = nh4_pre + (rates.RNH4MIN - rates.RNH4NITR) * delt < 0
-        # Same assignment as PCSE: the limited rate is the pre-uptake ammonium
-        # minus the nitrification rate (daily step, delt = 1).
-        rates.RNH4MIN = torch.where(immobilised, nh4_pre - rates.RNH4NITR, rates.RNH4MIN)
-        mineral_n = rates.RNORGDIS.sum(dim=0)
-        scale = torch.where(
-            immobilised,
-            rates.RNH4MIN / torch.clamp(mineral_n, min=1e-12),
-            torch.ones_like(mineral_n),
+        rates.RNH4MIN, rates.RNORGDIS = _limit_immobilisation(
+            nh4_pre, rates.RNH4MIN, rates.RNH4NITR, rates.RNORGDIS, delt
         )
-        rates.RNORGDIS = rates.RNORGDIS * scale.unsqueeze(0)
         rates.RNORG = rates.RNORGAM - rates.RNORGDIS
         rates.RNO3NITR = rates.RNH4NITR
         rates.RNO3DENITR = _denitrification(
@@ -388,13 +382,17 @@ class SNOMIN(SimulationObject):
             / _M2_TO_HA
         )
         self._check_mass_balances(day, delt)
+        # Organic pools are (amendments, layers, *batch). Mineral pools are
+        # (layers, *batch). Sum those leading axes only; a bare sum would add
+        # the batch members together.
         ha = 1.0 / _M2_TO_HA
-        states.ORGMATT = states.ORGMAT.sum() * ha
-        states.CORGT = states.CORG.sum() * ha
-        states.NORGT = states.NORG.sum() * ha
-        states.RMINT = states.RMINT + rates.RNORGDIS.sum() * ha
-        states.NH4T = states.NH4.sum() * ha
-        states.NO3T = states.NO3.sum() * ha
+        batch_ndim = self._batch_ndim
+        states.ORGMATT = _sum_soil(states.ORGMAT, batch_ndim) * ha
+        states.CORGT = _sum_soil(states.CORG, batch_ndim) * ha
+        states.NORGT = _sum_soil(states.NORG, batch_ndim) * ha
+        states.RMINT = states.RMINT + _sum_soil(rates.RNORGDIS, batch_ndim) * ha
+        states.NH4T = _sum_soil(states.NH4, batch_ndim) * ha
+        states.NO3T = _sum_soil(states.NO3, batch_ndim) * ha
         states.NH4LEACHCUM = states.NH4LEACHCUM + rates.RNH4LEACHCUM * delt
         states.NO3LEACHCUM = states.NO3LEACHCUM + rates.RNO3LEACHCUM * delt
         states.NDENITCUM = states.NDENITCUM + rates.RNDENITCUM * delt
@@ -442,35 +440,43 @@ class SNOMIN(SimulationObject):
     def _check_mass_balances(self, day, delt):
         states = self.states
         rates = self.rates
-        states.RORGMATAMTT = states.RORGMATAMTT + delt * rates.RORGMATAM.sum()
-        states.RORGMATDISTT = states.RORGMATDISTT + delt * rates.RORGMATDIS.sum()
-        states.RCORGAMTT = states.RCORGAMTT + delt * rates.RCORGAM.sum()
-        states.RCORGDISTT = states.RCORGDISTT + delt * rates.RCORGDIS.sum()
-        states.RNORGAMTT = states.RNORGAMTT + delt * rates.RNORGAM.sum()
-        states.RNORGDISTT = states.RNORGDISTT + delt * rates.RNORGDIS.sum()
-        states.RNH4MINTT = states.RNH4MINTT + delt * rates.RNH4MIN.sum()
-        states.RNH4NITRTT = states.RNH4NITRTT + delt * rates.RNH4NITR.sum()
-        states.RNH4UPTT = states.RNH4UPTT + delt * rates.RNH4UP.sum()
-        states.RNH4INTT = states.RNH4INTT + delt * rates.RNH4IN.sum()
-        states.RNH4OUTTT = states.RNH4OUTTT + delt * rates.RNH4OUT.sum()
-        states.RNH4AMTT = states.RNH4AMTT + delt * rates.RNH4AM.sum()
-        states.RNH4DEPOSTT = states.RNH4DEPOSTT + delt * rates.RNH4DEPOS.sum()
-        states.RNO3NITRTT = states.RNO3NITRTT + delt * rates.RNO3NITR.sum()
-        states.RNO3DENITRTT = states.RNO3DENITRTT + delt * rates.RNO3DENITR.sum()
-        states.RNO3UPTT = states.RNO3UPTT + delt * rates.RNO3UP.sum()
-        states.RNO3INTT = states.RNO3INTT + delt * rates.RNO3IN.sum()
-        states.RNO3OUTTT = states.RNO3OUTTT + delt * rates.RNO3OUT.sum()
-        states.RNO3AMTT = states.RNO3AMTT + delt * rates.RNO3AM.sum()
-        states.RNO3DEPOSTT = states.RNO3DEPOSTT + delt * rates.RNO3DEPOS.sum()
+        # Called from integrate. Organic rates sum amendments and layers.
+        # Mineral rates sum layers. The trailing batch axis stays intact, so
+        # each member keeps its own cumulative total.
+        batch_ndim = self._batch_ndim
+
+        def total(value):
+            return _sum_soil(value, batch_ndim)
+
+        states.RORGMATAMTT = states.RORGMATAMTT + delt * total(rates.RORGMATAM)
+        states.RORGMATDISTT = states.RORGMATDISTT + delt * total(rates.RORGMATDIS)
+        states.RCORGAMTT = states.RCORGAMTT + delt * total(rates.RCORGAM)
+        states.RCORGDISTT = states.RCORGDISTT + delt * total(rates.RCORGDIS)
+        states.RNORGAMTT = states.RNORGAMTT + delt * total(rates.RNORGAM)
+        states.RNORGDISTT = states.RNORGDISTT + delt * total(rates.RNORGDIS)
+        states.RNH4MINTT = states.RNH4MINTT + delt * total(rates.RNH4MIN)
+        states.RNH4NITRTT = states.RNH4NITRTT + delt * total(rates.RNH4NITR)
+        states.RNH4UPTT = states.RNH4UPTT + delt * total(rates.RNH4UP)
+        states.RNH4INTT = states.RNH4INTT + delt * total(rates.RNH4IN)
+        states.RNH4OUTTT = states.RNH4OUTTT + delt * total(rates.RNH4OUT)
+        states.RNH4AMTT = states.RNH4AMTT + delt * total(rates.RNH4AM)
+        states.RNH4DEPOSTT = states.RNH4DEPOSTT + delt * total(rates.RNH4DEPOS)
+        states.RNO3NITRTT = states.RNO3NITRTT + delt * total(rates.RNO3NITR)
+        states.RNO3DENITRTT = states.RNO3DENITRTT + delt * total(rates.RNO3DENITR)
+        states.RNO3UPTT = states.RNO3UPTT + delt * total(rates.RNO3UP)
+        states.RNO3INTT = states.RNO3INTT + delt * total(rates.RNO3IN)
+        states.RNO3OUTTT = states.RNO3OUTTT + delt * total(rates.RNO3OUT)
+        states.RNO3AMTT = states.RNO3AMTT + delt * total(rates.RNO3AM)
+        states.RNO3DEPOSTT = states.RNO3DEPOSTT + delt * total(rates.RNO3DEPOS)
 
         organic = (
-            self._ORGMATI.sum() - states.ORGMAT.sum() + states.RORGMATAMTT - states.RORGMATDISTT
+            total(self._ORGMATI) - total(states.ORGMAT) + states.RORGMATAMTT - states.RORGMATDISTT
         )
-        carbon = self._CORGI.sum() - states.CORG.sum() + states.RCORGAMTT - states.RCORGDISTT
-        nitrogen = self._NORGI.sum() - states.NORG.sum() + states.RNORGAMTT - states.RNORGDISTT
+        carbon = total(self._CORGI) - total(states.CORG) + states.RCORGAMTT - states.RCORGDISTT
+        nitrogen = total(self._NORGI) - total(states.NORG) + states.RNORGAMTT - states.RNORGDISTT
         ammonium = (
-            self._NH4I.sum()
-            - states.NH4.sum()
+            total(self._NH4I)
+            - total(states.NH4)
             + states.RNH4AMTT
             + states.RNH4INTT
             + states.RNH4MINTT
@@ -480,8 +486,8 @@ class SNOMIN(SimulationObject):
             - states.RNH4UPTT
         )
         nitrate = (
-            self._NO3I.sum()
-            - states.NO3.sum()
+            total(self._NO3I)
+            - total(states.NO3)
             + states.RNO3AMTT
             + states.RNO3NITRTT
             + states.RNO3INTT
@@ -502,6 +508,20 @@ class SNOMIN(SimulationObject):
             raise exc.SoilAmmoniumBalanceError(f"NH4 balance on {day}: {ammonium}")
         if torch.any(torch.abs(nitrate) > 1e-4):
             raise exc.SoilNitrateBalanceError(f"NO3 balance on {day}: {nitrate}")
+
+
+def _sum_soil(value: torch.Tensor, batch_ndim: int) -> torch.Tensor:
+    """Sum every axis in front of the batch.
+
+    An organic quantity is ranked (amendments, layers, *batch), so both soil
+    axes are included. A mineral quantity is ranked (layers, *batch), so only
+    the layer axis is included. The batch rank is the parameter shape stored
+    at initialisation.
+    """
+    soil_rank = value.dim() - batch_ndim
+    if soil_rank <= 0:
+        return value
+    return value.sum(dim=tuple(range(soil_rank)))
 
 
 def _with_batch(value: torch.Tensor, batch: tuple) -> torch.Tensor:
@@ -590,6 +610,24 @@ def _dissimilation(
     )
     nitrogen_rate = torch.where(active, conversion - assimilation, torch.zeros_like(organic_matter))
     return organic_rate, carbon_rate, nitrogen_rate
+
+
+def _limit_immobilisation(nh4_pre, mineralization, nitrification, organic_nitrogen_rate, delt):
+    """Keep the PCSE assignment when net immobilisation would be used.
+
+    PCSE sets the limited mineralization to the pre-uptake ammonium minus
+    nitrification, then scales every amendment in that layer by the ratio of
+    the limited rate to the original amendment sum.
+    """
+    immobilised = nh4_pre + (mineralization - nitrification) * delt < 0
+    limited = torch.where(immobilised, nh4_pre - nitrification, mineralization)
+    mineral_n = organic_nitrogen_rate.sum(dim=0)
+    scale = torch.where(
+        immobilised,
+        limited / torch.clamp(mineral_n, min=1e-12),
+        torch.ones_like(mineral_n),
+    )
+    return limited, organic_nitrogen_rate * scale.unsqueeze(0)
 
 
 def _layer_fraction(depth, z_min, z_max, thickness):

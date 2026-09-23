@@ -199,8 +199,8 @@ def assim7(
         eff_vispp_safe_b = eff_vispp_safe.unsqueeze(0)
         vispp_b = vispp.unsqueeze(0)
     else:
-        # Scalar inputs: laic is (3,); skip unsqueezes (broadcasting handles it)
-        xg_v = xgauss  # (3,)
+        # Scalar inputs: laic is (3,); skip unsqueezes (broadcasting handles it).
+        # xgauss is already the three quadrature points, so no extra view is needed.
         wg_v = wgauss  # (3,)
         laic = LAI * xgauss  # (3,)
         refs_b = refs
@@ -373,7 +373,7 @@ def assim8(
         vispp = (one - scv) * pardir / sinb_safe
         vispp_b = _batch(vispp)
     else:
-        xg_v = xgauss
+        # xgauss is already the three quadrature points, so no extra view is needed.
         wg_v = wgauss
         laic = lai * xgauss
         refs_b = refs
