@@ -61,9 +61,9 @@ class N_Stress(SimulationObject):
             min=0.0,
             max=1.0,
         )
-        rates.RFRGRL = 1.0 - (1.0 - growth_index) * (
-            params.RGRLAI - params.RGRLAI_MIN
-        ) / params.RGRLAI
+        rates.RFRGRL = (
+            1.0 - (1.0 - growth_index) * (params.RGRLAI - params.RGRLAI_MIN) / params.RGRLAI
+        )
 
     def __call__(self, day, drv):
         """PCSE calls this module directly."""

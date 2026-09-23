@@ -69,8 +69,7 @@ class SoilLayer:
         thickness = float(layer.Thickness)
         if not 5 <= thickness <= 250:
             msg = (
-                "Soil layer should have thickness between 5 and 250 cm. "
-                f"Current value: {thickness}"
+                f"Soil layer should have thickness between 5 and 250 cm. Current value: {thickness}"
             )
             raise exc.PCSEError(msg)
         self.Thickness = _as_tensor(thickness)
@@ -115,9 +114,7 @@ class SoilProfile(list):
         description = DotMap(parvalues["SoilProfileDescription"])
         for layer_properties in description.SoilLayers:
             self.append(
-                SoilLayer(
-                    layer_properties, description.PFFieldCapacity, description.PFWiltingPoint
-                )
+                SoilLayer(layer_properties, description.PFFieldCapacity, description.PFWiltingPoint)
             )
         for attr, value in description.items():
             if attr == "SoilLayers":

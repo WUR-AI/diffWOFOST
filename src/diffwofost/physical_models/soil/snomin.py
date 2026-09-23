@@ -157,21 +157,15 @@ class SNOMIN(SimulationObject):
         self._dtype = ComputeConfig.get_dtype()
         self.kiosk = kiosk
         # Initial mineral nitrogen is one value per layer, not a batch axis.
-        self.params = self.Parameters(
-            parvalues, shape=shape, do_not_broadcast=["NH4I", "NO3I"]
-        )
+        self.params = self.Parameters(parvalues, shape=shape, do_not_broadcast=["NH4I", "NO3I"])
         if "soil_profile" not in parvalues:
             msg = "SNOMIN requires the multi-layer water balance to create 'soil_profile' first."
             raise exc.PCSEError(msg)
         self.soiln_profile = parvalues["soil_profile"]
         n_layers = len(self.soiln_profile)
         params = self.params
-        nh4 = torch.stack(
-            [params.NH4I[il] * _M2_TO_HA for il in range(n_layers)], dim=0
-        )
-        no3 = torch.stack(
-            [params.NO3I[il] * _M2_TO_HA for il in range(n_layers)], dim=0
-        )
+        nh4 = torch.stack([params.NH4I[il] * _M2_TO_HA for il in range(n_layers)], dim=0)
+        no3 = torch.stack([params.NO3I[il] * _M2_TO_HA for il in range(n_layers)], dim=0)
         age = []
         orgmat = []
         corg = []
@@ -337,12 +331,12 @@ class SNOMIN(SimulationObject):
         rates.RNH4DEPOS, rates.RNO3DEPOS = _deposition(
             infiltration, params.NH4ConcR, params.NO3ConcR, states.NH4
         )
-        nh4_after = nh4_pre + (
-            rates.RNH4AM + rates.RNH4MIN + rates.RNH4DEPOS - rates.RNH4NITR
-        ) * delt
-        no3_after = no3_pre + (
-            rates.RNO3AM + rates.RNO3NITR + rates.RNO3DEPOS - rates.RNO3DENITR
-        ) * delt
+        nh4_after = (
+            nh4_pre + (rates.RNH4AM + rates.RNH4MIN + rates.RNH4DEPOS - rates.RNH4NITR) * delt
+        )
+        no3_after = (
+            no3_pre + (rates.RNO3AM + rates.RNO3NITR + rates.RNO3DEPOS - rates.RNO3DENITR) * delt
+        )
         conc_nh4 = _ammonium_concentration(profile, params.KSORP, nh4_after, soil_moisture)
         conc_no3 = _nitrate_concentration(profile, no3_after, soil_moisture)
         rates.RNH4IN, rates.RNH4OUT = _solute_flow(flow, conc_nh4)
@@ -627,8 +621,7 @@ def _ammonium_concentration(profile, ksorp, ammonium, moisture):
     concentration = []
     for il, layer in enumerate(profile):
         concentration.append(
-            ammonium[il]
-            / ((ksorp * layer.RHOD_kg_per_m3 + moisture[il]) * layer.Thickness_m)
+            ammonium[il] / ((ksorp * layer.RHOD_kg_per_m3 + moisture[il]) * layer.Thickness_m)
         )
     return torch.stack(concentration, dim=0)
 
@@ -652,8 +645,10 @@ def _nitrification(profile, knit_ref, ksorp, ammonium, moisture, temperature):
             (ksorp * layer.RHOD_kg_per_m3 + moisture[il]) * layer.Thickness_m
         )
         water_filled = moisture[il] / layer.SM0
-        moisture_factor = 0.9 / (1.0 + torch.exp(-15 * (water_filled - 0.45))) + 0.1 - 1.0 / (
-            1.0 + torch.exp(-50.0 * (water_filled - 0.95))
+        moisture_factor = (
+            0.9 / (1.0 + torch.exp(-15 * (water_filled - 0.45)))
+            + 0.1
+            - 1.0 / (1.0 + torch.exp(-50.0 * (water_filled - 0.95)))
         )
         rates.append(
             moisture_factor

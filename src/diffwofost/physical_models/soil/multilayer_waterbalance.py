@@ -270,9 +270,9 @@ class WaterBalanceLayered(SimulationObject):
         soil_evaporation = torch.minimum(evsmx, evaporative_demand + self._RINold)
         surface_water = states.SS > 1
         rates.EVW = torch.where(surface_water, evwmx, _as_tensor(0.0))
-        rates.EVS = torch.where(surface_water, _as_tensor(0.0), torch.where(
-            heavy_infiltration, evsmx, soil_evaporation
-        ))
+        rates.EVS = torch.where(
+            surface_water, _as_tensor(0.0), torch.where(heavy_infiltration, evsmx, soil_evaporation)
+        )
         self._DSLR = torch.where(
             surface_water,
             self._DSLR,
@@ -389,10 +389,14 @@ class WaterBalanceLayered(SimulationObject):
             conductivity.append(10.0 ** layer.CONDfromPF(pf_il))
             matric_flux.append(layer.MFPfromPF(pf_il))
         return (
-            torch.stack(pf, dim=0),
-            torch.stack(conductivity, dim=0),
-            torch.stack(matric_flux, dim=0),
-        ) if n_layers else (soil_moisture, soil_moisture, soil_moisture)
+            (
+                torch.stack(pf, dim=0),
+                torch.stack(conductivity, dim=0),
+                torch.stack(matric_flux, dim=0),
+            )
+            if n_layers
+            else (soil_moisture, soil_moisture, soil_moisture)
+        )
 
     def _maximum_boundary_flow(
         self, water_content, transpiration, pf, conductivity, matric_flux, delt
@@ -462,15 +466,11 @@ class WaterBalanceLayered(SimulationObject):
             reject_upward = upward & ~dry_target if il > 0 else upward & False
             flow_down_max = torch.maximum(limit_dry, limit_wet)
             saturation_limit = (
-                flow_max[il + 1]
-                + (profile[il].WC0 - water_content[il]) / delt
-                + transpiration[il]
+                flow_max[il + 1] + (profile[il].WC0 - water_content[il]) / delt + transpiration[il]
             )
             downward = torch.minimum(flow_down_max, saturation_limit)
             use_upward = (
-                upward & ~reject_upward
-                if il > 0
-                else torch.zeros_like(upward, dtype=torch.bool)
+                upward & ~reject_upward if il > 0 else torch.zeros_like(upward, dtype=torch.bool)
             )
             if il == 0:
                 use_upward = torch.zeros_like(limit_wet, dtype=torch.bool)
