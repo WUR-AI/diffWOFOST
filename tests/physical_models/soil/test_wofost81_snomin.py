@@ -271,10 +271,13 @@ def test_batched_trajectories_match_independent_runs():
         name: torch.tensor(pair, dtype=torch.float64) for name, pair in member_values.items()
     }
     batch_output = _run_diff(batched)
-    scalar_outputs = [
-        _run_diff({name: torch.tensor(pair[index], dtype=torch.float64) for name, pair in member_values.items()})
-        for index in range(2)
-    ]
+    scalar_outputs = []
+    for index in range(2):
+        overrides = {
+            name: torch.tensor(pair[index], dtype=torch.float64)
+            for name, pair in member_values.items()
+        }
+        scalar_outputs.append(_run_diff(overrides))
 
     names = ("DVS", "LAI", "TAGP", "TRA", "NAVAIL", "NuptakeTotal", "SM", "NH4", "NO3")
     for index, scalar in enumerate(scalar_outputs):

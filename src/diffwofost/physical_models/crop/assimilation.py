@@ -405,7 +405,9 @@ def assim8(
     # minimum/maximum broadcast a batched AMAX_REF; clamp rejects a tensor
     # bound mixed with a Python float.
     leaf_response = slp_b * (sln - lnb_b)
-    leaf_response = torch.minimum(torch.maximum(leaf_response, torch.zeros_like(leaf_response)), ref_b)
+    leaf_response = torch.minimum(
+        torch.maximum(leaf_response, torch.zeros_like(leaf_response)), ref_b
+    )
     amax = co2_b * tmpf_b * leaf_response
     amax_denom = torch.maximum(consts["two"], amax)
 
