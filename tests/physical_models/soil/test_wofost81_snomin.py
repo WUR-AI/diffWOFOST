@@ -1,6 +1,16 @@
-"""WOFOST 8.1 + SNOMIN matches PCSE daily, is differentiable, and batches."""
+"""WOFOST 8.1 + SNOMIN matches PCSE daily, is differentiable, and batches.
+
+Crop parameters come from the WOFOST 8.1 repository that PCSE selects for this
+model. The soil profile is the example in ``pcse.soil.soil_profile.SoilProfile``.
+Site values are the defaults of ``WOFOST81SiteDataProvider_SNOMIN``, plus the
+four quantities that provider requires. Weather is the first month of a PCSE
+7.2 test series.
+"""
 
 import datetime as dt
+import inspect
+import textwrap
+from functools import lru_cache
 from pathlib import Path
 import pytest
 import torch
@@ -8,9 +18,11 @@ import yaml
 from pcse.base import ParameterProvider as PcseParameterProvider
 from pcse.base import WeatherDataContainer
 from pcse.base import WeatherDataProvider
+from pcse.input import WOFOST81SiteDataProvider_SNOMIN
 from pcse.input import YAMLAgroManagementReader
 from pcse.input import YAMLCropDataProvider
 from pcse.models import Wofost81_NWLP_MLWB_SNOMIN
+from pcse.soil.soil_profile import SoilProfile
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.wofost81 import Wofost81
@@ -18,10 +30,14 @@ from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.parameter_providers import ParameterProvider
 from diffwofost.physical_models.soil.soil_wrappers import SoilModuleWrapper_NWLP_MLWB_SNOMIN
 from diffwofost.physical_models.test import calculate_numerical_grad
+from diffwofost.physical_models.test import get_test_data
 
-_GYM = Path("/home/michiel/WUR/PCSE-Gym/pcse_gym/envs/configs")
-_START = dt.date(2000, 3, 15)
-_END = dt.date(2000, 4, 14)
+_WEATHER = (
+    Path(__file__).resolve().parents[1] / "test_data" / "test_potentialproduction_wofost72_05.yaml"
+)
+_N_DAYS = 31
+_CROP_NAME = "wheat"
+_VARIETY_NAME = "Winter_wheat_101"
 
 # Daily crop, water and nitrogen outputs. Layered variables are compared per layer.
 _DAILY = (
@@ -43,33 +59,20 @@ _DAILY = (
 _LAYERED = ("SM", "NH4", "NO3")
 
 
+@lru_cache(maxsize=1)
 def _weather_rows():
-    day = _START
+    """First month of weather from a PCSE potential-production test file."""
     rows = []
-    while day <= _END:
-        tmin, tmax = 8.0, 18.0
-        temp = 0.5 * (tmin + tmax)
-        rows.append(
-            {
-                "DAY": day,
-                "LAT": 52.0,
-                "LON": 5.67,
-                "ELEV": 10.0,
-                "IRRAD": 15.0e6,
-                "TMIN": tmin,
-                "TMAX": tmax,
-                "TEMP": temp,
-                "DTEMP": 0.5 * (temp + tmax),
-                "VAP": 12.0,
-                "RAIN": 0.2,
-                "E0": 0.4,
-                "ES0": 0.3,
-                "ET0": 0.35,
-                "WIND": 2.0,
-            }
-        )
-        day += dt.timedelta(days=1)
+    for row in get_test_data(_WEATHER)["WeatherVariables"][:_N_DAYS]:
+        item = {key: value for key, value in row.items() if key != "SNOWDEPTH"}
+        item["DTEMP"] = 0.5 * (item["TEMP"] + item["TMAX"])
+        rows.append(item)
     return rows
+
+
+def _period():
+    rows = _weather_rows()
+    return rows[0]["DAY"], rows[-1]["DAY"]
 
 
 class _CallableWeather(WeatherDataProvider):
@@ -80,23 +83,46 @@ class _CallableWeather(WeatherDataProvider):
             self._store_WeatherDataContainer(container, container.DAY)
 
 
+def _example_soil():
+    """Load the soil-profile example published in the PCSE SoilProfile docstring."""
+    lines = inspect.getdoc(SoilProfile).splitlines()
+    start = next(i for i, line in enumerate(lines) if line.strip() == "SoilLayerTypes:")
+    end = next(i for i, line in enumerate(lines) if line.strip().startswith("GroundWater:"))
+    parsed = yaml.safe_load(textwrap.dedent("\n".join(lines[start : end + 1])))
+    profile = parsed["SoilProfileDescription"]
+    # The example's SubSoilType merge omits FSOMI. SoilLayer always reads it,
+    # and the same example sets FSOMI to 0 on the deeper layers.
+    if "FSOMI" not in profile["SubSoilType"]:
+        profile["SubSoilType"]["FSOMI"] = 0.0
+    rootable = sum(layer["Thickness"] for layer in profile["SoilLayers"])
+    return {"RDMSOL": float(rootable), "SoilProfileDescription": profile}
+
+
 def _providers():
-    crop = YAMLCropDataProvider(Wofost81_NWLP_MLWB_SNOMIN, fpath=str(_GYM / "crop"))
-    with (_GYM / "soil" / "arminda_soil.yaml").open() as handle:
-        soil = yaml.safe_load(handle)
-    with (_GYM / "site" / "arminda_site.yaml").open() as handle:
-        site = yaml.safe_load(handle)
+    crop = YAMLCropDataProvider(Wofost81_NWLP_MLWB_SNOMIN)
+    soil = _example_soil()
+    n_layers = len(soil["SoilProfileDescription"]["SoilLayers"])
+    # WAV, CO2, NH4I and NO3I have no default. The amounts sit inside the
+    # ranges checked by WOFOST81SiteDataProvider_SNOMIN.
+    site = WOFOST81SiteDataProvider_SNOMIN(
+        WAV=20.0,
+        CO2=360.0,
+        NH4I=[10.0] * n_layers,
+        NO3I=[1.0] * n_layers,
+    )
+    start, _end = _period()
+    harvest = start + dt.timedelta(days=300)
     agro_path = Path("/tmp/wofost81_snomin_agro.yaml")
     agro_path.write_text(
-        """
+        f"""
 AgroManagement:
-- 2000-03-15:
+- {start.isoformat()}:
     CropCalendar:
-        crop_name: winterwheat
-        variety_name: Arminda
-        crop_start_date: 2000-03-15
+        crop_name: {_CROP_NAME}
+        variety_name: {_VARIETY_NAME}
+        crop_start_date: {start.isoformat()}
         crop_start_type: sowing
-        crop_end_date: 2000-08-01
+        crop_end_date: {harvest.isoformat()}
         crop_end_type: harvest
         max_duration: 300
     TimedEvents: null
@@ -161,27 +187,31 @@ def _assert_series(reference, model, tol=1e-4):
                 )
 
 
-def _run_pcse(output_vars):
+def _run_pcse(output_vars, site_overrides=None):
     crop, soil, site, agro = _providers()
+    if site_overrides:
+        site = {**site, **site_overrides}
     reference = Wofost81_NWLP_MLWB_SNOMIN(
         PcseParameterProvider(cropdata=crop, soildata=soil, sitedata=site),
         _CallableWeather(_weather_rows()),
         agro,
         output_vars=output_vars,
     )
-    reference.run_till(_END)
+    _start, end = _period()
+    reference.run_till(end)
     return reference.get_output()
 
 
 def _run_diff(overrides=None):
     crop, soil, site, agro = _providers()
     params = ParameterProvider(cropdata=crop, soildata=soil, sitedata=site)
-    params.set_active_crop("winterwheat", "Arminda", "sowing", "harvest")
+    params.set_active_crop(_CROP_NAME, _VARIETY_NAME, "sowing", "harvest")
     for name, value in (overrides or {}).items():
         params[name] = value
     model = Engine(_config())
     model.setup(params, iter(_weather_rows()), agro)
-    model.run_till(_END)
+    _start, end = _period()
+    model.run_till(end)
     return model.get_output()
 
 
@@ -194,7 +224,6 @@ def _member(value, index):
     return value
 
 
-@pytest.mark.skipif(not _GYM.exists(), reason="PCSE-Gym crop and soil files are not available")
 def test_daily_outputs_match_pcse():
     """Every simulated day matches PCSE, not only the final day."""
     ComputeConfig.set_dtype(torch.float64)
@@ -205,7 +234,7 @@ def test_daily_outputs_match_pcse():
 
 
 class _LastDay:
-    """Run one Arminda month and return the final-day outputs."""
+    """Run one month and return the final-day outputs."""
 
     def __call__(self, overrides):
         last = _run_diff(overrides)[-1]
@@ -218,7 +247,6 @@ class _LastDay:
         return result
 
 
-@pytest.mark.skipif(not _GYM.exists(), reason="PCSE-Gym crop and soil files are not available")
 @pytest.mark.parametrize(
     ("parameter", "output_name"),
     [
@@ -235,7 +263,7 @@ def test_autograd_matches_numerical_gradient(parameter, output_name):
     ComputeConfig.set_device("cpu")
     crop, soil, site, _agro = _providers()
     baseline = ParameterProvider(cropdata=crop, soildata=soil, sitedata=site)
-    baseline.set_active_crop("winterwheat", "Arminda", "sowing", "harvest")
+    baseline.set_active_crop(_CROP_NAME, _VARIETY_NAME, "sowing", "harvest")
     param = torch.nn.Parameter(torch.tensor(float(baseline[parameter]), dtype=torch.float64))
 
     numerical_grad = calculate_numerical_grad(lambda: _LastDay(), parameter, param, output_name)
@@ -247,7 +275,6 @@ def test_autograd_matches_numerical_gradient(parameter, output_name):
     torch.testing.assert_close(numerical_grad, autograd, rtol=1e-3, atol=1e-3)
 
 
-@pytest.mark.skipif(not _GYM.exists(), reason="PCSE-Gym crop and soil files are not available")
 def test_batched_trajectories_match_independent_runs():
     """Batch members keep separate emergence, water and nitrogen histories.
 
@@ -258,7 +285,7 @@ def test_batched_trajectories_match_independent_runs():
     ComputeConfig.set_device("cpu")
     crop, soil, site, _agro = _providers()
     baseline = ParameterProvider(cropdata=crop, soildata=soil, sitedata=site)
-    baseline.set_active_crop("winterwheat", "Arminda", "sowing", "harvest")
+    baseline.set_active_crop(_CROP_NAME, _VARIETY_NAME, "sowing", "harvest")
     tsumem = float(baseline["TSUMEM"])
     wav = float(baseline["WAV"])
     knit = float(baseline["KNIT_REF"])
@@ -305,3 +332,62 @@ def test_batched_trajectories_match_independent_runs():
     assert not _close(dvs[0], dvs[1], tol=1e-6)
     assert not _close(sm[0], sm[1], tol=1e-6)
     assert not _close(navail[0], navail[1], tol=1e-6)
+
+
+def _batch_member(output, index):
+    """Slice one member out of a batched engine output series."""
+    member = []
+    for day in output:
+        sliced = dict(day)
+        for name in (*_DAILY, *_LAYERED):
+            if name in sliced:
+                sliced[name] = _member(sliced[name], index)
+        member.append(sliced)
+    return member
+
+
+def test_mixed_ifunrn_matches_independent_runs():
+    """IFUNRN 0 and 1 in one batch match separate scalar runs.
+
+    The SNOMIN site provider defaults NOTINF to 0, which makes the fixed and
+    storm-size formulas identical. A nonzero NOTINF makes IFUNRN select
+    different infiltration rates on days when the PCSE rainfall is not zero.
+
+    PCSE's layered water balance reads NINFTB when IFUNRN is 1, but never
+    builds that curve. Only the IFUNRN = 0 member is compared with PCSE. The
+    port uses the infiltration table from PCSE's classic water balance.
+    """
+    ComputeConfig.set_dtype(torch.float64)
+    ComputeConfig.set_device("cpu")
+    notinf = 0.25
+    output_vars = [*_DAILY, *_LAYERED]
+    pcse_fixed = _run_pcse(output_vars, site_overrides={"IFUNRN": 0, "NOTINF": notinf})
+    scalar_runs = [
+        _run_diff(
+            {
+                "IFUNRN": torch.tensor(ifunrn, dtype=torch.float64),
+                "NOTINF": torch.tensor(notinf, dtype=torch.float64),
+            }
+        )
+        for ifunrn in (0.0, 1.0)
+    ]
+    batch = _run_diff(
+        {
+            "IFUNRN": torch.tensor([0.0, 1.0], dtype=torch.float64),
+            "NOTINF": torch.tensor([notinf, notinf], dtype=torch.float64),
+        }
+    )
+
+    _assert_series(pcse_fixed, scalar_runs[0])
+    for index, scalar in enumerate(scalar_runs):
+        _assert_series(scalar, _batch_member(batch, index))
+
+    diverged = False
+    for day in batch:
+        first = _numbers(_member(day["SM"], 0))
+        second = _numbers(_member(day["SM"], 1))
+        pairs = zip(first, second, strict=True)
+        if any(not _close(left, right, tol=1e-6) for left, right in pairs):
+            diverged = True
+            break
+    assert diverged
