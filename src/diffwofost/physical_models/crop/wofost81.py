@@ -3,8 +3,9 @@
 The assimilate balance is the WOFOST 7.2 balance, with two additions taken
 from PCSE's ``Wofost81``: reallocation of leaf and stem biomass to storage
 organs after ``REALLOC_DVS``, and a nitrogen demand/uptake/stress loop.
-Soil water and nitrogen are not part of this class; pair it with
-``SoilModuleWrapper_NWLP_MLWB_SNOMIN`` for the 8.1 SNOMIN configuration.
+Soil water and nitrogen are not part of this class. Pair it with
+``SoilModuleWrapper_PP`` for potential production, or with
+``SoilModuleWrapper_NWLP_MLWB_SNOMIN`` for the layered SNOMIN configuration.
 """
 
 import datetime

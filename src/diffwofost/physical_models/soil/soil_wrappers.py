@@ -1,12 +1,15 @@
 """Wrappers that run a water balance and a nitrogen balance as one soil module.
 
-WOFOST 8.1 configurations point the engine at one of these wrappers. The
-SNOMIN configuration is the layered water balance plus the SNOMIN C/N balance.
+WOFOST 8.1 configurations point the engine at one of these wrappers. Potential
+production pairs the field-capacity water balance with a non-depleting nitrogen
+pool. The SNOMIN configuration pairs the layered water balance with SNOMIN.
 """
 
 from pcse.base import SimulationObject
 from pcse.traitlets import Instance
+from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.soil.multilayer_waterbalance import WaterBalanceLayered
+from diffwofost.physical_models.soil.n_soil_dynamics import N_PotentialProduction
 from diffwofost.physical_models.soil.snomin import SNOMIN
 
 
@@ -46,6 +49,13 @@ class BaseSoilWrapper(SimulationObject):
         if self.nutrientbalance_class is not None and hasattr(self.nutrientbalance, "finalize"):
             self.nutrientbalance.finalize(day)
         SimulationObject.finalize(self, day)
+
+
+class SoilModuleWrapper_PP(BaseSoilWrapper):
+    """Potential production: field-capacity water and a non-depleting nitrogen pool."""
+
+    waterbalance_class = WaterbalancePP
+    nutrientbalance_class = N_PotentialProduction
 
 
 class SoilModuleWrapper_NWLP_MLWB_SNOMIN(BaseSoilWrapper):
