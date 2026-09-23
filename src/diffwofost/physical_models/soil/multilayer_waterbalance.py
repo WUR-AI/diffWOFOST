@@ -245,25 +245,40 @@ class WaterBalanceLayered(SimulationObject):
         self._RAIN = rain
 
         # Layered transpiration is published as one value per soil layer once
-        # the crop has emerged. Before that the kiosk still holds the scalar
-        # rate-template default, which is the same situation as PCSE having no
-        # TRALY yet: evaporate at the potential soil and water rates.
+        # any batch member has emerged. Before that the kiosk still holds the
+        # scalar rate-template default, which is the same situation as PCSE
+        # having no TRALY yet: evaporate at the potential soil and water rates.
+        # A layer-shaped TRALY does not mean every member has emerged. The crop
+        # module writes EVSMX = 0 for a member with DVS < 0, while PCSE would
+        # still use the weather potential for that member.
+        weather_evwmx = _as_tensor(drv.E0 if hasattr(drv, "E0") else drv["E0"])
+        weather_evsmx = _as_tensor(drv.ES0 if hasattr(drv, "ES0") else drv["ES0"])
         layered_transpiration = kiosk["TRALY"] if "TRALY" in kiosk else None
-        if (
+        crop_has_layers = (
             isinstance(layered_transpiration, torch.Tensor)
             and layered_transpiration.ndim >= 1
             and layered_transpiration.shape[0] == len(profile)
-        ):
-            wtraly = layered_transpiration
-            rates.WTRA = kiosk["TRA"]
-            evwmx = kiosk["EVWMX"]
-            evsmx = kiosk["EVSMX"]
+        )
+        if crop_has_layers:
+            wtraly = _as_tensor(layered_transpiration)
+            wtra = _as_tensor(kiosk["TRA"])
+            evwmx = _as_tensor(kiosk["EVWMX"])
+            evsmx = _as_tensor(kiosk["EVSMX"])
+            if "DVS" in kiosk:
+                emerged = _as_tensor(kiosk["DVS"]) >= 0.0
+                lead = (1,) * (wtraly.ndim - emerged.ndim)
+                emerged_layers = emerged.reshape(lead + emerged.shape)
+                wtraly = torch.where(emerged_layers, wtraly, torch.zeros_like(wtraly))
+                wtra = torch.where(emerged, wtra, torch.zeros_like(wtra))
+                evwmx = torch.where(emerged, evwmx, weather_evwmx)
+                evsmx = torch.where(emerged, evsmx, weather_evsmx)
         else:
             wtraly = torch.zeros_like(states.SM)
-            rates.WTRA = _as_tensor(0.0)
-            evwmx = _as_tensor(drv.E0 if hasattr(drv, "E0") else drv["E0"])
-            evsmx = _as_tensor(drv.ES0 if hasattr(drv, "ES0") else drv["ES0"])
+            wtra = _as_tensor(0.0)
+            evwmx = weather_evwmx
+            evsmx = weather_evsmx
         rates.WTRALY = wtraly
+        rates.WTRA = wtra
 
         heavy_infiltration = self._RINold >= 1
         evaporative_demand = evsmx * (torch.sqrt(self._DSLR + 1) - torch.sqrt(self._DSLR))
