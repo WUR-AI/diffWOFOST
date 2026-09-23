@@ -9,6 +9,7 @@ four quantities that provider requires. Weather is the first month of a PCSE
 
 import datetime as dt
 import inspect
+import tempfile
 import textwrap
 from functools import lru_cache
 from pathlib import Path
@@ -104,9 +105,11 @@ def _agro(timed_events="null"):
     """Campaign for the weather month. ``timed_events`` is a YAML fragment."""
     start, _end = _period()
     harvest = start + dt.timedelta(days=300)
-    agro_path = Path("/tmp/wofost81_snomin_agro.yaml")
-    agro_path.write_text(
-        f"""
+    # The reader opens the path itself. A fixed /tmp path does not exist on Windows.
+    with tempfile.NamedTemporaryFile("w", suffix=".yaml", delete=False) as handle:
+        agro_path = Path(handle.name)
+        handle.write(
+            f"""
 AgroManagement:
 - {start.isoformat()}:
     CropCalendar:
@@ -120,8 +123,11 @@ AgroManagement:
     TimedEvents: {timed_events}
     StateEvents: null
 """
-    )
-    return YAMLAgroManagementReader(str(agro_path))
+        )
+    try:
+        return YAMLAgroManagementReader(str(agro_path))
+    finally:
+        agro_path.unlink(missing_ok=True)
 
 
 def _providers(timed_events="null"):
