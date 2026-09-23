@@ -158,43 +158,45 @@ class WaterBalanceLayered(SimulationObject):
             self._setup_new_crop()
 
     def _initial_moisture(self):
-        """Distribute initial available water (WAV) over the rooted profile."""
+        """Distribute initial available water (WAV) over the rooted profile.
+
+        ``Wtop > 0`` is rooted, including a layer the root front only partly
+        occupies. ``Wpot > 0`` with ``Wtop == 0`` is potentially rooted. The
+        weights stay tensors, so batch members can root different layers and a
+        partial layer keeps a gradient with respect to rooting depth.
+        """
         params = self.params
         profile = self.soil_profile
-        avmax = []
-        top_limit = params.WAV.new_zeros(())
-        low_limit = params.WAV.new_zeros(())
-        for layer in profile:
-            rooted = float(layer.Wtop) > 0
-            potential = float(layer.Wpot) > 0 and not rooted
-            if rooted:
-                sm_limit = torch.clamp(params.SMLIM, min=layer.SMW, max=layer.SM0)
-                capacity = (sm_limit - layer.SMW) * layer.Thickness
-                avmax.append(capacity)
-                top_limit = top_limit + capacity
-            elif potential:
-                capacity = (layer.SM0 - layer.SMW) * layer.Thickness
-                avmax.append(capacity)
-                low_limit = low_limit + capacity
-            else:
-                break
-
         wav = params.WAV
+        top_limit = wav.new_zeros(())
+        low_limit = wav.new_zeros(())
+        layer_capacity = []
+        for layer in profile:
+            rooted = layer.Wtop > 0
+            potential = (layer.Wpot > 0) & ~rooted
+            sm_limit = torch.clamp(params.SMLIM, min=layer.SMW, max=layer.SM0)
+            # A partly rooted layer still contributes its full capacity, as in PCSE.
+            top_capacity = torch.where(
+                rooted, (sm_limit - layer.SMW) * layer.Thickness, wav.new_zeros(())
+            )
+            low_capacity = torch.where(
+                potential, (layer.SM0 - layer.SMW) * layer.Thickness, wav.new_zeros(())
+            )
+            layer_capacity.append((rooted, potential, top_capacity, low_capacity))
+            top_limit = top_limit + top_capacity
+            low_limit = low_limit + low_capacity
+
         safe_top = torch.clamp(top_limit, min=1e-8)
         safe_low = torch.clamp(low_limit, min=1e-8)
+        zeros = wav.new_zeros(())
+        ones = wav.new_ones(())
         top_reduction = torch.where(
-            wav <= 0,
-            wav.new_zeros(()),
-            torch.where(wav <= top_limit, wav / safe_top, wav.new_ones(())),
+            wav <= 0, zeros, torch.where(wav <= top_limit, wav / safe_top, ones)
         )
         low_reduction = torch.where(
             wav <= top_limit,
-            wav.new_zeros(()),
-            torch.where(
-                wav < top_limit + low_limit,
-                (wav - top_limit) / safe_low,
-                wav.new_ones(()),
-            ),
+            zeros,
+            torch.where(wav < top_limit + low_limit, (wav - top_limit) / safe_low, ones),
         )
 
         water = wav.new_zeros(())
@@ -203,23 +205,18 @@ class WaterBalanceLayered(SimulationObject):
         available_low = wav.new_zeros(())
         sm_layers = []
         wc_layers = []
-        il_capacity = 0
-        for layer in profile:
-            rooted = float(layer.Wtop) > 0
-            potential = float(layer.Wpot) > 0 and not rooted
-            if rooted or potential:
-                reduction = top_reduction if rooted else low_reduction
-                sm_il = layer.SMW + avmax[il_capacity] * reduction / layer.Thickness
-                il_capacity += 1
-            else:
-                sm_il = layer.SMW
+        for layer, (rooted, potential, top_capacity, low_capacity) in zip(
+            profile, layer_capacity, strict=True
+        ):
+            sm_rooted = layer.SMW + top_capacity * top_reduction / layer.Thickness
+            sm_potential = layer.SMW + low_capacity * low_reduction / layer.Thickness
+            sm_il = torch.where(rooted, sm_rooted, torch.where(potential, sm_potential, layer.SMW))
             sm_layers.append(sm_il)
             wc_layers.append(sm_il * layer.Thickness)
-            if rooted or potential:
-                water = water + sm_il * layer.Thickness * layer.Wtop
-                water_low = water_low + sm_il * layer.Thickness * layer.Wpot
-                available_top = available_top + (sm_il - layer.SMW) * layer.Thickness * layer.Wtop
-                available_low = available_low + (sm_il - layer.SMW) * layer.Thickness * layer.Wpot
+            water = water + sm_il * layer.Thickness * layer.Wtop
+            water_low = water_low + sm_il * layer.Thickness * layer.Wpot
+            available_top = available_top + (sm_il - layer.SMW) * layer.Thickness * layer.Wtop
+            available_low = available_low + (sm_il - layer.SMW) * layer.Thickness * layer.Wpot
         sm = torch.stack(sm_layers, dim=0)
         wc = torch.stack(wc_layers, dim=0)
         totals = {

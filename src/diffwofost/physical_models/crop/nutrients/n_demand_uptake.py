@@ -164,7 +164,10 @@ class N_Demand_Uptake(SimulationObject):
         soil_limited = torch.minimum(
             torch.clamp(rates.Ndemand - rates.RNfixation, min=0.0), kiosk["NAVAIL"]
         )
-        rates.RNuptake = torch.minimum(soil_limited, params.RNUPTAKEMAX) * nutrient_limit
+        # PCSE: max(0, min(demand - fixation, NAVAIL, RNUPTAKEMAX)).
+        rates.RNuptake = (
+            torch.clamp(torch.minimum(soil_limited, params.RNUPTAKEMAX), min=0.0) * nutrient_limit
+        )
         supply = rates.RNuptake + rates.RNfixation
         has_demand = rates.Ndemand > 0
         safe_demand = torch.clamp(rates.Ndemand, min=1e-12)
