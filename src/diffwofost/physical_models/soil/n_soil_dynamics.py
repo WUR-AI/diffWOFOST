@@ -16,6 +16,15 @@ _NAVAIL_PP = 100.0
 class N_PotentialProduction(SimulationObject):
     """Unlimited soil nitrogen for potential-production simulations.
 
+    ``NAVAIL`` stays at 100 kg/ha whatever the crop takes. There are no
+    simulation parameters and no rate variables.
+
+    **State variables**
+
+    | Name   | Description                                      | Pbl | Unit    |
+    |--------|--------------------------------------------------|-----|---------|
+    | NAVAIL | Total mineral N from soil and fertiliser         | Y   | kg ha-1 |
+
     **Gradient mapping (which parameters have a gradient):**
 
     | Output | Parameters influencing it |

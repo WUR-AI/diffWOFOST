@@ -10,11 +10,48 @@ from diffwofost.physical_models.utils import AfgenTrait
 
 
 class N_Stress(SimulationObject):
-    """Leaf-death and juvenile-growth reduction from the crop nitrogen status.
+    """Nitrogen stress factors for leaf death and juvenile leaf expansion.
 
-    ``NSLLV`` accelerates leaf ageing. ``RFRGRL`` reduces the relative leaf
-    expansion rate while the canopy is still small. Both are table lookups of
-    a nitrogen index, so they stay differentiable through ``Afgen``.
+    ``NSLLV`` is a multiplication factor for leaf ageing. ``RFRGRL`` reduces
+    the relative growth rate of leaf area while the canopy is still in the
+    exponential phase. Both are table lookups of a nitrogen index, so they
+    stay differentiable through ``Afgen``.
+
+    **Simulation parameters**
+
+    | Name       | Description                                           | Unit                  |
+    |------------|-------------------------------------------------------|-----------------------|
+    | NMAXLV_TB  | Maximum N concentration in leaves as function of DVS | kg N kg-1 dry matter  |
+    | NMAXRT_FR  | Maximum N in roots as a fraction of the leaf maximum | -                     |
+    | NMAXST_FR  | Maximum N in stems as a fraction of the leaf maximum | -                     |
+    | NMAXSO     | Maximum N concentration in storage organs            | kg N kg-1 dry matter  |
+    | NRESIDLV   | Residual N fraction in leaves                         | kg N kg-1 dry matter  |
+    | NRESIDST   | Residual N fraction in stems                          | kg N kg-1 dry matter  |
+    | NSLLV_TB   | Leaf-death stress factor as function of the N index  | -                     |
+    | RGRLAI     | Maximum relative growth rate of leaf area             | d-1                   |
+    | RGRLAI_MIN | Relative growth rate of leaf area at maximum N stress| d-1                   |
+
+    **Rate variables**
+
+    These are not rates of a state. They are used directly when the leaf
+    rates are calculated.
+
+    | Name   | Description                                              | Pbl | Unit |
+    |--------|----------------------------------------------------------|-----|------|
+    | NSLLV  | Nitrogen stress factor for leaf death                    | Y   | -    |
+    | RFRGRL | Reduction of relative leaf growth in the exponential phase| Y  | -    |
+
+    **External dependencies**
+
+    | Name      | Description                  | Provided by                   | Unit    |
+    |-----------|------------------------------|-------------------------------|---------|
+    | DVS       | Crop development stage       | DVS_Phenology                 | -       |
+    | WLV       | Dry weight of living leaves  | WOFOST_Leaf_Dynamics          | kg ha-1 |
+    | WST       | Dry weight of living stems   | WOFOST_Stem_Dynamics          | kg ha-1 |
+    | WSO       | Dry weight of storage organs | WOFOST_Storage_Organ_Dynamics | kg ha-1 |
+    | NamountLV | Amount of N in leaves        | N_Crop_Dynamics               | kg ha-1 |
+    | NamountST | Amount of N in stems         | N_Crop_Dynamics               | kg ha-1 |
+    | NamountSO | Amount of N in storage organs| N_Crop_Dynamics               | kg ha-1 |
 
     **Gradient mapping (which parameters have a gradient):**
 

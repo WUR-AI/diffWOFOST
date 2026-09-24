@@ -62,7 +62,36 @@ class MFPCurve(Afgen):
 
 
 class SoilLayer:
-    """Intrinsic and derived properties of one soil layer."""
+    """Intrinsic and derived properties of one soil layer.
+
+    Required for each layer:
+
+    | Name        | Description                                      | Unit                    |
+    |-------------|--------------------------------------------------|-------------------------|
+    | CONDfromPF  | Log10 of unsaturated conductivity versus pF     | log10(cm d-1), -        |
+    | SMfromPF    | Volumetric moisture content versus pF           | m3 m-3, -               |
+    | Thickness   | Layer thickness                                  | cm                      |
+    | FSOMI       | Initial fraction of soil organic matter          | kg OM kg-1 soil         |
+    | CNRatioSOMI | Initial C:N ratio of soil organic matter         | kg C kg-1 N             |
+    | RHOD        | Bulk density                                     | g cm-3                  |
+    | Soil_pH     | Soil pH                                          | -                       |
+    | CRAIRC      | Critical air content for root aeration           | m3 air m-3 soil         |
+
+    Derived from those inputs:
+
+    | Name     | Description                                      | Unit           |
+    |----------|--------------------------------------------------|----------------|
+    | PFfromSM | Inverted moisture curve                          | -, m3 m-3      |
+    | MFPfromPF| Matric flux potential versus pF                  | cm2 d-1        |
+    | SM0      | Moisture content at saturation (pF = -1)         | m3 m-3         |
+    | SMW      | Moisture content at wilting point                | m3 m-3         |
+    | SMFCF    | Moisture content at field capacity               | m3 m-3         |
+    | WC0      | Water amount at saturation                       | cm             |
+    | WCW      | Water amount at wilting point                    | cm             |
+    | WCFC     | Water amount at field capacity                   | cm             |
+    | CondFC   | Conductivity at field capacity                   | cm d-1         |
+    | CondK0   | Conductivity at saturation                       | cm d-1         |
+    """
 
     def __init__(self, layer, pf_field_capacity, pf_wilting_point):
         sm_table = list(layer.SMfromPF)
@@ -119,7 +148,13 @@ class SoilLayer:
 
 
 class SoilProfile(list):
-    """Soil column as a list of ``SoilLayer`` objects plus profile-level attributes."""
+    """Soil column as a list of ``SoilLayer`` objects.
+
+    The description is read from ``SoilProfileDescription``: a pF at field
+    capacity, a pF at wilting point, and one entry per layer. Rooting status
+    is updated from the current rooting depth. Layer properties are documented
+    on ``SoilLayer``.
+    """
 
     def __init__(self, parvalues):
         super().__init__()

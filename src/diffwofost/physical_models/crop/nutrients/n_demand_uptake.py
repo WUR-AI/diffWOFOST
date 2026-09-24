@@ -16,12 +16,92 @@ MaxNutrientConcentrations = namedtuple(
 
 
 class N_Demand_Uptake(SimulationObject):
-    """Nitrogen demand of each organ and uptake limited by soil supply.
+    """Calculates the crop N demand and its uptake from the soil.
 
-    Uptake is the minimum of crop demand, soil mineral nitrogen and
-    ``RNUPTAKEMAX``. Below a transpiration reduction of 0.01 the crop takes
-    up no nitrogen. Storage organs are supplied by translocation from leaves,
-    stems and roots once development passes ``DVS_N_TRANSL``.
+    Crop N demand is calculated as the difference between the actual N
+    (kg N per kg biomass) in the vegetative plant organs (leaves, stems and roots)
+    and the maximum N concentration for each organ. N uptake is then estimated as
+    the minimum of supply from the soil and demand from the crop.
+
+    Nitrogen fixation (leguminous plants) is calculated by assuming that a fixed
+    fraction of the daily N demand is supplied by nitrogen fixation. The remaining
+    part has to be supplied by the soil.
+
+    The N demand of the storage organs is calculated in a somewhat different way
+    because it is assumed that the demand from the storage organs is fulfilled by
+    translocation of N from the leaves, stems and roots. Therefore the uptake of
+    the storage organs is calculated as the minimum of the daily translocatable N
+    supply and the demand from the storage organs. Below a transpiration reduction
+    of 0.01 the crop takes up no nitrogen.
+
+    **Simulation parameters**
+
+    | Name        | Description                                            | Unit                  |
+    |-------------|--------------------------------------------------------|-----------------------|
+    | NMAXLV_TB   | Maximum N concentration in leaves as function of DVS  | kg N kg-1 dry biomass |
+    | NMAXRT_FR   | Maximum N concentration in roots as fraction of leaves| -                     |
+    | NMAXST_FR   | Maximum N concentration in stems as fraction of leaves| -                     |
+    | NMAXSO      | Maximum N concentration in storage organs             | kg N kg-1 dry biomass |
+    | TCNT        | Time coefficient for N translocation to storage organs| days                  |
+    | NFIX_FR     | Fraction of N uptake supplied by biological fixation  | kg N kg-1 dry biomass |
+    | RNUPTAKEMAX | Maximum rate of N uptake                              | kg N ha-1 d-1         |
+    | DVS_N_TRANSL| Development stage at which translocation starts        | -                     |
+    | NRESIDLV    | Residual N fraction in leaves                          | kg N kg-1 dry biomass |
+    | NRESIDST    | Residual N fraction in stems                           | kg N kg-1 dry biomass |
+    | NRESIDRT    | Residual N fraction in roots                           | kg N kg-1 dry biomass |
+
+    **State variables**
+
+    | Name              | Description                                      | Pbl | Unit      |
+    |-------------------|--------------------------------------------------|-----|-----------|
+    | Ntranslocatable   | Total N that can move to the storage organs      | Y   | kg N ha-1 |
+    | NtranslocatableLV | Translocatable N in living leaves                | N   | kg N ha-1 |
+    | NtranslocatableST | Translocatable N in living stems                 | N   | kg N ha-1 |
+    | NtranslocatableRT | Translocatable N in living roots                 | N   | kg N ha-1 |
+
+    **Rate variables**
+
+    | Name              | Description                                      | Pbl | Unit          |
+    |-------------------|--------------------------------------------------|-----|---------------|
+    | RNuptakeLV        | Rate of N uptake in leaves                       | Y   | kg N ha-1 d-1 |
+    | RNuptakeST        | Rate of N uptake in stems                        | Y   | kg N ha-1 d-1 |
+    | RNuptakeRT        | Rate of N uptake in roots                        | Y   | kg N ha-1 d-1 |
+    | RNuptakeSO        | Rate of N uptake in storage organs               | Y   | kg N ha-1 d-1 |
+    | RNuptake          | Total rate of N uptake                           | Y   | kg N ha-1 d-1 |
+    | RNfixation        | Rate of N fixation                               | Y   | kg N ha-1 d-1 |
+    | RNtranslocation   | Total N translocation to storage organs          | Y   | kg N ha-1 d-1 |
+    | RNtranslocationLV | N translocation rate from leaves                 | Y   | kg N ha-1 d-1 |
+    | RNtranslocationST | N translocation rate from stems                  | Y   | kg N ha-1 d-1 |
+    | RNtranslocationRT | N translocation rate from roots                  | Y   | kg N ha-1 d-1 |
+    | NdemandLV         | N demand in living leaves                        | N   | kg N ha-1     |
+    | NdemandST         | N demand in living stems                         | N   | kg N ha-1     |
+    | NdemandRT         | N demand in living roots                         | N   | kg N ha-1     |
+    | NdemandSO         | N demand in storage organs                       | N   | kg N ha-1     |
+    | Ndemand           | Total crop N demand                              | N   | kg N ha-1     |
+
+    **Signals sent or handled**
+
+    None
+
+    **External dependencies**
+
+    | Name    | Description                         | Provided by        | Unit      |
+    |---------|-------------------------------------|--------------------|-----------|
+    | DVS     | Crop development stage              | DVS_Phenology      | -         |
+    | RFTRA   | Transpiration reduction factor      | Evapotranspiration | -         |
+    | NAVAIL  | Total available N from soil         | N_Soil_Dynamics    | kg ha-1   |
+    | WLV     | Weight of living leaves             | WOFOST_Leaf_Dynamics | kg ha-1 |
+    | WST     | Weight of living stems              | WOFOST_Stem_Dynamics | kg ha-1 |
+    | WRT     | Weight of living roots              | WOFOST_Root_Dynamics | kg ha-1 |
+    | WSO     | Weight of storage organs            | WOFOST_Storage_Organ_Dynamics | kg ha-1 |
+    | NamountLV | N amount in living leaves         | N_Crop_Dynamics    | kg ha-1   |
+    | NamountST | N amount in living stems          | N_Crop_Dynamics    | kg ha-1   |
+    | NamountRT | N amount in living roots          | N_Crop_Dynamics    | kg ha-1   |
+    | NamountSO | N amount in storage organs        | N_Crop_Dynamics    | kg ha-1   |
+    | GRLV    | Growth rate of living leaves        | WOFOST_Leaf_Dynamics | kg ha-1 d-1 |
+    | GRST    | Growth rate of living stems         | WOFOST_Stem_Dynamics | kg ha-1 d-1 |
+    | GRRT    | Growth rate of living roots         | WOFOST_Root_Dynamics | kg ha-1 d-1 |
+    | GRSO    | Growth rate of storage organs       | WOFOST_Storage_Organ_Dynamics | kg ha-1 d-1 |
 
     **Gradient mapping (which parameters have a gradient):**
 

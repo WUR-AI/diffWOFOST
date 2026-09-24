@@ -28,7 +28,80 @@ _OM_TO_C = 0.58
 
 
 class SNOMIN(SimulationObject):
-    """Layered soil nitrogen module for mineral and organic nitrogen.
+    """Layered soil nitrogen balance for mineral and organic nitrogen.
+
+    A full description is given by Berghuijs et al. (2024), European Journal
+    of Agronomy 154, 127099, https://doi.org/10.1016/j.eja.2024.127099.
+
+    Organic pools are defined for each soil layer and each amendment.
+    Mineral pools and their rates are defined for each soil layer.
+
+    **Simulation parameters**
+
+    | Name       | Description                                      | Unit                |
+    |------------|--------------------------------------------------|---------------------|
+    | A0SOM      | Initial age of soil organic matter               | y                   |
+    | CNRatioBio | C:N ratio of microbial biomass                   | kg C kg-1 N         |
+    | FASDIS     | Fraction of assimilation going to dissimilation  | -                   |
+    | KDENIT_REF | Reference first-order denitrification constant   | d-1                 |
+    | KNIT_REF   | Reference first-order nitrification constant     | d-1                 |
+    | KSORP      | Ammonium sorption coefficient                    | m3 water kg-1 soil  |
+    | MRCDIS     | Michaelis-Menten constant of the respiration term| kg C m-2 d-1        |
+    | NO3ConcR   | Nitrate-N concentration in rain                  | mg L-1              |
+    | NH4ConcR   | Ammonium-N concentration in rain                 | mg L-1              |
+    | NO3I       | Initial nitrate-N in each layer                  | kg ha-1             |
+    | NH4I       | Initial ammonium-N in each layer                 | kg ha-1             |
+    | WFPS_CRIT  | Critical water-filled pore space                 | m3 water m-3 pore   |
+
+    **State variables**
+
+    | Name   | Description                         | Unit        |
+    |--------|-------------------------------------|-------------|
+    | AGE    | Apparent age of an amendment        | d           |
+    | ORGMAT | Organic matter                      | kg OM m-2   |
+    | CORG   | Carbon in organic matter            | kg C m-2    |
+    | NORG   | Nitrogen in organic matter          | kg N m-2    |
+    | NH4    | Ammonium-N                          | kg N m-2    |
+    | NO3    | Nitrate-N                           | kg N m-2    |
+    | NAVAIL | Mineral N available to the crop     | kg N ha-1   |
+
+    **Rate variables**
+
+    | Name       | Description                              | Unit            |
+    |------------|------------------------------------------|-----------------|
+    | RAGE       | Change of apparent age                   | d d-1           |
+    | RAGEAM     | Apparent age assigned at application     | d d-1           |
+    | RAGEAG     | Ageing of an existing amendment          | d d-1           |
+    | RCORG      | Change of organic carbon                 | kg C m-2 d-1    |
+    | RCORGAM    | Organic carbon applied                   | kg C m-2 d-1    |
+    | RCORGDIS   | Dissimilation of organic carbon          | kg C m-2 d-1    |
+    | RNORG      | Change of organic nitrogen               | kg N m-2 d-1    |
+    | RNORGAM    | Organic nitrogen applied                 | kg N m-2 d-1    |
+    | RNORGDIS   | Dissimilation of organic nitrogen        | kg N m-2 d-1    |
+    | RORGMAT    | Change of organic matter                 | kg OM m-2 d-1   |
+    | RORGMATAM  | Organic matter applied                   | kg OM m-2 d-1   |
+    | RORGMATDIS | Dissimilation of organic matter          | kg OM m-2 d-1   |
+    | RNH4       | Change of ammonium-N                     | kg N m-2 d-1    |
+    | RNH4AM     | Ammonium-N applied                       | kg N m-2 d-1    |
+    | RNH4DEPOS  | Ammonium-N deposited from rain           | kg N m-2 d-1    |
+    | RNH4IN     | Ammonium-N inflow from the adjacent layer| kg N m-2 d-1    |
+    | RNH4OUT    | Ammonium-N outflow to the adjacent layer | kg N m-2 d-1    |
+    | RNH4MIN    | Net mineralisation to ammonium-N         | kg N m-2 d-1    |
+    | RNH4NITR   | Nitrification of ammonium-N              | kg N m-2 d-1    |
+    | RNH4UP     | Root uptake of ammonium-N                | kg N m-2 d-1    |
+    | RNO3       | Change of nitrate-N                      | kg N m-2 d-1    |
+    | RNO3AM     | Nitrate-N applied                        | kg N m-2 d-1    |
+    | RNO3DEPOS  | Nitrate-N deposited from rain            | kg N m-2 d-1    |
+    | RNO3IN     | Nitrate-N inflow from the adjacent layer | kg N m-2 d-1    |
+    | RNO3OUT    | Nitrate-N outflow to the adjacent layer  | kg N m-2 d-1    |
+    | RNO3NITR   | Nitrate-N produced by nitrification      | kg N m-2 d-1    |
+    | RNO3DENITR | Denitrification of nitrate-N             | kg N m-2 d-1    |
+    | RNO3UP     | Root uptake of nitrate-N                 | kg N m-2 d-1    |
+
+    **Signals sent or handled**
+
+    ``apply_n_snomin`` is handled by ``_on_APPLY_N_SNOMIN``. It adds a
+    fertiliser or manure application to the organic and mineral pools.
 
     **Gradient mapping (which parameters have a gradient):**
 

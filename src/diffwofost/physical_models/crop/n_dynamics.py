@@ -14,7 +14,62 @@ from diffwofost.physical_models.utils import AfgenTrait
 
 
 class N_Crop_Dynamics(SimulationObject):
-    """Nitrogen amounts in each living organ, plus uptake, fixation and loss.
+    """Book-keeping of nitrogen in leaves, stems, roots and storage organs.
+
+    This class keeps the nitrogen amount of each living organ. Daily uptake
+    and translocation come from ``N_Demand_Uptake``. Nitrogen leaves an organ
+    when that organ dies.
+
+    **Simulation parameters**
+
+    | Name      | Description                                           | Unit                  |
+    |-----------|-------------------------------------------------------|-----------------------|
+    | NMAXLV_TB | Maximum N concentration in leaves as function of DVS | kg N kg-1 dry biomass |
+    | NMAXRT_FR | Maximum N in roots as a fraction of the leaf maximum | -                     |
+    | NMAXST_FR | Maximum N in stems as a fraction of the leaf maximum | -                     |
+    | NRESIDLV  | Residual N fraction in leaves                         | kg N kg-1 dry biomass |
+    | NRESIDRT  | Residual N fraction in roots                          | kg N kg-1 dry biomass |
+    | NRESIDST  | Residual N fraction in stems                          | kg N kg-1 dry biomass |
+
+    **State variables**
+
+    | Name         | Description                              | Unit      |
+    |--------------|------------------------------------------|-----------|
+    | NamountLV    | Actual N amount in living leaves         | kg N ha-1 |
+    | NamountST    | Actual N amount in living stems          | kg N ha-1 |
+    | NamountRT    | Actual N amount in living roots          | kg N ha-1 |
+    | NamountSO    | Actual N amount in storage organs        | kg N ha-1 |
+    | NuptakeTotal | Total N absorbed from the soil           | kg N ha-1 |
+    | NfixTotal    | Total N supplied by biological fixation  | kg N ha-1 |
+    | NlossesTotal | Total N lost with dying biomass          | kg N ha-1 |
+
+    **Rate variables**
+
+    | Name       | Description                         | Unit          |
+    |------------|-------------------------------------|---------------|
+    | RNamountLV | Net change of N in leaves           | kg N ha-1 d-1 |
+    | RNamountST | Net change of N in stems            | kg N ha-1 d-1 |
+    | RNamountRT | Net change of N in roots            | kg N ha-1 d-1 |
+    | RNdeathLV  | N loss with dying leaves            | kg N ha-1 d-1 |
+    | RNdeathST  | N loss with dying stems             | kg N ha-1 d-1 |
+    | RNdeathRT  | N loss with dying roots             | kg N ha-1 d-1 |
+    | RNloss     | Total N loss due to senescence      | kg N ha-1 d-1 |
+
+    **Signals sent or handled**
+
+    None
+
+    **External dependencies**
+
+    | Name | Description                 | Provided by          | Unit        |
+    |------|-----------------------------|----------------------|-------------|
+    | DVS  | Crop development stage      | DVS_Phenology        | -           |
+    | WLV  | Dry weight of living leaves | WOFOST_Leaf_Dynamics | kg ha-1     |
+    | WST  | Dry weight of living stems  | WOFOST_Stem_Dynamics | kg ha-1     |
+    | WRT  | Dry weight of living roots  | WOFOST_Root_Dynamics | kg ha-1     |
+    | DRLV | Death rate of leaves        | WOFOST_Leaf_Dynamics | kg ha-1 d-1 |
+    | DRST | Death rate of stems         | WOFOST_Stem_Dynamics | kg ha-1 d-1 |
+    | DRRT | Death rate of roots         | WOFOST_Root_Dynamics | kg ha-1 d-1 |
 
     **Gradient mapping (which parameters have a gradient):**
 

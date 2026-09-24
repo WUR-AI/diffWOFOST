@@ -22,12 +22,81 @@ from diffwofost.physical_models.utils import Afgen
 
 
 class WaterBalanceLayered(SimulationObject):
-    """Layered water balance for water-limited production.
+    """Layered water balance for soil water availability and crop water stress.
 
-    Downward flow is the larger of a dry (matric-flux) flow and a wet
-    (gravity) flow, limited so a layer cannot pass saturation or fall below
-    field capacity. Upward flow is the dry flow when it is negative, limited
-    to half of the amount that would equalise the two layers.
+    The single-layer free-drainage balance cannot represent texture changes
+    through the profile, and it makes rainfall available to every root on the
+    day it falls. This balance still uses a daily step. Downward and upward
+    flow follow the hydraulic head and the soil conductivity, combined in the
+    matric flux potential.
+
+    Two flows are computed. The dry flow follows the suction gradient between
+    layers and may be upward. The wet flow follows gravity and the current
+    conductivity and is downward. Downward flow is the larger of the two,
+    limited so a layer does not pass saturation and does not fall below field
+    capacity. Upward flow is the dry flow when it is negative, limited to half
+    of the amount that would equalise the two layers.
+
+    Layer thickness should stay at least 10 to 20 cm, because a thinner top
+    layer fills in one day and the daily step cannot infiltrate the storm.
+    The maximum rootable depth must fall on a layer boundary.
+
+    The soil profile comes from ``SoilProfileDescription``. See ``SoilProfile``
+    and ``SoilLayer`` for the layer properties.
+
+    **Simulation parameters**
+
+    | Name   | Description                                      | Unit    |
+    |--------|--------------------------------------------------|---------|
+    | NOTINF | Maximum fraction of rain that does not infiltrate| -       |
+    | IFUNRN | Storm-size infiltration switch (1) or constant (0)| -      |
+    | SSI    | Initial surface storage                          | cm      |
+    | SSMAX  | Maximum surface storage                          | cm      |
+    | SMLIM  | Upper moisture limit of the top layer            | cm3/cm3 |
+    | WAV    | Initial amount of water in the soil              | cm      |
+
+    **State variables**
+
+    | Name    | Description                                         | Unit    |
+    |---------|-----------------------------------------------------|---------|
+    | WTRAT   | Total water lost as transpiration                  | cm      |
+    | EVST    | Total evaporation from the soil surface             | cm      |
+    | EVWT    | Total evaporation from a water surface              | cm      |
+    | TSR     | Total surface runoff                                | cm      |
+    | RAINT   | Total rainfall                                      | cm      |
+    | WDRT    | Water added to the root zone by deeper roots        | cm      |
+    | TOTINF  | Total infiltration                                  | cm      |
+    | TOTIRR  | Total effective irrigation                          | cm      |
+    | SM      | Volumetric moisture content of each layer           | -       |
+    | WC      | Water amount in each layer                          | cm      |
+    | W       | Amount of water in the root zone                    | cm      |
+    | WLOW    | Water between current roots and maximum root depth  | cm      |
+    | WWLOW   | Water in the whole profile (W + WLOW)               | cm      |
+    | WBOT    | Water below the maximum rootable depth              | cm      |
+    | WAVUPP  | Plant-available water in the rooted zone            | cm      |
+    | WAVLOW  | Plant-available water in the potential root zone    | cm      |
+    | WAVBOT  | Plant-available water below maximum rooting depth   | cm      |
+    | SS      | Surface storage                                     | cm      |
+    | SM_MEAN | Mean water content in the rooted zone               | cm3/cm3 |
+    | PERCT   | Total percolation from the rooted zone              | cm      |
+    | LOSST   | Total water lost to deeper soil                     | cm      |
+
+    **Rate variables**
+
+    | Name       | Description                              | Unit   |
+    |------------|------------------------------------------|--------|
+    | Flow       | Flow from one layer to the next          | cm/day |
+    | RIN        | Infiltration at the surface              | cm/day |
+    | WTRALY     | Transpiration taken from each layer      | cm/day |
+    | WTRA       | Total crop transpiration                 | cm/day |
+    | EVS        | Soil evaporation                         | cm/day |
+    | EVW        | Open-water evaporation                   | cm/day |
+    | RIRR       | Irrigation                               | cm/day |
+    | DWC        | Net change of water in each layer        | cm/day |
+    | DRAINT     | Change of accumulated rainfall           | cm/day |
+    | DSS        | Change of surface storage                | cm/day |
+    | DTSR       | Surface runoff                           | cm/day |
+    | BOTTOMFLOW | Flow at the bottom of the profile        | cm/day |
 
     **Gradient mapping (which parameters have a gradient):**
 

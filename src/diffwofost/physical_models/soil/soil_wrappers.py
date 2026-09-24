@@ -16,8 +16,9 @@ from diffwofost.physical_models.soil.snomin import SNOMIN
 class BaseSoilWrapper(SimulationObject):
     """Run a water-balance class and a nutrient-balance class on the same day.
 
-    These wrappers add no parameters. Gradients are those of the water-balance
-    and nitrogen-balance classes they construct.
+    WOFOST 8.1 points the engine at one wrapper instead of importing the water
+    balance directly. These wrappers add no parameters of their own. Gradients
+    are those of the water-balance and nitrogen-balance classes they construct.
     """
 
     waterbalance_class = None
@@ -56,14 +57,22 @@ class BaseSoilWrapper(SimulationObject):
 
 
 class SoilModuleWrapper_PP(BaseSoilWrapper):
-    """Potential production: field-capacity water and a non-depleting nitrogen pool."""
+    """Soil water and soil nitrogen for potential production.
+
+    Water is held at field capacity by ``WaterbalancePP``. Nitrogen is the
+    non-depleting pool of ``N_PotentialProduction``.
+    """
 
     waterbalance_class = WaterbalancePP
     nutrientbalance_class = N_PotentialProduction
 
 
 class SoilModuleWrapper_NWLP_MLWB_SNOMIN(BaseSoilWrapper):
-    """Water- and nitrogen-limited production with the layered water balance and SNOMIN."""
+    """Water- and nitrogen-limited production with layered water and SNOMIN.
+
+    The layered water balance supplies soil moisture and layer flows.
+    ``SNOMIN`` supplies the mineral and organic nitrogen balance.
+    """
 
     waterbalance_class = WaterBalanceLayered
     nutrientbalance_class = SNOMIN
