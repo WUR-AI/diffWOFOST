@@ -338,10 +338,11 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         is_lai_exp = s.LAIEXP < 6.0
         DTEFF = torch.clamp(TEMP - p.TBASE, 0.0)
 
-        # NOTE: conditional statements do not allow for the gradient to be
-        # tracked through the condition. Thus, the gradient with respect to
-        # parameters that contribute to `is_lai_exp` (e.g. RGRLAI and TBASE)
-        # are expected to be incorrect.
+        # NOTE: the hard LAIEXP < 6 branch does not provide a gradient
+        # through the branch selection itself. Parameters that influence LAIEXP
+        # (e.g. RGRLAI and TBASE) therefore receive the derivative of the
+        # currently selected branch, but not a gradient contribution associated
+        # with crossing the LAIEXP = 6 threshold.
 
         r.GLAIEX = torch.where(
             dvs_mask,
@@ -399,9 +400,12 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # Integration of physiological age
         # Zero out all dead leaf classes
-        # NOTE: conditional statements do not allow for the gradient to be
-        # tracked through the condition. Thus, the gradient with respect to
-        # parameters that contribute to `is_alive` are expected to be incorrect.
+        # NOTE: the hard is_alive branch does not provide a gradient through
+        # the branch selection itself. Parameters that influence which leaf
+        # classes stay alive receive the derivative of the selected branch,
+        # but not a contribution from crossing zero biomass. Unlike SPAN, this
+        # threshold is a result of the biomass and death calculation, so no
+        # straight-through estimator is applied.
         tLV = torch.where(is_alive, tLV, 0.0)
         tLVAGE = tLVAGE + rates.FYSAGE
         tLVAGE = torch.where(is_alive, tLVAGE, 0.0)

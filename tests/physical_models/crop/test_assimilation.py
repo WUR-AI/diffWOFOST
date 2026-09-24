@@ -481,7 +481,8 @@ class TestDiffAssimilationGradients:
 
 
 def test_wofost81_assimilation_matches_pcse():
-    """WOFOST 8.1 gross assimilation follows PCSE below and above the SLN switch."""
+    """WOFOST 8.1 gross assimilation follows PCSE below and above the LAI threshold
+    for the SLN profile."""
     import datetime
     from types import SimpleNamespace
     from pcse.base.parameter_providers import ParameterProvider
