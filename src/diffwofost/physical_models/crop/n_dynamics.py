@@ -14,7 +14,23 @@ from diffwofost.physical_models.utils import AfgenTrait
 
 
 class N_Crop_Dynamics(SimulationObject):
-    """Nitrogen amounts in each living organ, plus uptake, fixation and loss."""
+    """Nitrogen amounts in each living organ, plus uptake, fixation and loss.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output       | Parameters influencing it                    |
+    |--------------|----------------------------------------------|
+    | NamountLV    | NMAXLV_TB, NRESIDLV                          |
+    | NamountST    | NMAXLV_TB, NMAXST_FR, NRESIDST               |
+    | NamountRT    | NMAXLV_TB, NMAXRT_FR, NRESIDRT               |
+    | NamountSO    | NMAXLV_TB                                    |
+    | NuptakeTotal | the parameters of ``N_Demand_Uptake``        |
+
+    [!NOTE]
+    The daily change of each pool follows the uptake and translocation rates.
+    ``NRESID*`` changes how much nitrogen can leave an organ, not the initial amount.
+    The initial amount is the maximum concentration times the initial biomass.
+    """
 
     demand_uptake = Instance(SimulationObject)
     NamountLVI = None

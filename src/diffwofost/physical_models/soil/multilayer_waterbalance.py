@@ -28,6 +28,18 @@ class WaterBalanceLayered(SimulationObject):
     (gravity) flow, limited so a layer cannot pass saturation or fall below
     field capacity. Upward flow is the dry flow when it is negative, limited
     to half of the amount that would equalise the two layers.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                                      |
+    |--------|----------------------------------------------------------------|
+    | SM     | WAV, SMLIM, SSMAX, SSI, NOTINF, SMTAB, CONDTAB, Thickness      |
+    | EVS    | WAV, SMLIM, NOTINF, SMTAB                                      |
+    | Flow   | SMTAB, CONDTAB, Thickness                                      |
+
+    [!NOTE]
+    ``IFUNRN`` is a switch between two infiltration formulas. Inside a layer the
+    rooted weight is linear in rooting depth. Crossing into another layer is a hard switch.
     """
 
     MaxFlowIter = 50

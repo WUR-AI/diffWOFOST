@@ -4,6 +4,18 @@ This is the torch port of ``pcse.soil.soil_profile``. Hydraulic lookup tables
 go through diffWOFOST's differentiable ``Afgen``. Layer thickness and the pF
 curves are structural inputs; volumetric thresholds derived from those curves
 stay in the autograd graph.
+
+**Gradient mapping (which parameters have a gradient):**
+
+| Quantity | Parameters influencing it                          |
+|----------|----------------------------------------------------|
+| SM0, SMFCF, SMW | SMTAB, PFFieldCapacity, PFWiltingPoint   |
+| MFP, conductivity | CONDTAB                                   |
+| Wtop     | Thickness, and rooting depth inside the layer     |
+
+[!NOTE]
+``Wtop`` is linear in rooting depth while the root front sits inside a layer.
+Crossing into the next layer is a hard switch.
 """
 
 import torch

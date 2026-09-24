@@ -22,6 +22,19 @@ class N_Demand_Uptake(SimulationObject):
     ``RNUPTAKEMAX``. Below a transpiration reduction of 0.01 the crop takes
     up no nitrogen. Storage organs are supplied by translocation from leaves,
     stems and roots once development passes ``DVS_N_TRANSL``.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output           | Parameters influencing it                                |
+    |------------------|----------------------------------------------------------|
+    | Ndemand, RNuptake| NMAXLV_TB, NMAXST_FR, NMAXRT_FR, NMAXSO, RNUPTAKEMAX     |
+    | RNfixation       | NFIX_FR, NMAXLV_TB, NMAXST_FR, NMAXRT_FR, NMAXSO         |
+    | RNtranslocation  | TCNT, NMAXSO, NRESIDLV, NRESIDST, NRESIDRT               |
+
+    [!NOTE]
+    ``DVS_N_TRANSL`` is a hard development-stage switch, so its gradient is zero.
+    The residual nitrogen fractions still have a gradient once translocation has started.
+    The ``RFTRA > 0.01`` cutoff is a fixed constant, not a parameter.
     """
 
     class Parameters(TensorParamTemplate):

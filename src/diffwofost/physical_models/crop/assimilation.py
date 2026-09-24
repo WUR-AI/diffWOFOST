@@ -620,6 +620,17 @@ class WOFOST81_Assimilation(SimulationObject):
     Maximum leaf photosynthesis declines with depth in the canopy following
     the specific leaf nitrogen. CO2 corrections come from ``CO2AMAXTB`` and
     ``CO2EFFTB``.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                                      |
+    |--------|----------------------------------------------------------------|
+    | PGASS  | AMAX_LNB, AMAX_REF, AMAX_SLP, EFFTB, KDIFTB, TMPFTB, TMNFTB,   |
+    |        | CO2AMAXTB, CO2EFFTB, CO2, KN                                   |
+
+    [!NOTE]
+    ``TMNFTB`` is applied to the mean of the emerged days in a 7-day window.
+    The window itself is a buffer, not a torch operation.
     """
 
     @property

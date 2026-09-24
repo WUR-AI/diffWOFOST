@@ -3,8 +3,8 @@
 The crop is the 8.1 wheat from PCSE's parameter repository. Soil moisture
 comes from PCSE's ``DummySoilDataProvider``, which is the soil used when
 production does not depend on a real profile. Site CO2 is the documented
-default of the WOFOST 8.1 classic site provider. Weather is the first month
-of a PCSE 7.2 potential-production series.
+default of the WOFOST 8.1 classic site provider. Weather is the full
+2010-03-25 to 2010-12-31 series from a PCSE 7.2 potential-production file.
 """
 
 import datetime as dt
@@ -32,7 +32,8 @@ from diffwofost.physical_models.variablekiosk import VariableKiosk
 _WEATHER = (
     Path(__file__).resolve().parents[1] / "test_data" / "test_potentialproduction_wofost72_05.yaml"
 )
-_N_DAYS = 31
+# Gradient checks repeat the run. The daily comparison uses the whole series.
+_SHORT_RUN = 31
 _CROP_NAME = "wheat"
 _VARIETY_NAME = "Winter_wheat_101"
 # Documented default of WOFOST81SiteDataProvider_Classic.
@@ -55,10 +56,13 @@ _DAILY = (
 )
 
 
-def _weather_rows():
-    """First month of weather from a PCSE potential-production test file."""
+def _weather_rows(n_days=None):
+    """Weather from a PCSE potential-production test file, optionally truncated."""
+    series = get_test_data(_WEATHER)["WeatherVariables"]
+    if n_days is not None:
+        series = series[:n_days]
     rows = []
-    for row in get_test_data(_WEATHER)["WeatherVariables"][:_N_DAYS]:
+    for row in series:
         item = {key: value for key, value in row.items() if key != "SNOWDEPTH"}
         item["DTEMP"] = 0.5 * (item["TEMP"] + item["TMAX"])
         rows.append(item)
@@ -120,15 +124,16 @@ def _close(actual, expected):
     return abs(actual - expected) <= 1e-4 + 1e-4 * abs(expected)
 
 
-def _run_pcse():
+def _run_pcse(n_days=None):
     crop, soil, site, agro = _inputs()
+    rows = _weather_rows(n_days)
     model = Wofost81_PP(
         PcseParameterProvider(cropdata=crop, soildata=soil, sitedata=site),
-        _CallableWeather(_weather_rows()),
+        _CallableWeather(rows),
         agro,
         output_vars=list(_DAILY),
     )
-    model.run_till(_weather_rows()[-1]["DAY"])
+    model.run_till(rows[-1]["DAY"])
     return model.get_output()
 
 
@@ -148,7 +153,7 @@ def _tensor_weather(rows):
     return converted
 
 
-def _run_diff(overrides=None):
+def _run_diff(overrides=None, n_days=None):
     crop, soil, site, agro = _inputs()
     params = ParameterProvider(cropdata=crop, soildata=soil, sitedata=site)
     params.set_active_crop(_CROP_NAME, _VARIETY_NAME, "sowing", "harvest")
@@ -159,9 +164,10 @@ def _run_diff(overrides=None):
         SOIL=SoilModuleWrapper_PP,
         OUTPUT_VARS=list(_DAILY),
     )
+    rows = _weather_rows(n_days)
     model = Engine(config)
-    model.setup(params, iter(_tensor_weather(_weather_rows())), agro)
-    model.run_till(_weather_rows()[-1]["DAY"])
+    model.setup(params, iter(_tensor_weather(rows)), agro)
+    model.run_till(rows[-1]["DAY"])
     return model.get_output()
 
 
@@ -201,10 +207,10 @@ def test_navail_is_republished_after_the_kiosk_flush():
 
 
 class _LastDay:
-    """Run one month and return the final-day outputs."""
+    """Run the short window and return the final-day outputs."""
 
     def __call__(self, overrides):
-        last = _run_diff(overrides)[-1]
+        last = _run_diff(overrides, n_days=_SHORT_RUN)[-1]
         result = {}
         for name, value in last.items():
             if isinstance(value, torch.Tensor):

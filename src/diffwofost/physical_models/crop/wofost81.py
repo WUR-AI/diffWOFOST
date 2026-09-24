@@ -43,7 +43,22 @@ from diffwofost.physical_models.traitlets import Tensor
 
 
 class Wofost81(SimulationObject):
-    """Top-level WOFOST 8.1 crop: phenology through nitrogen stress."""
+    """Top-level WOFOST 8.1 crop: phenology through nitrogen stress.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output      | Parameters influencing it                                      |
+    |-------------|----------------------------------------------------------------|
+    | DMI, TAGP   | CVL, CVO, CVR, CVS                                             |
+    | REALLOC_LV  | REALLOC_LEAF_FRACTION, REALLOC_LEAF_RATE                      |
+    | REALLOC_ST  | REALLOC_STEM_FRACTION, REALLOC_STEM_RATE                      |
+    | REALLOC_SO  | REALLOC_LEAF_FRACTION, REALLOC_LEAF_RATE,                     |
+    |             | REALLOC_STEM_FRACTION, REALLOC_STEM_RATE, REALLOC_EFFICIENCY  |
+
+    [!NOTE]
+    ``REALLOC_DVS`` is a hard development-stage switch, so its gradient is zero.
+    The leaf and stem fractions still have a gradient once reallocation has started.
+    """
 
     pheno = Instance(SimulationObject)
     part = Instance(SimulationObject)

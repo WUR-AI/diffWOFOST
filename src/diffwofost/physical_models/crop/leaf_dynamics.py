@@ -448,6 +448,19 @@ class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
     multiplies age-driven leaf death by the nitrogen stress factor ``NSLLV`` and
     reduces exponential leaf expansion under nitrogen and water stress while
     DVS < 0.2 and LAI < 0.75. Leaf biomass can also be reallocated to storage organs.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    The ``WOFOST_Leaf_Dynamics`` table still applies. This subclass adds:
+
+    | Output | Parameters influencing it          |
+    |--------|------------------------------------|
+    | LAI    | NSLLV, RFRGRL, REALLOC_LV          |
+    | TWLV   | REALLOC_LV                         |
+
+    [!NOTE]
+    ``DVS < 0.2`` and ``LAI < 0.75`` are fixed cutoffs, not parameters.
+    ``SPAN`` keeps the straight-through estimator of the parent class when it is calibrated.
     """
 
     PUBLISH_RATES = ["DRLV", "GRLV"]

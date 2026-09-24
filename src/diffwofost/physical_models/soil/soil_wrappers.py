@@ -14,7 +14,11 @@ from diffwofost.physical_models.soil.snomin import SNOMIN
 
 
 class BaseSoilWrapper(SimulationObject):
-    """Run a water-balance class and a nutrient-balance class on the same day."""
+    """Run a water-balance class and a nutrient-balance class on the same day.
+
+    These wrappers add no parameters. Gradients are those of the water-balance
+    and nitrogen-balance classes they construct.
+    """
 
     waterbalance_class = None
     nutrientbalance_class = None

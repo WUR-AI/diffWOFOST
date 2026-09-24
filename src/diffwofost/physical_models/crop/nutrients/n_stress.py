@@ -15,6 +15,16 @@ class N_Stress(SimulationObject):
     ``NSLLV`` accelerates leaf ageing. ``RFRGRL`` reduces the relative leaf
     expansion rate while the canopy is still small. Both are table lookups of
     a nitrogen index, so they stay differentiable through ``Afgen``.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                          |
+    |--------|----------------------------------------------------|
+    | NSLLV  | NMAXLV_TB, NMAXST_FR, NMAXSO, NSLLV_TB             |
+    | RFRGRL | NMAXLV_TB, RGRLAI, RGRLAI_MIN                      |
+
+    [!NOTE]
+    ``NMAXRT_FR``, ``NRESIDLV`` and ``NRESIDST`` are not read by this module.
     """
 
     class Parameters(TensorParamTemplate):

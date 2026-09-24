@@ -478,3 +478,115 @@ class TestDiffAssimilationGradients:
         grad_autograd = torch.autograd.grad(loss, param)[0]
 
         assert torch.allclose(grad_autograd, grad_num, atol=1e-4, rtol=1e-4)
+
+
+def test_wofost81_assimilation_matches_pcse():
+    """WOFOST 8.1 gross assimilation follows PCSE below and above the SLN switch."""
+    import datetime
+    from types import SimpleNamespace
+    from pcse.base.parameter_providers import ParameterProvider
+    from pcse.base.variablekiosk import VariableKiosk
+    from pcse.crop.assimilation import WOFOST81_Assimilation as PcseAssimilation
+    from diffwofost.physical_models.config import ComputeConfig
+    from diffwofost.physical_models.crop.assimilation import WOFOST81_Assimilation
+
+    ComputeConfig.set_dtype(torch.float64)
+    ComputeConfig.set_device("cpu")
+    day = datetime.date(2010, 6, 1)
+    tables = {
+        "AMAX_LNB": 0.5,
+        "AMAX_REF": 40.0,
+        "AMAX_SLP": 20.0,
+        "KN": 0.5,
+        "CO2": 360.0,
+        "EFFTB": [0.0, 0.45, 40.0, 0.45],
+        "KDIFTB": [0.0, 0.6, 2.0, 0.6],
+        "TMPFTB": [0.0, 1.0, 40.0, 1.0],
+        "TMNFTB": [0.0, 1.0, 40.0, 1.0],
+        "CO2AMAXTB": [40.0, 0.0, 360.0, 1.0, 720.0, 1.2],
+        "CO2EFFTB": [40.0, 0.0, 360.0, 1.0, 720.0, 1.2],
+    }
+    weather = {"IRRAD": 15e6, "TEMP": 18.0, "DTEMP": 20.0, "TMIN": 10.0, "LAT": 52.0}
+    for lai in (0.005, 2.0):
+        states = {"DVS": 1.0, "LAI": lai, "NamountLV": 40.0}
+        kiosk = VariableKiosk()
+        for name, value in states.items():
+            kiosk.register_variable(0, name, type="S", publish=True)
+            kiosk.set_variable(0, name, value)
+        pcse = PcseAssimilation(day, kiosk, ParameterProvider(cropdata=tables))
+        reference = pcse(day, SimpleNamespace(**weather))
+        tensor_kiosk = VariableKiosk()
+        for name, value in states.items():
+            tensor_kiosk.register_variable(0, name, type="S", publish=True)
+            tensor_kiosk.set_variable(0, name, torch.tensor(value))
+        diff = WOFOST81_Assimilation(day, tensor_kiosk, ParameterProvider(cropdata=tables))
+        got = diff(day, weather)
+        torch.testing.assert_close(
+            got, torch.tensor(reference, dtype=got.dtype), rtol=1e-6, atol=1e-8
+        )
+
+
+def _assimilation_pgass(overrides, lai, n_amount_lv):
+    """One day of WOFOST 8.1 assimilation with the given parameter overrides."""
+    import datetime
+    from pcse.base.parameter_providers import ParameterProvider
+    from pcse.base.variablekiosk import VariableKiosk
+    from diffwofost.physical_models.crop.assimilation import WOFOST81_Assimilation
+
+    day = datetime.date(2010, 6, 1)
+    crop = {
+        "AMAX_LNB": 0.5,
+        "AMAX_REF": 40.0,
+        "AMAX_SLP": 20.0,
+        "KN": 0.5,
+        "CO2": 360.0,
+        "EFFTB": [0.0, 0.45, 40.0, 0.45],
+        "KDIFTB": [0.0, 0.6, 2.0, 0.6],
+        "TMPFTB": [0.0, 1.0, 40.0, 1.0],
+        "TMNFTB": [0.0, 1.0, 40.0, 1.0],
+        "CO2AMAXTB": [40.0, 0.0, 360.0, 1.0, 720.0, 1.2],
+        "CO2EFFTB": [40.0, 0.0, 360.0, 1.0, 720.0, 1.2],
+    }
+    provider = ParameterProvider(cropdata=crop)
+    for name, value in overrides.items():
+        provider.set_override(name, value, check=False)
+    kiosk = VariableKiosk()
+    states = {"DVS": 1.0, "LAI": lai, "NamountLV": n_amount_lv}
+    for name, value in states.items():
+        kiosk.register_variable(0, name, type="S", publish=True)
+        kiosk.set_variable(0, name, torch.tensor(value, dtype=torch.float64))
+    weather = {"IRRAD": 15e6, "TEMP": 18.0, "DTEMP": 20.0, "TMIN": 10.0, "LAT": 52.0}
+    return WOFOST81_Assimilation(day, kiosk, provider)(day, weather)
+
+
+def _assert_scalar_gradient(evaluate, name, value):
+    """Central differences agree with autograd for one scalar parameter."""
+    from diffwofost.physical_models.config import ComputeConfig
+
+    ComputeConfig.set_dtype(torch.float64)
+    ComputeConfig.set_device("cpu")
+    param = torch.nn.Parameter(torch.tensor(value, dtype=torch.float64))
+    loss = evaluate({name: param}).sum()
+    autograd = torch.autograd.grad(loss, param)[0]
+    delta = 1e-6
+    with torch.no_grad():
+        plus = evaluate({name: param.detach() + delta}).sum()
+        minus = evaluate({name: param.detach() - delta}).sum()
+    numerical = (plus - minus) / (2 * delta)
+    assert torch.isfinite(autograd).all()
+    assert autograd.item() != 0
+    torch.testing.assert_close(autograd, numerical, rtol=1e-3, atol=1e-3)
+
+
+def test_amax_ref_gradient_matches_numerical():
+    """AMAX_REF changes gross assimilation once the leaf response is at the cap."""
+    _assert_scalar_gradient(
+        lambda overrides: _assimilation_pgass(overrides, 2.0, 40.0), "AMAX_REF", 40.0
+    )
+
+
+def test_amax_slp_gradient_matches_numerical():
+    """AMAX_SLP changes gross assimilation while the leaf response is below the cap."""
+    _assert_scalar_gradient(
+        lambda overrides: _assimilation_pgass(overrides, 2.0, 2.0), "AMAX_SLP", 20.0
+    )

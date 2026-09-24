@@ -454,6 +454,20 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
     | DVS  | Crop development stage            | Phenology     | -    |
     | LAI  | Leaf area index                   | Leaf dynamics | -    |
     | SM   | Volumetric soil moisture content  | Waterbalance  | -    |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                                      |
+    |--------|----------------------------------------------------------------|
+    | EVWMX  | KDIFTB                                                         |
+    | EVSMX  | KDIFTB                                                         |
+    | TRAMX  | CFET, KDIFTB, CO2, CO2TRATB                                    |
+    | TRA    | CFET, KDIFTB, DEPNR, SMFCF, SMW, CRAIRC, SM0, CO2, CO2TRATB    |
+    | RFTRA  | CFET, DEPNR, SMFCF, SMW, CRAIRC, SM0, CO2, CO2TRATB            |
+
+    [!NOTE]
+    ``DEPNR < 3`` uses the straight-through estimator in ``SWEAF``. ``IAIRDU`` and
+    ``IOX`` are switches.
     """
 
     class Parameters(TensorParamTemplate):
@@ -563,6 +577,21 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
     | LAI  | Leaf area index                   | Leaf dynamics | -    |
     | RD   | Rooting depth                     | Root dynamics | cm   |
     | SM   | Soil moisture per layer           | Waterbalance  | -    |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                                              |
+    |--------|------------------------------------------------------------------------|
+    | EVWMX  | KDIFTB                                                                 |
+    | EVSMX  | KDIFTB                                                                 |
+    | TRAMX  | CFET, KDIFTB, CO2, CO2TRATB                                            |
+    | TRA    | CFET, KDIFTB, DEPNR, CO2, CO2TRATB, layer SMW, SMFCF, SM0, CRAIRC      |
+    | RFTRA  | CFET, DEPNR, CO2, CO2TRATB, layer SMW, SMFCF, SM0, CRAIRC              |
+
+    [!NOTE]
+    Soil moisture thresholds come from the soil profile, not from crop parameters.
+    ``DEPNR < 3`` uses the straight-through estimator in ``SWEAF``. ``IAIRDU`` and
+    ``IOX`` are switches.
     """
 
     soil_profile = Any()

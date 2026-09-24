@@ -14,7 +14,18 @@ _NAVAIL_PP = 100.0
 
 
 class N_PotentialProduction(SimulationObject):
-    """Unlimited soil nitrogen for potential-production simulations."""
+    """Unlimited soil nitrogen for potential-production simulations.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it |
+    |--------|---------------------------|
+    | NAVAIL | none                      |
+
+    [!NOTE]
+    ``NAVAIL`` stays at 100 kg/ha. Crop uptake reads it and does not change it,
+    so the gradient of this pool with respect to uptake is zero.
+    """
 
     class StateVariables(TensorStatesTemplate):
         NAVAIL = Tensor(-99.0)

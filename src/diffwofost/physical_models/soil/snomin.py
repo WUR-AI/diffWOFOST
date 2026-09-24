@@ -28,7 +28,22 @@ _OM_TO_C = 0.58
 
 
 class SNOMIN(SimulationObject):
-    """Layered soil nitrogen module for mineral and organic nitrogen."""
+    """Layered soil nitrogen module for mineral and organic nitrogen.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output          | Parameters influencing it                                      |
+    |-----------------|----------------------------------------------------------------|
+    | NH4, NO3, NAVAIL| NH4I, NO3I, KNIT_REF, KDENIT_REF, FASDIS, CNRatioBio,          |
+    |                 | MRCDIS, KSORP, A0SOM                                           |
+    | RNO3DENITR      | KDENIT_REF, MRCDIS                                             |
+    | RNH4NITR        | KNIT_REF                                                       |
+
+    [!NOTE]
+    ``WFPS_CRIT`` is a hard threshold, so its gradient is zero. Denitrification
+    and nitrification still have a gradient through the rate coefficients on the
+    active side of that threshold.
+    """
 
     soiln_profile = None
 
