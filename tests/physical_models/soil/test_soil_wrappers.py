@@ -45,8 +45,7 @@ def test_ported_wrappers_pair_the_same_balances_as_pcse():
     """Each wrapper points at the same water and nitrogen classes as PCSE."""
     assert SoilModuleWrapper_PP.waterbalance_class.__name__ == PcsePP.waterbalance_class.__name__
     assert (
-        SoilModuleWrapper_PP.nutrientbalance_class.__name__
-        == PcsePP.nutrientbalance_class.__name__
+        SoilModuleWrapper_PP.nutrientbalance_class.__name__ == PcsePP.nutrientbalance_class.__name__
     )
     assert (
         SoilModuleWrapper_NWLP_MLWB_SNOMIN.waterbalance_class.__name__
