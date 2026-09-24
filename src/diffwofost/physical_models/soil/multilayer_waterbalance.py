@@ -102,13 +102,15 @@ class WaterBalanceLayered(SimulationObject):
 
     | Output | Parameters influencing it                                      |
     |--------|----------------------------------------------------------------|
-    | SM     | WAV, SMLIM, SSMAX, SSI, NOTINF, SMTAB, CONDTAB, Thickness      |
+    | SM     | WAV, SMLIM, SSMAX, SSI, NOTINF, SMTAB, CONDTAB                 |
     | EVS    | WAV, SMLIM, NOTINF, SMTAB                                      |
-    | Flow   | SMTAB, CONDTAB, Thickness                                      |
+    | Flow   | SMTAB, CONDTAB                                                 |
 
     [!NOTE]
     ``IFUNRN`` is a switch between two infiltration formulas. Inside a layer the
-    rooted weight is linear in rooting depth. Crossing into another layer is a hard switch.
+    rooted weight is linear in rooting depth. Crossing into another layer is a
+    hard switch, so the gradient through that branch is zero. Layer thickness
+    has no gradient path: ``float(layer.Thickness)`` builds a new tensor.
     """
 
     MaxFlowIter = 50
@@ -322,13 +324,12 @@ class WaterBalanceLayered(SimulationObject):
         self._RIRR = _as_tensor(0.0)
         self._RAIN = rain
 
-        # Layered transpiration is published as one value per soil layer once
-        # any batch member has emerged. Before that the kiosk still holds the
-        # scalar rate-template default, which is the same situation as PCSE
-        # having no TRALY yet: evaporate at the potential soil and water rates.
-        # A layer-shaped TRALY does not mean every member has emerged. The crop
-        # module writes EVSMX = 0 for a member with DVS < 0, while PCSE would
-        # still use the weather potential for that member.
+        # Layered transpiration is published once any batch member has emerged.
+        # Before that the kiosk has no layer-shaped TRALY, as in PCSE before
+        # emergence: no transpiration, and evaporation at the weather potentials.
+        # A layer-shaped TRALY does not mean every member has emerged. A member
+        # with DVS < 0 keeps that pre-emergence behaviour: WTRALY and WTRA are
+        # zero, and EVWMX and EVSMX are the weather E0 and ES0.
         weather_evwmx = _as_tensor(drv.E0 if hasattr(drv, "E0") else drv["E0"])
         weather_evsmx = _as_tensor(drv.ES0 if hasattr(drv, "ES0") else drv["ES0"])
         layered_transpiration = kiosk["TRALY"] if "TRALY" in kiosk else None

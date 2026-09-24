@@ -460,6 +460,64 @@ def _batch_member(output, index):
     return member
 
 
+# Crop pools and rates that must not move while a member is still emerging.
+# DVS itself advances towards emergence, and the soil keeps its own water balance.
+_CROP_HELD = (
+    "LAI",
+    "TAGP",
+    "TWLV",
+    "TWST",
+    "TWSO",
+    "TRA",
+    "TRAMX",
+    "NuptakeTotal",
+    "NamountLV",
+    "NamountST",
+    "NamountRT",
+    "NamountSO",
+)
+
+
+def test_pre_emergence_member_keeps_crop_states():
+    """One emerged member does not move the crop states of a member still at DVS < 0.
+
+    The batch continues once any member has emerged. This checks that the
+    still-emerging member keeps the crop pools from the sowing day, and that
+    the emerged member matches its own single-crop run.
+    """
+    ComputeConfig.set_dtype(torch.float64)
+    ComputeConfig.set_device("cpu")
+    crop, soil, site, _agro = _providers()
+    baseline = ParameterProvider(cropdata=crop, soildata=soil, sitedata=site)
+    baseline.set_active_crop(_CROP_NAME, _VARIETY_NAME, "sowing", "harvest")
+    tsumem = float(baseline["TSUMEM"])
+    pair = (tsumem, tsumem * 1.8)
+    batched = {"TSUMEM": torch.tensor(pair, dtype=torch.float64)}
+    batch_output = _run_diff(batched, n_days=_SHORT_RUN)
+    emerged = _run_diff({"TSUMEM": torch.tensor(pair[0], dtype=torch.float64)}, n_days=_SHORT_RUN)
+
+    held = {name: _numbers(_member(batch_output[0][name], 1)) for name in _CROP_HELD}
+    mixed_days = 0
+    for day in batch_output:
+        late_dvs = _numbers(_member(day["DVS"], 1))[0]
+        early_dvs = _numbers(_member(day["DVS"], 0))[0]
+        if late_dvs < 0.0:
+            for name, initial in held.items():
+                actual = _numbers(_member(day[name], 1))
+                for got, want in zip(actual, initial, strict=True):
+                    assert _close(got, want, tol=1e-8), (name, day["day"], got, want)
+        if late_dvs < 0.0 and early_dvs >= 0.0:
+            mixed_days += 1
+    assert mixed_days > 0
+
+    for ref_day, batch_day in zip(emerged, batch_output, strict=True):
+        for name in ("DVS", *_CROP_HELD):
+            expected = _numbers(ref_day[name])
+            actual = _numbers(_member(batch_day[name], 0))
+            for got, want in zip(actual, expected, strict=True):
+                assert _close(got, want, tol=1e-5), (name, ref_day["day"], got, want)
+
+
 def test_mixed_ifunrn_matches_independent_runs():
     """IFUNRN 0 and 1 in one batch match separate scalar runs.
 

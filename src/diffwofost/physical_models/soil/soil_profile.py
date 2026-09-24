@@ -11,11 +11,13 @@ stay in the autograd graph.
 |----------|----------------------------------------------------|
 | SM0, SMFCF, SMW | SMTAB, PFFieldCapacity, PFWiltingPoint   |
 | MFP, conductivity | CONDTAB                                   |
-| Wtop     | Thickness, and rooting depth inside the layer     |
+| Wtop     | Rooting depth while the root front is inside the layer |
 
 [!NOTE]
 ``Wtop`` is linear in rooting depth while the root front sits inside a layer.
-Crossing into the next layer is a hard switch.
+Crossing into the next layer is a hard switch, so the gradient through that
+branch is zero. Layer thickness is different: ``float(layer.Thickness)`` builds
+a new tensor, so there is no gradient path back to the soil-data value.
 """
 
 import torch
