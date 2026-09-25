@@ -100,8 +100,11 @@ class N_Stress(SimulationObject):
         stress_index = torch.clamp(ratio, min=1.0, max=2.0)
         rates.NSLLV = params.NSLLV_TB(stress_index)
 
+        # ``torch.where`` still divides when WLV is zero. The clamp keeps that
+        # unused branch finite; the selected value stays 0, as in PCSE.
+        leaf_weight = torch.clamp(kiosk["WLV"], min=1e-12)
         leaf_concentration = torch.where(
-            kiosk["WLV"] > 0, kiosk["NamountLV"] / kiosk["WLV"], torch.zeros_like(kiosk["WLV"])
+            kiosk["WLV"] > 0, kiosk["NamountLV"] / leaf_weight, torch.zeros_like(kiosk["WLV"])
         )
         growth_index = torch.clamp(
             (leaf_concentration - 0.9 * nmax_leaf) / (nmax_leaf - 0.9 * nmax_leaf),

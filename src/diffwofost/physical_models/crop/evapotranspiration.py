@@ -819,7 +819,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         rftra = r.RFOS * r.RFWS
         r.TRALY = r.TRAMX * rftra * root_fraction
         r.TRA = r.TRALY.sum(dim=0)
-        r.RFTRA = torch.where(r.TRAMX > self._epsilon, r.TRA / r.TRAMX, 1.0)
+        tramx = torch.clamp(r.TRAMX, min=self._epsilon)
+        r.RFTRA = torch.where(r.TRAMX > self._epsilon, r.TRA / tramx, 1.0)
 
         # Pre-emergence: RFOS = 1.0
         r.RFOS = dvs_mask_layers * r.RFOS + (1.0 - dvs_mask_layers)
