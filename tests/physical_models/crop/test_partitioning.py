@@ -1,11 +1,16 @@
+import datetime
 import warnings
 from unittest.mock import patch
 import pytest
 import torch
 from numpy.testing import assert_array_almost_equal
+from pcse.base.parameter_providers import ParameterProvider
+from pcse.base.variablekiosk import VariableKiosk
+from pcse.crop.partitioning import DVS_Partitioning_N as PcsePartitioningN
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.partitioning import DVS_Partitioning
+from diffwofost.physical_models.crop.partitioning import DVS_Partitioning_N
 from diffwofost.physical_models.test import EngineTestHelper
 from diffwofost.physical_models.test import calculate_numerical_grad
 from diffwofost.physical_models.test import get_test_data
@@ -454,3 +459,37 @@ class TestDiffPartitioningGradients:
                 + f"'{output_name}' is zero: {grads.detach().cpu().numpy()}",
                 UserWarning,
             )
+
+
+def _close(actual, expected):
+    expected_tensor = torch.tensor(expected, dtype=actual.dtype, device=actual.device)
+    assert torch.isclose(actual, expected_tensor, rtol=1e-7, atol=1e-9)
+
+
+def _kiosk(values):
+    kiosk = VariableKiosk()
+    for name, value in values.items():
+        kiosk.register_variable(0, name, type="S", publish=True)
+        kiosk.set_variable(0, name, value)
+    return kiosk
+
+
+def test_partitioning_n_root_fraction_follows_water_stress():
+    """Checks root-fraction adjustment under water stress against PCSE."""
+    day = datetime.date(2010, 6, 1)
+    parameters = ParameterProvider(
+        cropdata={
+            "FRTB": [0.0, 0.30, 2.0, 0.00],
+            "FLTB": [0.0, 0.50, 1.0, 0.50, 2.0, 0.00],
+            "FSTB": [0.0, 0.50, 1.0, 0.50, 2.0, 0.00],
+            "FOTB": [0.0, 0.00, 1.0, 0.00, 2.0, 1.00],
+        }
+    )
+    for rftra in (1.0, 0.1):
+        pcse = PcsePartitioningN(day, _kiosk({"DVS": 1.0, "RFTRA": rftra}), parameters)
+        pcse.integrate(day)
+        states = {"DVS": torch.tensor(1.0), "RFTRA": torch.tensor(rftra)}
+        diff = DVS_Partitioning_N(day, _kiosk(states), parameters)
+        diff.integrate(day)
+        for name in ("FR", "FL", "FS", "FO"):
+            _close(getattr(diff.states, name), getattr(pcse.states, name))

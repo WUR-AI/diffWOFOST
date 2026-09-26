@@ -813,3 +813,92 @@ class TestDiffEvapotranspirationGradients:
                 + f" w.r.t '{output_name}' is zero: {grads.data}",
                 UserWarning,
             )
+
+
+def test_co2_evapotranspiration_matches_pcse():
+    """CO2-adjusted transpiration follows PCSE when the canopy has emerged."""
+    from pcse.base.parameter_providers import ParameterProvider
+    from pcse.base.variablekiosk import VariableKiosk
+    from pcse.crop.evapotranspiration import EvapotranspirationCO2 as PcseCO2
+    from diffwofost.physical_models.config import ComputeConfig
+
+    ComputeConfig.set_dtype(torch.float64)
+    ComputeConfig.set_device("cpu")
+    day = datetime.date(2010, 6, 1)
+    crop = {
+        "CFET": 1.0,
+        "DEPNR": 4.5,
+        "KDIFTB": [0.0, 0.6, 2.0, 0.6],
+        "IAIRDU": 0.0,
+        "IOX": 0.0,
+        "CO2": 360.0,
+        "CO2TRATB": [40.0, 1.0, 1000.0, 0.8],
+    }
+    soil = {"CRAIRC": 0.06, "SM0": 0.45, "SMW": 0.10, "SMFCF": 0.30}
+    states = {"DVS": 1.0, "LAI": 3.0, "SM": 0.18}
+    weather = {"ET0": 0.4, "E0": 0.5, "ES0": 0.35}
+
+    def kiosk_of(values):
+        kiosk = VariableKiosk()
+        for name, value in values.items():
+            kiosk.register_variable(0, name, type="S", publish=True)
+            kiosk.set_variable(0, name, value)
+        return kiosk
+
+    pcse = PcseCO2(day, kiosk_of(states), ParameterProvider(cropdata=crop, soildata=soil))
+    pcse(day, SimpleNamespace(**weather))
+    diff = EvapotranspirationCO2(
+        day,
+        kiosk_of({name: torch.tensor(value) for name, value in states.items()}),
+        ParameterProvider(cropdata=crop, soildata=soil),
+    )
+    diff.calc_rates(day, weather)
+    for name in ("TRAMX", "TRA", "EVSMX", "RFTRA"):
+        actual = getattr(diff.rates, name)
+        expected = torch.tensor(getattr(pcse.rates, name), dtype=actual.dtype)
+        torch.testing.assert_close(actual, expected, rtol=1e-6, atol=1e-8)
+
+
+def test_co2_gradient_matches_numerical():
+    """CO2 changes maximum transpiration through CO2TRATB."""
+    from pcse.base.parameter_providers import ParameterProvider
+    from pcse.base.variablekiosk import VariableKiosk
+    from diffwofost.physical_models.config import ComputeConfig
+
+    ComputeConfig.set_dtype(torch.float64)
+    ComputeConfig.set_device("cpu")
+    day = datetime.date(2010, 6, 1)
+    crop = {
+        "CFET": 1.0,
+        "DEPNR": 4.5,
+        "KDIFTB": [0.0, 0.6, 2.0, 0.6],
+        "IAIRDU": 0.0,
+        "IOX": 0.0,
+        "CO2": 360.0,
+        "CO2TRATB": [40.0, 1.0, 1000.0, 0.8],
+    }
+    soil = {"CRAIRC": 0.06, "SM0": 0.45, "SMW": 0.10, "SMFCF": 0.30}
+    states = {"DVS": 1.0, "LAI": 3.0, "SM": 0.18}
+    weather = {"ET0": 0.4, "E0": 0.5, "ES0": 0.35}
+
+    def tramx(co2):
+        provider = ParameterProvider(cropdata=crop, soildata=soil)
+        provider.set_override("CO2", co2, check=False)
+        kiosk = VariableKiosk()
+        for name, value in states.items():
+            kiosk.register_variable(0, name, type="S", publish=True)
+            kiosk.set_variable(0, name, torch.tensor(value, dtype=torch.float64))
+        model = EvapotranspirationCO2(day, kiosk, provider)
+        model.calc_rates(day, weather)
+        return model.rates.TRAMX
+
+    param = torch.nn.Parameter(torch.tensor(360.0, dtype=torch.float64))
+    loss = tramx(param).sum()
+    autograd = torch.autograd.grad(loss, param)[0]
+    delta = 1e-4
+    with torch.no_grad():
+        numerical = (tramx(param.detach() + delta) - tramx(param.detach() - delta)).sum()
+        numerical = numerical / (2 * delta)
+    assert torch.isfinite(autograd).all()
+    assert autograd.item() != 0
+    torch.testing.assert_close(autograd, numerical, rtol=1e-3, atol=1e-3)

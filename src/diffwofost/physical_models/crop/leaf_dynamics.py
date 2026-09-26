@@ -187,7 +187,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # TODO check if parvalues are already torch.nn.Parameters
         self.params = self.Parameters(parvalues, shape=shape)
-        self.rates = self.RateVariables(kiosk, shape=shape)
+        self.rates = self.RateVariables(
+            kiosk, publish=getattr(self, "PUBLISH_RATES", None), shape=shape
+        )
 
         # Create scalar constants once at the beginning to avoid recreating them
         self._zero = torch.tensor(0.0, dtype=self.dtype, device=self.device)
@@ -336,10 +338,11 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         is_lai_exp = s.LAIEXP < 6.0
         DTEFF = torch.clamp(TEMP - p.TBASE, 0.0)
 
-        # NOTE: conditional statements do not allow for the gradient to be
-        # tracked through the condition. Thus, the gradient with respect to
-        # parameters that contribute to `is_lai_exp` (e.g. RGRLAI and TBASE)
-        # are expected to be incorrect.
+        # NOTE: the hard LAIEXP < 6 branch does not provide a gradient
+        # through the branch selection itself. Parameters that influence LAIEXP
+        # (e.g. RGRLAI and TBASE) therefore receive the derivative of the
+        # currently selected branch, but not a gradient contribution associated
+        # with crossing the LAIEXP = 6 threshold.
 
         r.GLAIEX = torch.where(
             dvs_mask,
@@ -397,13 +400,18 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # Integration of physiological age
         # Zero out all dead leaf classes
-        # NOTE: conditional statements do not allow for the gradient to be
-        # tracked through the condition. Thus, the gradient with respect to
-        # parameters that contribute to `is_alive` are expected to be incorrect.
+        # NOTE: the hard is_alive branch does not provide a gradient through
+        # the branch selection itself. Parameters that influence which leaf
+        # classes stay alive receive the derivative of the selected branch,
+        # but not a contribution from crossing zero biomass. Unlike SPAN, this
+        # threshold is a result of the biomass and death calculation, so no
+        # straight-through estimator is applied.
         tLV = torch.where(is_alive, tLV, 0.0)
         tLVAGE = tLVAGE + rates.FYSAGE
         tLVAGE = torch.where(is_alive, tLVAGE, 0.0)
         tSLA = torch.where(is_alive, tSLA, 0.0)
+
+        tLV = self._apply_reallocation(tLV)
 
         # --------- leave growth ---------
         idx = int((day - self.START_DATE).days / delt)
@@ -428,6 +436,72 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         self.states.LV = tLV
         self.states.SLA = tSLA
         self.states.LVAGE = tLVAGE
+
+    def _apply_reallocation(self, leaf_biomass: torch.Tensor) -> torch.Tensor:
+        """Scale living leaf classes when assimilates are reallocated.
+
+        WOFOST 7.2 does not reallocate leaf biomass. WOFOST 8.1 overrides this.
+        """
+        return leaf_biomass
+
+
+class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
+    """Leaf dynamics with nitrogen-stress effects on ageing and juvenile expansion.
+
+    This is the WOFOST 8.1 leaf module. Relative to ``WOFOST_Leaf_Dynamics`` it
+    multiplies age-driven leaf death by the nitrogen stress factor ``NSLLV`` and
+    reduces exponential leaf expansion under nitrogen and water stress while
+    DVS < 0.2 and LAI < 0.75. Leaf biomass can also be reallocated to storage organs.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    The ``WOFOST_Leaf_Dynamics`` table still applies. This subclass adds:
+
+    | Output | Parameters influencing it          |
+    |--------|------------------------------------|
+    | LAI    | NSLLV, RFRGRL, REALLOC_LV          |
+    | TWLV   | REALLOC_LV                         |
+
+    [!NOTE]
+    ``DVS < 0.2`` and ``LAI < 0.75`` are fixed cutoffs, not parameters.
+    ``SPAN`` keeps the straight-through estimator of the parent class when it is calibrated.
+    """
+
+    PUBLISH_RATES = ["DRLV", "GRLV"]
+
+    def calc_rates(self, day: datetime.date, drv: dict) -> None:
+        """Calculate leaf rates, then apply the nitrogen-stress corrections."""
+        super().calc_rates(day, drv)
+        rates = self.rates
+        states = self.states
+        kiosk = self.kiosk
+
+        emerged = kiosk["DVS"] >= self._zero
+        rates.DALV = torch.minimum(rates.DALV * kiosk["NSLLV"], states.WLV)
+        rates.DALV = emerged * rates.DALV
+        rates.DRLV = torch.maximum(rates.DSLV, rates.DALV)
+
+        # Juvenile expansion is source-limited by water and nitrogen stress.
+        juvenile = emerged & (kiosk["DVS"] < 0.2) & (states.LAI < 0.75)
+        factor = torch.where(juvenile, kiosk["RFTRA"] * kiosk["RFRGRL"], 1.0 + self._zero)
+        expanding = states.LAIEXP < 6.0
+        rates.GLAIEX = torch.where(expanding & emerged, rates.GLAIEX * factor, rates.GLAIEX)
+        leaf_area_growth = torch.minimum(rates.GLAIEX, rates.GLASOL)
+        rates.SLAT = torch.where(
+            emerged & expanding & (rates.GRLV > self._epsilon),
+            leaf_area_growth / (rates.GRLV + self._epsilon),
+            rates.SLAT,
+        )
+
+    def _apply_reallocation(self, leaf_biomass: torch.Tensor) -> torch.Tensor:
+        realloc = self.kiosk["REALLOC_LV"]
+        total = leaf_biomass.sum(dim=0)
+        factor = torch.where(
+            (realloc > self._zero) & (realloc < total),
+            (total - realloc) / torch.clamp(total, min=self._epsilon),
+            1.0 + self._zero,
+        )
+        return leaf_biomass * factor
 
 
 def _exist_required_external_variables(kiosk):
