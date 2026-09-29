@@ -16,6 +16,30 @@ phenology_config = Configuration(
     OUTPUT_VARS=["DVR", "DVS", "TSUM", "TSUME", "VERN"],
 )
 
+phenology_config_with_activity = Configuration(
+    CROP=DVS_Phenology,
+    OUTPUT_VARS=["DVR", "DVS", "TSUM", "TSUME", "VERN", "IS_ACTIVE", "STAGE", "DOS"],
+)
+
+# Phenology-related crop model parameters
+CROP_MODEL_PARAMS = [
+    "TSUMEM",
+    "TBASEM",
+    "TEFFMX",
+    "TSUM1",
+    "TSUM2",
+    "IDSL",
+    "DLO",
+    "DLC",
+    "DVSI",
+    "DVSEND",
+    "DTSMTB",
+    "VERNRTB",
+    "VERNSAT",
+    "VERNBASE",
+    "VERNDVS",
+]
+
 
 class DVS_PhenologyForPCSE(DVS_Phenology):
     """DVS_Phenology subclass that adds a get_variable() override required by
@@ -63,26 +87,8 @@ def assert_reference_match(reference, model, expected_precision):
 def get_test_diff_phenology_model():
     test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"
     test_data = get_test_data(test_data_url)
-    # Phenology-related crop model parameters
-    crop_model_params = [
-        "TSUMEM",
-        "TBASEM",
-        "TEFFMX",
-        "TSUM1",
-        "TSUM2",
-        "IDSL",
-        "DLO",
-        "DLC",
-        "DVSI",
-        "DVSEND",
-        "DTSMTB",
-        "VERNRTB",
-        "VERNSAT",
-        "VERNBASE",
-        "VERNDVS",
-    ]
     (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-        prepare_engine_input(test_data, crop_model_params)
+        prepare_engine_input(test_data, CROP_MODEL_PARAMS)
     )
     return DiffPhenologyDynamics(
         crop_model_params_provider,
@@ -90,6 +96,46 @@ def get_test_diff_phenology_model():
         agro_management_inputs,
         phenology_config,
     )
+
+
+def _prepare_batch_phenology_input(n, tsum1=100.0, tsum2=100.0, tsumem=30.0):
+    """Prepare an n-element phenology batch that matures quickly.
+
+    IDSL is disabled (no daylength/vernalisation gating) and TSUMEM/TSUM1/TSUM2
+    are set to small values so the whole crop cycle completes in a few weeks, well within the
+    available weather data window even with a staggered CROP_START_DATE.
+    """
+    test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
+    test_data = get_test_data(test_data_url)
+
+    (
+        crop_model_params_provider,
+        weather_data_provider,
+        agro_management_inputs,
+        _,
+    ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS, meteo_range_checks=False)
+
+    for param in CROP_MODEL_PARAMS:
+        if param == "DTSMTB":
+            repeated = crop_model_params_provider[param].repeat(n, 1)
+        else:
+            repeated = crop_model_params_provider[param].repeat(n)
+        crop_model_params_provider.set_override(param, repeated, check=False)
+
+    dtype = crop_model_params_provider["TSUM1"].dtype
+    crop_model_params_provider.set_override("IDSL", torch.zeros(n, dtype=dtype), check=False)
+    crop_model_params_provider.set_override(
+        "TSUMEM", torch.full((n,), tsumem, dtype=dtype), check=False
+    )
+    crop_model_params_provider.set_override(
+        "TSUM1", torch.full((n,), tsum1, dtype=dtype), check=False
+    )
+    crop_model_params_provider.set_override(
+        "TSUM2", torch.full((n,), tsum2, dtype=dtype), check=False
+    )
+
+    day0 = weather_data_provider[0]["DAY"].toordinal()
+    return crop_model_params_provider, weather_data_provider, agro_management_inputs, day0
 
 
 class DiffPhenologyDynamics(torch.nn.Module):
@@ -138,29 +184,13 @@ class TestPhenologyDynamics:
     @pytest.mark.parametrize("test_data_url", phenology_data_urls)
     def test_phenology_with_testengine(self, test_data_url, device):
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNRTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
+
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS)
 
         engine = EngineTestHelper(config=phenology_config)
         engine.setup(
@@ -206,29 +236,12 @@ class TestPhenologyDynamics:
         # pick a test case with vernalisation to have all the parameters
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNRTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS, meteo_range_checks=False)
 
         if param == "TEMP":
             if device == "cuda":
@@ -288,29 +301,13 @@ class TestPhenologyDynamics:
         # TODO: revisit this choice when Engine is fixed
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNRTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
+
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS)
 
         test_value = crop_model_params_provider[param]
         if param == "DTSMTB":
@@ -349,31 +346,16 @@ class TestPhenologyDynamics:
     def test_phenology_with_multiple_parameter_vectors(self, device):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
+
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS)
 
-        for param in crop_model_params:
-            if param == "DTSMTB":
+        for param in CROP_MODEL_PARAMS:
+            if param in ("DTSMTB", "VERNRTB"):
                 repeated = crop_model_params_provider[param].repeat(10, 1)
             else:
                 repeated = crop_model_params_provider[param].repeat(10)
@@ -396,46 +378,15 @@ class TestPhenologyDynamics:
     def test_phenology_with_multiple_parameter_arrays(self, device):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS, meteo_range_checks=False)
 
-        for param in (
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ):
-            if param == "DTSMTB":
+        for param in CROP_MODEL_PARAMS:
+            if param in ("DTSMTB", "VERNRTB"):
                 repeated = crop_model_params_provider[param].repeat(30, 5, 1)
             else:
                 repeated = crop_model_params_provider[param].broadcast_to((30, 5))
@@ -463,28 +414,13 @@ class TestPhenologyDynamics:
     def test_phenology_with_incompatible_parameter_vectors(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
+
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params)
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS)
 
         crop_model_params_provider.set_override(
             "TSUM1", crop_model_params_provider["TSUM1"].repeat(10), check=False
@@ -504,28 +440,13 @@ class TestPhenologyDynamics:
     def test_phenology_with_incompatible_weather_parameter_vectors(self):
         test_data_url = f"{phy_data_folder}/test_phenology_wofost72_05.yaml"
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
+
         (
             crop_model_params_provider,
             weather_data_provider,
             agro_management_inputs,
             _,
-        ) = prepare_engine_input(test_data, crop_model_params, meteo_range_checks=False)
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS, meteo_range_checks=False)
 
         crop_model_params_provider.set_override(
             "TSUM1", crop_model_params_provider["TSUM1"].repeat(10), check=False
@@ -557,24 +478,9 @@ class TestPhenologyDynamics:
     @pytest.mark.parametrize("test_data_url", wofost72_data_urls)
     def test_wofost_pp_with_phenology(self, test_data_url, monkeypatch):
         test_data = get_test_data(test_data_url)
-        crop_model_params = [
-            "TSUMEM",
-            "TBASEM",
-            "TEFFMX",
-            "TSUM1",
-            "TSUM2",
-            "IDSL",
-            "DLO",
-            "DLC",
-            "DVSI",
-            "DVSEND",
-            "DTSMTB",
-            "VERNSAT",
-            "VERNBASE",
-            "VERNDVS",
-        ]
+
         (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
-            prepare_engine_input(test_data, crop_model_params, return_weather_data_provider=True)
+            prepare_engine_input(test_data, CROP_MODEL_PARAMS, return_weather_data_provider=True)
         )
         expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
 
@@ -592,6 +498,134 @@ class TestPhenologyDynamics:
             assert len(actual_results) == len(expected_results)
             for reference, model_day in zip(expected_results, actual_results, strict=False):
                 assert_reference_match(reference, model_day, expected_precision)
+
+    def test_crop_start_date_default_is_backward_compatible(self, device):
+        # CROP_START_DATE is never overridden here: relies entirely on the
+        # injected -1 default, so the run must reproduce the reference exactly,
+        # with IS_ACTIVE True for every output day.
+        test_data_url = f"{phy_data_folder}/test_phenology_wofost72_17.yaml"
+        test_data = get_test_data(test_data_url)
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            _,
+        ) = prepare_engine_input(test_data, CROP_MODEL_PARAMS)
+
+        engine = EngineTestHelper(config=phenology_config_with_activity)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
+        engine.run_till_terminate()
+        actual_results = engine.get_output()
+        expected_results, expected_precision = test_data["ModelResults"], test_data["Precision"]
+
+        assert len(actual_results) == len(expected_results)
+        for reference, model in zip(expected_results, actual_results, strict=False):
+            assert_reference_match(reference, model, expected_precision)
+            assert bool(model["IS_ACTIVE"])
+
+    def test_phenology_staggered_crop_start_date(self, device):
+        n = 3
+        offsets = [0, 5, 15]  # offsets for start date of each element
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            day0,
+        ) = _prepare_batch_phenology_input(n)
+
+        start_dates = torch.tensor(
+            [day0 + offset for offset in offsets], dtype=torch.int64, device=device
+        )
+        crop_model_params_provider.set_override("CROP_START_DATE", start_dates, check=False)
+
+        engine = EngineTestHelper(config=phenology_config_with_activity)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
+        engine.run_till_terminate()
+        results = engine.get_output()
+
+        is_active = torch.stack([r["IS_ACTIVE"] for r in results]).cpu()
+        dvs = torch.stack([r["DVS"] for r in results]).cpu()
+        dos = torch.stack([r["DOS"] for r in results]).cpu()
+
+        # element 0: active from the very first day (offset = 0)
+        assert torch.all(is_active[:, 0])
+        assert not torch.any(torch.isnan(dvs[:, 0]))
+
+        # element 1 and 2: inactive (DVS NaN) until its own start day, then active
+        for el in (1, 2):
+            assert not torch.any(is_active[: offsets[el], el])
+            assert torch.all(torch.isnan(dvs[: offsets[el], el]))
+            assert torch.all(is_active[offsets[el] :, el])
+            assert not torch.any(torch.isnan(dvs[offsets[el] :, el]))
+            assert dos[offsets[el], el] == day0 + offsets[el]
+
+    def test_phenology_matured_element_keeps_reporting_frozen_values(self, device):
+        n = 2
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            _,
+        ) = _prepare_batch_phenology_input(n)
+
+        # element 0 matures much sooner than element 1
+        tsum1 = crop_model_params_provider["TSUM1"].clone()
+        tsum2 = crop_model_params_provider["TSUM2"].clone()
+        tsum1[0], tsum2[0] = 10.0, 10.0
+        tsum1[1], tsum2[1] = 300.0, 300.0
+        crop_model_params_provider.set_override("TSUM1", tsum1, check=False)
+        crop_model_params_provider.set_override("TSUM2", tsum2, check=False)
+
+        engine = EngineTestHelper(config=phenology_config_with_activity)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
+        engine.run_till_terminate()
+        results = engine.get_output()
+
+        stage = torch.stack([r["STAGE"] for r in results]).cpu()
+        is_active = torch.stack([r["IS_ACTIVE"] for r in results]).cpu()
+        dvs = torch.stack([r["DVS"] for r in results]).cpu()
+
+        # identify first day of maturity of element zero
+        mature_days = (stage[:, 0] == 3).nonzero(as_tuple=True)[0]
+        assert mature_days.numel() > 0
+        first_mature_day = mature_days[0].item()
+
+        # element 1 has not matured yet at that point
+        assert stage[first_mature_day, 1] < 3
+
+        # element 0 stays active for the remaining part of the simulation, and keeps reporting
+        # its frozen final DVS (2.0) from the maturity day onwards
+        assert torch.all(is_active[first_mature_day:, 0])
+        assert torch.all(dvs[first_mature_day:, 0] == 2)
+
+    def test_phenology_no_early_termination_for_pending_element(self, device):
+        n = 2
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            day0,
+        ) = _prepare_batch_phenology_input(n, tsum1=10.0, tsum2=10.0)
+
+        # element 1 starts 30 days after element 0
+        start_dates = torch.tensor([day0, day0 + 30], dtype=torch.int64, device=device)
+        crop_model_params_provider.set_override("CROP_START_DATE", start_dates, check=False)
+
+        engine = EngineTestHelper(config=phenology_config_with_activity)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
+        engine.run_till_terminate()
+        results = engine.get_output()
+
+        stage = torch.stack([r["STAGE"] for r in results]).cpu()
+
+        # element 0 matures quickly, well before element 1's own start day
+        mature_day = (stage[:, 0] == 3).nonzero(as_tuple=True)[0][0].item()
+        assert stage[mature_day, 1] == -1  # element 1 still inactive
+
+        # the run only terminates once every started element has matured too
+        assert stage[-2, 1] == 2  # on the second-last day, element 1 is not yet mature
+        assert stage[-1, 0] == 3  # on the last day, both elements are mature
+        assert stage[-1, 1] == 3
 
 
 @pytest.mark.usefixtures("fast_mode")
@@ -737,3 +771,35 @@ class TestDiffPhenologyDynamicsGradients:
                 ),
                 UserWarning,
             )
+
+    def test_gradients_mixed_active_inactive_batch(self, device):
+        (
+            crop_model_params_provider,
+            weather_data_provider,
+            agro_management_inputs,
+            day0,
+        ) = _prepare_batch_phenology_input(2, tsum1=50.0, tsum2=50.0)
+
+        start_dates = torch.tensor([-1, day0 + 5], dtype=torch.int64, device=device)
+        crop_model_params_provider.set_override("CROP_START_DATE", start_dates, check=False)
+        tsum1_value = crop_model_params_provider["TSUM1"].clone()
+
+        def model(params_dict):
+            for name, value in params_dict.items():
+                crop_model_params_provider.set_override(name, value, check=False)
+            engine = EngineTestHelper(config=phenology_config_with_activity)
+            engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
+            engine.run_till_terminate()
+            results = engine.get_output()
+            is_active = torch.stack([r["IS_ACTIVE"] for r in results])
+            dvs = torch.stack([r["DVS"] for r in results])
+            # mask the inactive elements with a plain zero constant
+            return {"DVS": torch.where(is_active, dvs, torch.zeros_like(dvs))}
+
+        numerical_grad = calculate_numerical_grad(lambda: model, "TSUM1", tsum1_value, "DVS")
+
+        param = torch.nn.Parameter(tsum1_value.clone())
+        grad = torch.autograd.grad(model({"TSUM1": param})["DVS"].sum(), param)[0]
+        assert torch.all(torch.isfinite(grad))
+
+        torch.testing.assert_close(grad, numerical_grad, rtol=1e-2, atol=1e-2)
