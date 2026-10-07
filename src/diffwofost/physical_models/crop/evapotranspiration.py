@@ -15,6 +15,22 @@ from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
 
 
+def _stack_layer_property(values, dtype, device) -> torch.Tensor:
+    """Stack per-layer soil properties without dropping autograd history.
+
+    Each layer property must be a Python number or a single-element tensor
+    (reshaped to ``()``). ``torch.tensor([...])`` would break the graph when a
+    value already requires grad; ``stack`` of ``.to()`` tensors keeps it.
+    """
+    columns = []
+    for value in values:
+        if isinstance(value, torch.Tensor):
+            columns.append(value.to(dtype=dtype, device=device).reshape(()))
+        else:
+            columns.append(torch.tensor(value, dtype=dtype, device=device))
+    return torch.stack(columns)
+
+
 def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
     """Soil Water Easily Available Fraction (SWEAF).
 
@@ -438,6 +454,20 @@ class EvapotranspirationCO2(_BaseEvapotranspirationNonLayered):
     | DVS  | Crop development stage            | Phenology     | -    |
     | LAI  | Leaf area index                   | Leaf dynamics | -    |
     | SM   | Volumetric soil moisture content  | Waterbalance  | -    |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                                      |
+    |--------|----------------------------------------------------------------|
+    | EVWMX  | KDIFTB                                                         |
+    | EVSMX  | KDIFTB                                                         |
+    | TRAMX  | CFET, KDIFTB, CO2, CO2TRATB                                    |
+    | TRA    | CFET, KDIFTB, DEPNR, SMFCF, SMW, CRAIRC, SM0, CO2, CO2TRATB    |
+    | RFTRA  | CFET, DEPNR, SMFCF, SMW, CRAIRC, SM0, CO2, CO2TRATB            |
+
+    [!NOTE]
+    ``DEPNR < 3`` uses the straight-through estimator in ``SWEAF``. ``IAIRDU`` and
+    ``IOX`` are switches.
     """
 
     class Parameters(TensorParamTemplate):
@@ -547,6 +577,21 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
     | LAI  | Leaf area index                   | Leaf dynamics | -    |
     | RD   | Rooting depth                     | Root dynamics | cm   |
     | SM   | Soil moisture per layer           | Waterbalance  | -    |
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    | Output | Parameters influencing it                                              |
+    |--------|------------------------------------------------------------------------|
+    | EVWMX  | KDIFTB                                                                 |
+    | EVSMX  | KDIFTB                                                                 |
+    | TRAMX  | CFET, KDIFTB, CO2, CO2TRATB                                            |
+    | TRA    | CFET, KDIFTB, DEPNR, CO2, CO2TRATB, layer SMW, SMFCF, SM0, CRAIRC      |
+    | RFTRA  | CFET, DEPNR, CO2, CO2TRATB, layer SMW, SMFCF, SM0, CRAIRC              |
+
+    [!NOTE]
+    Soil moisture thresholds come from the soil profile, not from crop parameters.
+    ``DEPNR < 3`` uses the straight-through estimator in ``SWEAF``. ``IAIRDU`` and
+    ``IOX`` are switches.
     """
 
     soil_profile = Any()
@@ -607,23 +652,24 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
             shape=shape,
         )
 
-        # Pre-stack layer soil properties as tensors
+        # Pre-stack layer soil properties as tensors. ``stack`` keeps the
+        # autograd history when a layer property is already a tensor.
         n_layers = len(self.soil_profile)
         self._n_layers = n_layers
-        self._layer_smw = torch.tensor(
-            [layer.SMW for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_smw = _stack_layer_property(
+            [layer.SMW for layer in self.soil_profile], self.dtype, self.device
         )
-        self._layer_smfcf = torch.tensor(
-            [layer.SMFCF for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_smfcf = _stack_layer_property(
+            [layer.SMFCF for layer in self.soil_profile], self.dtype, self.device
         )
-        self._layer_sm0 = torch.tensor(
-            [layer.SM0 for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_sm0 = _stack_layer_property(
+            [layer.SM0 for layer in self.soil_profile], self.dtype, self.device
         )
-        self._layer_crairc = torch.tensor(
-            [layer.CRAIRC for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        self._layer_crairc = _stack_layer_property(
+            [layer.CRAIRC for layer in self.soil_profile], self.dtype, self.device
         )
-        thicknesses = torch.tensor(
-            [layer.Thickness for layer in self.soil_profile], dtype=self.dtype, device=self.device
+        thicknesses = _stack_layer_property(
+            [layer.Thickness for layer in self.soil_profile], self.dtype, self.device
         )
         self._layer_depth_hi = torch.cumsum(thicknesses, dim=0)
         self._layer_depth_lo = self._layer_depth_hi - thicknesses
@@ -773,7 +819,8 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         rftra = r.RFOS * r.RFWS
         r.TRALY = r.TRAMX * rftra * root_fraction
         r.TRA = r.TRALY.sum(dim=0)
-        r.RFTRA = torch.where(r.TRAMX > self._epsilon, r.TRA / r.TRAMX, 1.0)
+        tramx = torch.clamp(r.TRAMX, min=self._epsilon)
+        r.RFTRA = torch.where(r.TRAMX > self._epsilon, r.TRA / tramx, 1.0)
 
         # Pre-emergence: RFOS = 1.0
         r.RFOS = dvs_mask_layers * r.RFOS + (1.0 - dvs_mask_layers)

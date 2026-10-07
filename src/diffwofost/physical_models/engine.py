@@ -144,12 +144,15 @@ class Engine(PcseEngine):
         # Determine common shape for the parameters and weather data
         self._shape = _get_shape(self.parameterprovider, self.drv)
 
+        # Soil is created before the first management call, as in PCSE. An
+        # amendment on the sowing day is otherwise dispatched before any
+        # listener exists and is lost.
+        if self.mconf.SOIL is not None:
+            self.soil = self.mconf.SOIL(self.day, self.kiosk, parameterprovider, shape=self._shape)
+
         # Call AgroManagement module for management actions at initialization
         self.agromanager(self.day, None)
 
-        # Component for simulation of soil processes
-        if self.mconf.SOIL is not None:
-            self.soil = self.mconf.SOIL(self.day, self.kiosk, parameterprovider)
         # Component for crop simulation
         if self.mconf.CROP is not None:
             self._create_crop(self.day)
