@@ -155,6 +155,8 @@ class N_Crop_Dynamics(SimulationObject):
         rates = self.rates
         states = self.states
         kiosk = self.kiosk
+
+        # Loss of nitrogen with dying biomass.
         # Same unused-branch guard as N_Stress: the selected rate is still 0.
         leaf_weight = torch.clamp(kiosk["WLV"], min=1e-12)
         stem_weight = torch.clamp(kiosk["WST"], min=1e-12)

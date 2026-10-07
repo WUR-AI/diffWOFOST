@@ -244,6 +244,7 @@ class SNOMIN(SimulationObject):
         self._device = ComputeConfig.get_device()
         self._dtype = ComputeConfig.get_dtype()
         self.kiosk = kiosk
+
         # Initial mineral nitrogen is one value per layer, not a batch axis.
         self.params = self.Parameters(parvalues, shape=shape, do_not_broadcast=["NH4I", "NO3I"])
         if "soil_profile" not in parvalues:
@@ -254,6 +255,7 @@ class SNOMIN(SimulationObject):
         params = self.params
         nh4 = torch.stack([params.NH4I[il] * _M2_TO_HA for il in range(n_layers)], dim=0)
         no3 = torch.stack([params.NO3I[il] * _M2_TO_HA for il in range(n_layers)], dim=0)
+
         age = []
         orgmat = []
         corg = []
@@ -266,6 +268,7 @@ class SNOMIN(SimulationObject):
             orgmat.append(organic)
             corg.append(carbon)
             norg.append(carbon / layer.CNRatioSOMI)
+
         # Amendment axis first, layer axis second: (1, n_layers, *batch).
         # Layer properties are identical for every batch member; parameters
         # such as A0SOM already carry the batch axis.
@@ -277,6 +280,7 @@ class SNOMIN(SimulationObject):
         norg = _with_batch(torch.stack(norg, dim=0).unsqueeze(0), batch)
         nh4 = _with_batch(nh4, batch)
         no3 = _with_batch(no3, batch)
+
         zeros = params.A0SOM.new_zeros(params.shape)
         self.states = self.StateVariables(
             kiosk,
@@ -323,6 +327,8 @@ class SNOMIN(SimulationObject):
             shape=shape,
         )
         self.rates = self.RateVariables(kiosk, do_not_broadcast=self._LAYER_RATES, shape=shape)
+
+        # Placeholders for the next amendment
         self._RAGEAM = torch.zeros_like(age)
         self._RORGMATAM = torch.zeros_like(orgmat)
         self._RCORGAM = torch.zeros_like(corg)
@@ -334,6 +340,7 @@ class SNOMIN(SimulationObject):
         self._NORGI = norg
         self._NH4I = nh4
         self._NO3I = no3
+
         self._connect_signal(self._on_APPLY_N_SNOMIN, signals.apply_n_snomin)
 
     def calc_rates(self, day: datetime.date, drv):
@@ -402,6 +409,7 @@ class SNOMIN(SimulationObject):
             rooting_depth,
             soil_moisture,
         )
+
         # Remaining mineral nitrogen after uptake, then chemical conversion
         nh4_pre = states.NH4 - rates.RNH4UP * delt
         no3_pre = states.NO3 - rates.RNO3UP * delt
@@ -474,12 +482,18 @@ class SNOMIN(SimulationObject):
         rates = self.rates
         params = self.params
         kiosk = self.kiosk
+
+        # Organic pools
         states.AGE = states.AGE + rates.RAGE * delt
         states.ORGMAT = states.ORGMAT + rates.RORGMAT * delt
         states.CORG = states.CORG + rates.RCORG * delt
         states.NORG = states.NORG + rates.RNORG * delt
+
+        # Mineral pools
         states.NH4 = states.NH4 + rates.RNH4 * delt
         states.NO3 = states.NO3 + rates.RNO3 * delt
+
+        # Plant-available nitrogen
         rooting_depth = kiosk["RD"] * _CM_TO_M if "RD" in kiosk else _as_tensor(0.0)
         states.NAVAIL = (
             _available_nitrogen(
@@ -488,6 +502,8 @@ class SNOMIN(SimulationObject):
             / _M2_TO_HA
         )
         self._check_mass_balances(day, delt)
+
+        # Profile totals.
         # Organic pools are (amendments, layers, *batch). Mineral pools are
         # (layers, *batch). Sum those leading axes only; a bare sum would add
         # the batch members together.
@@ -514,7 +530,22 @@ class SNOMIN(SimulationObject):
         f_NO3N=None,
         initial_age=None,
     ):
-        """Queue one fertiliser or manure amendment for the next rate calculation."""
+        """Application rates of one fertiliser or manure amendment.
+
+        Calculates the rates of organic matter, organic carbon, organic
+        nitrogen, ammonium, nitrate, and the initial apparent age of the
+        applied material. The AgroManagement file provides:
+
+        | Name              | Description                                 | Unit                   |
+        |-------------------|---------------------------------------------|------------------------|
+        | amount            | Amount of material in the amendment         | kg material ha-1       |
+        | application_depth | Depth over which the amendment is applied   | cm                     |
+        | cnratio           | C:N ratio of the organic matter             | kg C kg-1 N            |
+        | initial_age       | Initial apparent age of the organic matter  | y                      |
+        | f_NH4N            | Fraction of ammonium-N in the material      | kg NH4-N kg-1 material |
+        | f_NO3N            | Fraction of nitrate-N in the material       | kg NO3-N kg-1 material |
+        | f_orgmat          | Fraction of organic matter in the amendment | kg OM kg-1 material    |
+        """
         profile = self.soiln_profile
         depth = _as_tensor(application_depth)
         depth = torch.maximum(depth, profile[0].Thickness)
@@ -528,6 +559,7 @@ class SNOMIN(SimulationObject):
         org_am, corg_am, norg_am = _application_organic(
             profile, amount_t, depth, cn_ratio, organic_fraction
         )
+
         n_layers = len(profile)
         zeros = torch.zeros((1, n_layers), dtype=self._dtype, device=self._device)
         age_row = age.expand(1, n_layers)

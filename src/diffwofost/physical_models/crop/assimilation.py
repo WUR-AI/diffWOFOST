@@ -686,6 +686,8 @@ class WOFOST81_Assimilation(SimulationObject):
         temp = drv["TEMP"]
         dtemp = drv["DTEMP"]
         tmin = drv["TMIN"]
+
+        # 7-day running average of TMIN.
         # PCSE starts filling this window only once Wofost81 leaves the emerging
         # stage and calls assimilation. Pre-emergence days are excluded from the
         # average so a mixed batch does not pollute emerged members.
@@ -695,11 +697,17 @@ class WOFOST81_Assimilation(SimulationObject):
         tmin_stack = torch.stack(list(self._tmn_window), dim=0)
         mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
         tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
+
+        # Photoperiodic daylength.
         dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(
             day, drv["LAT"], drv["IRRAD"], dtype=self.dtype, device=self.device
         )
+
+        # CO2 and temperature response factors of AMAX.
         tmpf = params.TMPFTB(temp)
         eff = params.EFFTB(dtemp) * params.CO2EFFTB(params.CO2)
+
+        # Gross assimilation, then the low-minimum-temperature correction.
         dtga = totass8(
             params.AMAX_LNB,
             params.AMAX_REF,
@@ -722,6 +730,8 @@ class WOFOST81_Assimilation(SimulationObject):
             device=self.device,
         )
         dtga = dtga * params.TMNFTB(tminra)
+
+        # Assimilation in kg CH2O per ha.
         # Same as PCSE: no DVS factor here. Wofost81 skips this module while
         # STAGE is emerging for the whole batch.
         rates.PGASS = dtga * (30.0 / 44.0)

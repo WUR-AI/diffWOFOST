@@ -235,6 +235,7 @@ class N_Demand_Uptake(SimulationObject):
         rates.RNtranslocation = torch.minimum(
             rates.NdemandSO / delt, states.Ntranslocatable / params.TCNT
         )
+
         # PCSE divides by the total only when it is not zero. Each organ pool is
         # clamped at zero, so the total cannot be negative and ``> 0`` matches
         # that test. ``torch.where`` still evaluates the division, so the
@@ -259,13 +260,16 @@ class N_Demand_Uptake(SimulationObject):
             no_share,
         )
 
+        # Uptake from the soil.
+        # PCSE: max(0, min(demand - fixation, NAVAIL, RNUPTAKEMAX)).
         soil_limited = torch.minimum(
             torch.clamp(rates.Ndemand - rates.RNfixation, min=0.0), kiosk["NAVAIL"]
         )
-        # PCSE: max(0, min(demand - fixation, NAVAIL, RNUPTAKEMAX)).
         rates.RNuptake = (
             torch.clamp(torch.minimum(soil_limited, params.RNUPTAKEMAX), min=0.0) * nutrient_limit
         )
+
+        # Distribute uptake over the organs.
         supply = rates.RNuptake + rates.RNfixation
         has_demand = rates.Ndemand > 0
         safe_demand = torch.clamp(rates.Ndemand, min=1e-12)
