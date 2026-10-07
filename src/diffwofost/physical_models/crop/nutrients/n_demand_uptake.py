@@ -191,8 +191,10 @@ class N_Demand_Uptake(SimulationObject):
         states = self.states
         delt = 1.0
         maximum = self._maximum_concentrations()
+        # No nutrients are absorbed when severe water shortage occurs, RFTRA <= 0.01.
         nutrient_limit = torch.where(kiosk["RFTRA"] > 0.01, 1.0, 0.0)
 
+        # N demand [kg ha-1]
         rates.NdemandLV = _organ_demand(
             maximum.NMAXLV, kiosk["WLV"], kiosk["NamountLV"], kiosk["GRLV"], delt
         )
@@ -206,8 +208,11 @@ class N_Demand_Uptake(SimulationObject):
             maximum.NMAXSO, kiosk["WSO"], kiosk["NamountSO"], kiosk["GRSO"], delt
         )
         rates.Ndemand = rates.NdemandLV + rates.NdemandST + rates.NdemandRT + rates.NdemandSO
+
+        # biological nitrogen fixation
         rates.RNfixation = torch.clamp(params.NFIX_FR * rates.Ndemand, min=0.0) * nutrient_limit
 
+        # Calculate translocatable nitrogen in different organs
         translocating = kiosk["DVS"] >= params.DVS_N_TRANSL
         states.NtranslocatableLV = torch.where(
             translocating,

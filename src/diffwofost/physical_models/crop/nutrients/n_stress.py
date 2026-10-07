@@ -92,6 +92,8 @@ class N_Stress(SimulationObject):
         kiosk = self.kiosk
         nmax_leaf = params.NMAXLV_TB(kiosk["DVS"])
         nmax_stem = params.NMAXST_FR * nmax_leaf
+
+        # Nitrogen stress index for leaf death
         nitrogen_above = kiosk["NamountLV"] + kiosk["NamountST"] + kiosk["NamountSO"]
         nitrogen_above_max = (
             kiosk["WLV"] * nmax_leaf + kiosk["WST"] * nmax_stem + kiosk["WSO"] * params.NMAXSO
@@ -100,6 +102,7 @@ class N_Stress(SimulationObject):
         stress_index = torch.clamp(ratio, min=1.0, max=2.0)
         rates.NSLLV = params.NSLLV_TB(stress_index)
 
+        # Reduction of juvenile leaf expansion.
         # ``torch.where`` still divides when WLV is zero. The clamp keeps that
         # unused branch finite; the selected value stays 0, as in PCSE.
         leaf_weight = torch.clamp(kiosk["WLV"], min=1e-12)

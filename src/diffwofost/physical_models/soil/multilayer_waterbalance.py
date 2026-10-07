@@ -320,10 +320,12 @@ class WaterBalanceLayered(SimulationObject):
         delt = 1.0
         rain = _as_tensor(drv.RAIN if hasattr(drv, "RAIN") else drv["RAIN"])
 
+        # Rate of irrigation (RIRR) and rainfall kept for totalling in RAINT
         rates.RIRR = self._RIRR
         self._RIRR = _as_tensor(0.0)
         self._RAIN = rain
 
+        # Crop transpiration and maximum evaporation rates.
         # Layered transpiration is published once any batch member has emerged.
         # Before that the kiosk has no layer-shaped TRALY, as in PCSE before
         # emergence: no transpiration, and evaporation at the weather potentials.
@@ -359,6 +361,7 @@ class WaterBalanceLayered(SimulationObject):
         rates.WTRALY = wtraly
         rates.WTRA = wtra
 
+        # Actual evaporation rates
         heavy_infiltration = self._RINold >= 1
         evaporative_demand = evsmx * (torch.sqrt(self._DSLR + 1) - torch.sqrt(self._DSLR))
         soil_evaporation = torch.minimum(evsmx, evaporative_demand + self._RINold)
@@ -373,7 +376,10 @@ class WaterBalanceLayered(SimulationObject):
             torch.where(heavy_infiltration, _as_tensor(1.0), self._DSLR + 1),
         )
 
+        # conductivities and Matric Flux Potentials for all layers
         pf, conductivity, matric_flux = self._hydraulic_state(states.SM)
+
+        # Potentially infiltrating rainfall.
         # IFUNRN is 0 or 1 per batch element. torch.where keeps both formulas
         # defined when members disagree, matching the classic water balance.
         rin_fixed = (1.0 - params.NOTINF) * rain
@@ -387,6 +393,7 @@ class WaterBalanceLayered(SimulationObject):
             rin_pre,
         )
 
+        # Maximum flow at the top boundary of each layer
         flow_max = self._maximum_boundary_flow(
             states.WC, wtraly, pf, conductivity, matric_flux, delt
         )
@@ -401,6 +408,7 @@ class WaterBalanceLayered(SimulationObject):
         rates.DWC = dwc
         rates.BOTTOMFLOW = flow[-1]
 
+        # Surface storage and surface runoff
         not_infiltrated = rain + rates.RIRR - rates.EVW - rates.RIN
         rates.DSS = torch.minimum(not_infiltrated, params.SSMAX - states.SS)
         rates.DTSR = not_infiltrated - rates.DSS
@@ -416,12 +424,18 @@ class WaterBalanceLayered(SimulationObject):
         sm = torch.stack([wc[il] / layer.Thickness for il, layer in enumerate(profile)], dim=0)
         states.WC = wc
         states.SM = sm
+
+        # total transpiration and evaporation
         states.WTRAT = states.WTRAT + rates.WTRA * delt
         states.EVWT = states.EVWT + rates.EVW * delt
         states.EVST = states.EVST + rates.EVS * delt
+
+        # totals for rainfall, irrigation and infiltration
         states.RAINT = states.RAINT + self._RAIN
         states.TOTINF = states.TOTINF + rates.RIN * delt
         states.TOTIRR = states.TOTIRR + rates.RIRR * delt
+
+        # surface storage and runoff
         states.SS = states.SS + rates.DSS * delt
         states.TSR = states.TSR + rates.DTSR * delt
         states.BOTTOMFLOWT = states.BOTTOMFLOWT + rates.BOTTOMFLOW * delt

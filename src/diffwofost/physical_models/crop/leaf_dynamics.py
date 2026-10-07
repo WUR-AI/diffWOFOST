@@ -476,6 +476,7 @@ class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
         states = self.states
         kiosk = self.kiosk
 
+        # Nitrogen stress increases age-driven leaf death.
         emerged = kiosk["DVS"] >= self._zero
         rates.DALV = torch.minimum(rates.DALV * kiosk["NSLLV"], states.WLV)
         rates.DALV = emerged * rates.DALV

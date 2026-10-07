@@ -355,12 +355,15 @@ class SNOMIN(SimulationObject):
         )
         ph = torch.stack([layer.Soil_pH for layer in profile], dim=0)
 
+        # Collect amendment rates
         rates.RAGEAM = self._RAGEAM
         rates.RORGMATAM = self._RORGMATAM
         rates.RCORGAM = self._RCORGAM
         rates.RNORGAM = self._RNORGAM
         rates.RNH4AM = self._RNH4AM
         rates.RNO3AM = self._RNO3AM
+
+        # Reset placeholders for amendment rates
         self._RAGEAM = torch.zeros_like(states.AGE)
         self._RORGMATAM = torch.zeros_like(rates.RORGMATAM)
         self._RCORGAM = torch.zeros_like(rates.RCORGAM)
@@ -368,7 +371,10 @@ class SNOMIN(SimulationObject):
         self._RNH4AM = torch.zeros_like(states.NH4)
         self._RNO3AM = torch.zeros_like(states.NO3)
 
+        # Calculate increase in apparent age of each amendment
         rates.RAGEAG = _age_increase(states.AGE, delt, pf, ph, temperature)
+
+        # Calculate dissimilation rates of each amendment
         rates.RORGMATDIS, rates.RCORGDIS, rates.RNORGDIS = _dissimilation(
             states.AGE,
             states.ORGMAT,
@@ -379,10 +385,13 @@ class SNOMIN(SimulationObject):
             ph,
             temperature,
         )
+
+        # Calculate rates of change of apparent age, organic matter and organic C
         rates.RAGE = rates.RAGEAG + rates.RAGEAM
         rates.RORGMAT = rates.RORGMATAM - rates.RORGMATDIS
         rates.RCORG = rates.RCORGAM - rates.RCORGDIS
 
+        # Calculate N uptake rates
         rates.RNH4UP, rates.RNO3UP = _uptake(
             profile,
             delt,
@@ -393,6 +402,7 @@ class SNOMIN(SimulationObject):
             rooting_depth,
             soil_moisture,
         )
+        # Remaining mineral nitrogen after uptake, then chemical conversion
         nh4_pre = states.NH4 - rates.RNH4UP * delt
         no3_pre = states.NO3 - rates.RNO3UP * delt
         # Amendment axis only. The result stays one mineralization rate per layer.
@@ -415,6 +425,8 @@ class SNOMIN(SimulationObject):
             soil_moisture,
             temperature,
         )
+
+        # Calculate deposition rates
         rates.RNH4DEPOS, rates.RNO3DEPOS = _deposition(
             infiltration, params.NH4ConcR, params.NO3ConcR, states.NH4
         )
@@ -424,10 +436,14 @@ class SNOMIN(SimulationObject):
         no3_after = (
             no3_pre + (rates.RNO3AM + rates.RNO3NITR + rates.RNO3DEPOS - rates.RNO3DENITR) * delt
         )
+
+        # Inorganic nitrogen flow between layers
         conc_nh4 = _ammonium_concentration(profile, params.KSORP, nh4_after, soil_moisture)
         conc_no3 = _nitrate_concentration(profile, no3_after, soil_moisture)
         rates.RNH4IN, rates.RNH4OUT = _solute_flow(flow, conc_nh4)
         rates.RNO3IN, rates.RNO3OUT = _solute_flow(flow, conc_no3)
+
+        # Calculate rates of change of NH4-N and NO3-N
         rates.RNH4 = (
             rates.RNH4AM
             + rates.RNH4MIN
@@ -446,6 +462,8 @@ class SNOMIN(SimulationObject):
             + rates.RNO3IN
             - rates.RNO3OUT
         )
+
+        # Output rate variables for nitrogen loss
         rates.RNH4LEACHCUM = rates.RNH4OUT[-1] / _M2_TO_HA
         rates.RNO3LEACHCUM = rates.RNO3OUT[-1] / _M2_TO_HA
         rates.RNDENITCUM = rates.RNO3DENITR.sum(dim=0) / _M2_TO_HA

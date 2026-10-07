@@ -4,7 +4,7 @@ import torch
 from pcse.soil.soil_profile import SoilProfile as PcseSoilProfile
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.soil.soil_profile import SoilProfile
-from .test_wofost81_snomin import _example_soil
+from ..crop.test_wofost81_snomin import _example_soil
 
 
 def _close(actual, expected):

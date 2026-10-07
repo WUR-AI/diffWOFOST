@@ -125,7 +125,11 @@ class N_Crop_Dynamics(SimulationObject):
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, shape=shape)
         self.kiosk = kiosk
+
+        # Initialize components of the crop nitrogen dynamics
         self.demand_uptake = N_Demand_Uptake(day, kiosk, parvalues, shape=shape)
+
+        # Initial amounts at the maximum concentration of each organ
         params = self.params
         nmax_leaf = params.NMAXLV_TB(kiosk["DVS"])
         self.NamountLVI = kiosk["WLV"] * nmax_leaf
@@ -164,11 +168,16 @@ class N_Crop_Dynamics(SimulationObject):
         rates.RNdeathRT = torch.where(
             kiosk["WRT"] > 0, states.NamountRT / root_weight * kiosk["DRRT"], 0.0
         )
+
+        # N rates in leaves, stems, roots and storage organs computed as
+        # uptake - translocation - death.
+        # Storage organs only gain nitrogen by translocation.
         rates.RNamountLV = kiosk["RNuptakeLV"] - kiosk["RNtranslocationLV"] - rates.RNdeathLV
         rates.RNamountST = kiosk["RNuptakeST"] - kiosk["RNtranslocationST"] - rates.RNdeathST
         rates.RNamountRT = kiosk["RNuptakeRT"] - kiosk["RNtranslocationRT"] - rates.RNdeathRT
         rates.RNamountSO = kiosk["RNuptakeSO"] + kiosk["RNtranslocation"]
         rates.RNloss = rates.RNdeathLV + rates.RNdeathST + rates.RNdeathRT
+
         self._check_n_balance(day)
 
     def integrate(self, day: datetime.date, delt=1.0):
@@ -176,11 +185,15 @@ class N_Crop_Dynamics(SimulationObject):
         states = self.states
         rates = self.rates
         kiosk = self.kiosk
+
+        # N amount in leaves, stems, roots and storage organs
         states.NamountLV = states.NamountLV + rates.RNamountLV
         states.NamountST = states.NamountST + rates.RNamountST
         states.NamountRT = states.NamountRT + rates.RNamountRT
         states.NamountSO = states.NamountSO + rates.RNamountSO
         self.demand_uptake.integrate(day, delt)
+
+        # total nitrogen uptake from soil
         states.NuptakeTotal = states.NuptakeTotal + kiosk["RNuptake"]
         states.NfixTotal = states.NfixTotal + kiosk["RNfixation"]
         states.NlossesTotal = states.NlossesTotal + rates.RNloss

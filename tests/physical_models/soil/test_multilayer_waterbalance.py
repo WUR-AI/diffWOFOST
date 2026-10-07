@@ -9,7 +9,7 @@ from pcse.input import WOFOST81SiteDataProvider_SNOMIN
 from pcse.soil.multilayer_waterbalance import WaterBalanceLayered as PcseWater
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.soil.multilayer_waterbalance import WaterBalanceLayered
-from .test_wofost81_snomin import _example_soil
+from ..crop.test_wofost81_snomin import _example_soil
 
 DAY = datetime.date(2010, 6, 1)
 
