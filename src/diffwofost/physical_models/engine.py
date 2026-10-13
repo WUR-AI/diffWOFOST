@@ -5,7 +5,6 @@ and reused across multiple simulation runs while keeping tensor-shaped model
 parameters and external state handling intact.
 """
 
-import gc
 from collections.abc import Iterator
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -79,10 +78,8 @@ class Engine(PcseEngine):
         for component_name in ("crop", "soil"):
             component = getattr(self, component_name, None)
             if component is not None:
-                component._delete()
+                _delete_component(component)
                 setattr(self, component_name, None)
-
-        gc.collect()
 
         self._deferred = DeferredQueue()
         self.flag_terminate = False
@@ -301,6 +298,26 @@ def _get_params_shape(provider: MutableMapping) -> tuple:
             else:
                 raise ValueError("Non-matching shapes found in parameter provider!")
     return shape
+
+
+def _delete_component(component):
+    """Delete a simulation component and release its states/rates.
+
+    Each states/rates container registers its own bound ``_update_kiosk`` method
+    as a trait observer. This reference cycle keeps the containers, the kiosk and
+    all published tensors alive until a full garbage collection. Removing the
+    observers after ``_delete()`` lets reference counting free them immediately.
+    """
+    containers = []
+    pending = [component]
+    while pending:
+        obj = pending.pop()
+        containers.extend(c for c in (obj.states, obj.rates) if c is not None)
+        pending.extend(obj.subSimObjects)
+
+    component._delete()
+    for container in containers:
+        container.unobserve_all()
 
 
 def _to_iterator(weatherdata):
