@@ -1,3 +1,4 @@
+import datetime
 import logging
 import math
 from collections import namedtuple
@@ -6,8 +7,14 @@ import torch
 from pcse.traitlets import TraitType
 from pcse.util import doy
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.deferred import defer
 
 logging.disable(logging.CRITICAL)
+
+
+def _raise_latitude_error():
+    msg = "Latitude not between -90 and 90"
+    raise RuntimeError(msg)
 
 
 def daylength(day, latitude, angle=-4, dtype=None, device=None):
@@ -37,21 +44,18 @@ def daylength(day, latitude, angle=-4, dtype=None, device=None):
     if not isinstance(latitude, torch.Tensor):
         latitude = torch.tensor(latitude, dtype=dtype, device=device)
 
-    # Check for range of latitude
-    if (latitude.abs() > 90.0).any():
-        msg = "Latitude not between -90 and 90"
-        raise RuntimeError(msg)
+    # Check for range of latitude (evaluated at the end of the simulated day when run by
+    # the engine, see diffwofost.physical_models.deferred)
+    defer(torch.any(latitude.abs() > 90.0), _raise_latitude_error)
 
-    # Calculate day-of-year from date object day
-    IDAY = doy(day)
+    SINDEC, COSDEC, _ = solar_declination(day)
+    return daylength_core(latitude, SINDEC, COSDEC, angle)
 
-    # calculate daylength
-    # Declination only depends on IDAY so it stays a Python scalar for efficiency.
-    DEC = -math.asin(
-        math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0)
-    )
-    SINLD = torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
-    COSLD = torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
+
+def daylength_core(latitude, SINDEC, COSDEC, angle=-4):
+    """Tensor part of `daylength`, given the solar declination of the day."""
+    SINLD = torch.sin(math.radians(1.0) * latitude) * SINDEC
+    COSLD = torch.cos(math.radians(1.0) * latitude) * COSDEC
     AOB = (-math.sin(angle * math.radians(1.0)) + SINLD) / COSLD
 
     # daylength — replace scalar if/elif/else with torch.where for batched support
@@ -112,25 +116,48 @@ def astro(day, latitude, radiation, dtype=None, device=None):
     if not isinstance(radiation, torch.Tensor):
         radiation = torch.tensor(radiation, dtype=dtype, device=device)
 
-    # Check for range of latitude
-    if (latitude.abs() > 90.0).any():
-        msg = "Latitude not between -90 and 90"
-        raise RuntimeError(msg)
+    # Check for range of latitude (evaluated at the end of the simulated day when run by
+    # the engine, see diffwofost.physical_models.deferred)
+    defer(torch.any(latitude.abs() > 90.0), _raise_latitude_error)
 
-    # Determine day-of-year (IDAY) from day
+    SINDEC, COSDEC, SC = solar_declination(day)
+    return astro_core(latitude, radiation, SINDEC, COSDEC, SC)
+
+
+def solar_declination(day):
+    """Sine and cosine of the solar declination and the solar constant (J m-2 s-1) for a day."""
     IDAY = doy(day)
-
-    # Declination and solar constant for this day
-    # DEC and SC only depend on IDAY so remain Python scalars for efficiency.
     DEC = -math.asin(
         math.sin(23.45 * math.radians(1.0)) * math.cos(2.0 * math.pi * (float(IDAY) + 10.0) / 365.0)
     )
     SC = 1370.0 * (1.0 + 0.033 * math.cos(2.0 * math.pi * float(IDAY) / 365.0))
+    return math.sin(DEC), math.cos(DEC), SC
 
+
+_SOLAR_TABLES: dict = {}
+
+
+def solar_declination_table(dtype, device) -> torch.Tensor:
+    """`solar_declination` for day-of-year 1..366 as a device tensor (row 0 unused).
+
+    Indexing a row gives the values for a day without a host to device copy.
+    """
+    key = (dtype, str(device))
+    if key not in _SOLAR_TABLES:
+        rows = [(0.0, 1.0, 0.0)]
+        for iday in range(1, 367):
+            day = datetime.date(2000, 1, 1) + datetime.timedelta(days=iday - 1)
+            rows.append(solar_declination(day))
+        _SOLAR_TABLES[key] = torch.tensor(rows, dtype=dtype, device=device)
+    return _SOLAR_TABLES[key]
+
+
+def astro_core(latitude, radiation, SINDEC, COSDEC, SC):
+    """Tensor part of `astro`, given the solar declination and constant of the day."""
     # calculation of daylength from intermediate variables
     # SINLD, COSLD and AOB
-    SINLD = torch.sin(math.radians(1.0) * latitude) * math.sin(DEC)
-    COSLD = torch.cos(math.radians(1.0) * latitude) * math.cos(DEC)
+    SINLD = torch.sin(math.radians(1.0) * latitude) * SINDEC
+    COSLD = torch.cos(math.radians(1.0) * latitude) * COSDEC
     AOB = SINLD / COSLD
 
     # For very high latitudes and days in summer and winter a limit is
@@ -389,8 +416,9 @@ class Afgen:
         i = torch.searchsorted(x_list_contig, x_contig, right=False) - 1
         i = torch.clamp(i, 0, len(self.x_list) - 2)
 
-        # Calculate interpolated value
-        interp_value = self.y_list[i] + self.slopes[i] * (x - self.x_list[i])
+        # Calculate interpolated value (take() instead of indexing: indexing with a 0-d
+        # tensor would read the index back to the host)
+        interp_value = self.y_list.take(i) + self.slopes.take(i) * (x - self.x_list.take(i))
 
         # Apply boundary conditions using torch.where
         result = torch.where(

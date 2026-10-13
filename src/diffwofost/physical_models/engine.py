@@ -17,6 +17,7 @@ from pcse.engine import Engine as PcseEngine
 from pcse.timer import Timer
 from pcse.traitlets import Instance
 from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.deferred import DeferredQueue
 from diffwofost.physical_models.override import normalize_components
 from diffwofost.physical_models.variablekiosk import VariableKiosk
 
@@ -48,6 +49,7 @@ class Engine(PcseEngine):
             TypeError: If no configuration is provided.
         """
         BaseEngine.__init__(self)
+        self._deferred = DeferredQueue()
 
         if config is None:
             msg = "A model configuration must be provided when initializing the engine."
@@ -82,6 +84,7 @@ class Engine(PcseEngine):
 
         gc.collect()
 
+        self._deferred = DeferredQueue()
         self.flag_terminate = False
         self.flag_crop_finish = False
         self.flag_crop_start = False
@@ -114,7 +117,11 @@ class Engine(PcseEngine):
             Engine: The configured engine instance.
         """
         self._reset_runtime_state()
+        with self._deferred.active():
+            self._setup(parameterprovider, weatherdataprovider, agromanagement, external_states)
+        return self
 
+    def _setup(self, parameterprovider, weatherdataprovider, agromanagement, external_states):
         self.parameterprovider = parameterprovider
 
         # Variable kiosk for registering and publishing variables
@@ -156,7 +163,19 @@ class Engine(PcseEngine):
 
         # Calculate initial rates
         self.calc_rates(self.day, self.drv)
-        return self
+
+    def _run(self):
+        """Make one time step of the simulation.
+
+        Conditions that the components check on the device during the step are
+        evaluated together at the end of it (see `diffwofost.physical_models.deferred`).
+        """
+        with self._deferred.active():
+            self._run_day()
+
+    def _run_day(self):
+        """Make one time step of the simulation (the PCSE engine step)."""
+        PcseEngine._run(self)
 
     def _on_CROP_START(
         self, day, crop_name=None, variety_name=None, crop_start_type=None, crop_end_type=None

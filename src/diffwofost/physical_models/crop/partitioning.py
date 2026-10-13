@@ -7,6 +7,8 @@ from pcse.traitlets import Instance
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.deferred import defer
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
@@ -77,10 +79,14 @@ class _BaseDVSPartitioning(SimulationObject):
         FS = self.states.FS
         FO = self.states.FO
         checksum = FR + (FL + FS + FO) * (1.0 - FR) - 1.0
-        if torch.any(torch.abs(checksum) >= 0.0001):
+
+        def fail():
             msg = self._format_partitioning_error(checksum, FR, FL, FS, FO)
             self.logger.error(msg)
             self._handle_partitioning_error(msg)
+
+        # evaluated at the end of the simulated day, see diffwofost.physical_models.deferred
+        defer(torch.any(torch.abs(checksum) >= 0.0001), fail)
 
     def _set_partitioning_states(self, FR, FL, FS, FO):
         self.states.FR = FR
@@ -119,7 +125,8 @@ class _BaseDVSPartitioning(SimulationObject):
 
     def _update_from_tables(self):
         DVS = _broadcast_to(self.kiosk["DVS"], self.params.shape)
-        FR, FL, FS, FO = self._compute_partitioning_from_tables(DVS)
+        p = self.params
+        FR, FL, FS, FO = _partitioning_from_tables(DVS, p.FRTB, p.FLTB, p.FSTB, p.FOTB)
         self._set_partitioning_states(FR, FL, FS, FO)
         self._check_partitioning()
 
@@ -321,3 +328,9 @@ class DVS_Partitioning_N(_BaseDVSPartitioning):
         Rate calculation does nothing for partitioning as it is a derived state.
         """
         return self.states.PF
+
+
+@kernel
+def _partitioning_from_tables(DVS, FRTB, FLTB, FSTB, FOTB):
+    """Partitioning fractions (FR, FL, FS, FO) at development stage DVS."""
+    return FRTB(DVS), FLTB(DVS), FSTB(DVS), FOTB(DVS)

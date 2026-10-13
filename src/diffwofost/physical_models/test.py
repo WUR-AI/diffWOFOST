@@ -14,7 +14,7 @@ from diffwofost.physical_models.weather import to_weather_data_iterator
 class EngineTestHelper(Engine):
     """An engine which is purely for running the YAML unit tests."""
 
-    def _run(self):
+    def _run_day(self):
         """Make one time step of the simulation."""
         # Update timer
         self.day, delt = self.timer()
