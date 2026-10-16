@@ -5,7 +5,6 @@ and reused across multiple simulation runs while keeping tensor-shaped model
 parameters and external state handling intact.
 """
 
-import gc
 from collections.abc import Iterator
 from collections.abc import MutableMapping
 from pathlib import Path
@@ -17,6 +16,7 @@ from pcse.engine import Engine as PcseEngine
 from pcse.timer import Timer
 from pcse.traitlets import Instance
 from diffwofost.physical_models.config import Configuration
+from diffwofost.physical_models.deferred import DeferredQueue
 from diffwofost.physical_models.override import normalize_components
 from diffwofost.physical_models.variablekiosk import VariableKiosk
 
@@ -48,6 +48,7 @@ class Engine(PcseEngine):
             TypeError: If no configuration is provided.
         """
         BaseEngine.__init__(self)
+        self._deferred = DeferredQueue()
 
         if config is None:
             msg = "A model configuration must be provided when initializing the engine."
@@ -77,11 +78,10 @@ class Engine(PcseEngine):
         for component_name in ("crop", "soil"):
             component = getattr(self, component_name, None)
             if component is not None:
-                component._delete()
+                _delete_component(component)
                 setattr(self, component_name, None)
 
-        gc.collect()
-
+        self._deferred = DeferredQueue()
         self.flag_terminate = False
         self.flag_crop_finish = False
         self.flag_crop_start = False
@@ -114,7 +114,11 @@ class Engine(PcseEngine):
             Engine: The configured engine instance.
         """
         self._reset_runtime_state()
+        with self._deferred.active():
+            self._setup(parameterprovider, weatherdataprovider, agromanagement, external_states)
+        return self
 
+    def _setup(self, parameterprovider, weatherdataprovider, agromanagement, external_states):
         self.parameterprovider = parameterprovider
 
         # Variable kiosk for registering and publishing variables
@@ -156,7 +160,19 @@ class Engine(PcseEngine):
 
         # Calculate initial rates
         self.calc_rates(self.day, self.drv)
-        return self
+
+    def _run(self):
+        """Make one time step of the simulation.
+
+        Conditions that the components check on the device during the step are
+        evaluated together at the end of it (see `diffwofost.physical_models.deferred`).
+        """
+        with self._deferred.active():
+            self._run_day()
+
+    def _run_day(self):
+        """Make one time step of the simulation (the PCSE engine step)."""
+        PcseEngine._run(self)
 
     def _on_CROP_START(
         self, day, crop_name=None, variety_name=None, crop_start_type=None, crop_end_type=None
@@ -282,6 +298,26 @@ def _get_params_shape(provider: MutableMapping) -> tuple:
             else:
                 raise ValueError("Non-matching shapes found in parameter provider!")
     return shape
+
+
+def _delete_component(component):
+    """Delete a simulation component and release its states/rates.
+
+    Each states/rates container registers its own bound ``_update_kiosk`` method
+    as a trait observer. This reference cycle keeps the containers, the kiosk and
+    all published tensors alive until a full garbage collection. Removing the
+    observers after ``_delete()`` lets reference counting free them immediately.
+    """
+    containers = []
+    pending = [component]
+    while pending:
+        obj = pending.pop()
+        containers.extend(c for c in (obj.states, obj.rates) if c is not None)
+        pending.extend(obj.subSimObjects)
+
+    component._delete()
+    for container in containers:
+        container.unobserve_all()
 
 
 def _to_iterator(weatherdata):

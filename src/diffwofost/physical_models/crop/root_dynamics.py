@@ -7,6 +7,7 @@ from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 
@@ -205,22 +206,9 @@ class WOFOST_Root_Dynamics(SimulationObject):
         s = self.states
         k = self.kiosk
 
-        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
-        # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
-        dvs_mask = k["DVS"] >= 0
-
-        # Increase in root biomass
-        r.GRRT = dvs_mask * k["FR"] * k["DMI"]
-        r.DRRT = dvs_mask * s.WRT * p.RDRRTB(k["DVS"])
-        r.GWRT = r.GRRT - r.DRRT
-
-        # Increase in root depth
-        r.RR = dvs_mask * torch.minimum((s.RDM - s.RD), p.RRI)
-
-        # Do not let the roots growth if partioning to the roots
-        # (variable FR) is zero.
-        mask = k["FR"] > 0.0
-        r.RR = r.RR * mask * dvs_mask
+        r.GRRT, r.DRRT, r.GWRT, r.RR = _root_rates(
+            k["DVS"], k["FR"], k["DMI"], s.WRT, s.RD, s.RDM, p.RRI, p.RDRRTB
+        )
 
     def integrate(self, day: datetime.date = None, delt=1.0) -> None:
         """Integrate the state variables using the rates of change.
@@ -232,14 +220,45 @@ class WOFOST_Root_Dynamics(SimulationObject):
         rates = self.rates
         states = self.states
 
-        # Dry weight of living roots
-        states.WRT = states.WRT + rates.GWRT
+        states.WRT, states.DWRT, states.TWRT, states.RD = _root_integrate(
+            states.WRT, states.DWRT, states.RD, rates.GWRT, rates.DRRT, rates.RR
+        )
 
-        # Dry weight of dead roots
-        states.DWRT = states.DWRT + rates.DRRT
 
-        # Total weight dry + living roots
-        states.TWRT = states.WRT + states.DWRT
+@kernel
+def _root_rates(DVS, FR, DMI, WRT, RD, RDM, RRI, RDRRTB):
+    """Rates of change of the root dynamics, see `WOFOST_Root_Dynamics.calc_rates`."""
+    # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
+    # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
+    dvs_mask = DVS >= 0
 
-        # New root depth
-        states.RD = states.RD + rates.RR
+    # Increase in root biomass
+    GRRT = dvs_mask * FR * DMI
+    DRRT = dvs_mask * WRT * RDRRTB(DVS)
+    GWRT = GRRT - DRRT
+
+    # Increase in root depth
+    RR = dvs_mask * torch.minimum((RDM - RD), RRI)
+
+    # Do not let the roots growth if partioning to the roots
+    # (variable FR) is zero.
+    mask = FR > 0.0
+    RR = RR * mask * dvs_mask
+    return GRRT, DRRT, GWRT, RR
+
+
+@kernel
+def _root_integrate(WRT, DWRT, RD, GWRT, DRRT, RR):
+    """State integration of the root dynamics, see `WOFOST_Root_Dynamics.integrate`."""
+    # Dry weight of living roots
+    WRT = WRT + GWRT
+
+    # Dry weight of dead roots
+    DWRT = DWRT + DRRT
+
+    # Total weight dry + living roots
+    TWRT = WRT + DWRT
+
+    # New root depth
+    RD = RD + RR
+    return WRT, DWRT, TWRT, RD
