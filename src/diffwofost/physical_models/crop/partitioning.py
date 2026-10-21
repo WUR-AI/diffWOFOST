@@ -104,6 +104,7 @@ class _BaseDVSPartitioning(SimulationObject):
         self.params = self.Parameters(parvalues, shape=shape)
         self.kiosk = kiosk
         DVS = _broadcast_to(self.kiosk["DVS"], self.params.shape)
+        # Initial partitioning factors (pf).
         FR, FL, FS, FO = self._compute_partitioning_from_tables(DVS)
         self.states = self.StateVariables(
             kiosk,
@@ -214,7 +215,6 @@ class DVS_Partitioning(_BaseDVSPartitioning):
         return self.states.PF
 
 
-# This class is used in `wofost81` and has NOT been tested, see #41
 class DVS_Partitioning_N(_BaseDVSPartitioning):
     """Class for assimilate partitioning based on development stage (DVS) with N stress.
 
