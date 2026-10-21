@@ -14,3 +14,19 @@ See [`DATA_LICENSE.md`](../DATA_LICENSE.md).
 The notebook loads these by default. Set `FORCE_RETRAIN = True` to train from
 scratch; retrained copies are written to `data_temp/trained_models/` (gitignored)
 and do not overwrite this folder.
+
+# Pretrained irrigation-control checkpoints
+
+These weights ship with `differentiable_irrigation_control.ipynb` so the STE
+and PPO sections can run without retraining (~minutes for STE, ~45–70 min for PPO).
+
+| File | Model | Notes |
+|------|-------|-------|
+| `mlp_weekly_best.pt` | STE irrigation MLP (weekly train) | best hard $R$ on 2010 YAML |
+| `ppo_weekly_stress.pt` | From-scratch PPO actor–critic | stress-shaped train; best hard $R$ on 2010 |
+
+The notebook loads `pretrained/` when `data_temp/` has no matching checkpoint.
+Set `PPO_LOAD_IF_AVAILABLE = False` (or delete the local `data_temp` copy) to
+retrain; new weights are written under `data_temp/` (gitignored) and do not
+overwrite this folder.
+
