@@ -156,7 +156,7 @@ class N_Crop_Dynamics(SimulationObject):
         states = self.states
         kiosk = self.kiosk
 
-        # Loss of nitrogen with dying biomass.
+        # Compute loss of NPK due to death of plant material.
         # Same unused-branch guard as N_Stress: the selected rate is still 0.
         leaf_weight = torch.clamp(kiosk["WLV"], min=1e-12)
         stem_weight = torch.clamp(kiosk["WST"], min=1e-12)
@@ -172,8 +172,8 @@ class N_Crop_Dynamics(SimulationObject):
         )
 
         # N rates in leaves, stems, roots and storage organs computed as
-        # uptake - translocation - death.
-        # Storage organs only gain nitrogen by translocation.
+        # uptake - translocation - death,
+        # except for storage organs, which only take up as a result of translocation.
         rates.RNamountLV = kiosk["RNuptakeLV"] - kiosk["RNtranslocationLV"] - rates.RNdeathLV
         rates.RNamountST = kiosk["RNuptakeST"] - kiosk["RNtranslocationST"] - rates.RNdeathST
         rates.RNamountRT = kiosk["RNuptakeRT"] - kiosk["RNtranslocationRT"] - rates.RNdeathRT

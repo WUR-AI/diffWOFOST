@@ -307,6 +307,8 @@ class N_Demand_Uptake(SimulationObject):
         return
 
     def _maximum_concentrations(self):
+        # Maximum N concentrations in leaves [kg N kg-1 DM].
+        # Stem and root maxima are fractions of that leaf concentration.
         nmax_leaf = self.params.NMAXLV_TB(self.kiosk["DVS"])
         return MaxNutrientConcentrations(
             NMAXLV=nmax_leaf,

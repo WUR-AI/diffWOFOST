@@ -394,6 +394,7 @@ def assim8(
         vispp = (one - scv) * pardir / sinb_safe
         vispp_b = vispp
 
+    # Calculate AMAX with gradient in canopy ORYZA
     # ``torch.where`` evaluates both branches, so keep the denominators finite
     # even when LAI is zero. The selected SLN still follows PCSE: the nitrogen
     # profile when LAI >= 0.01, otherwise NLV / LAI.
@@ -411,12 +412,17 @@ def assim8(
     amax = co2_b * tmpf_b * leaf_response
     amax_denom = torch.maximum(consts["two"], amax)
 
+    # absorbed diffuse radiation (VISDF),light from direct
+    # origine (VIST) and direct light (VISD)
     exp_kdirbl_laic = torch.exp(-kdirbl_b * laic)
     visdf = (one - refs_b) * pardif_b * kdif_b * torch.exp(-kdif_b * laic)
     vist = (one - refs_b) * pardir_b * kdir_t_b * torch.exp(-kdir_t_b * laic)
     visd = (one - scv) * pardir_b * kdirbl_b * exp_kdirbl_laic
+    # absorbed flux in W/m2 for shaded leaves and assimilation
     visshd = visdf + vist - visd
     fgrsh = amax * (one - torch.exp(-visshd * eff_b / amax_denom))
+    # direct light absorbed by leaves perpendicular on direct
+    # beam and assimilation of sunlit leaf area
     exp_term = one - torch.exp(-vispp_b * eff_b / amax_denom)
     eff_vispp = eff_b * vispp_b
     eff_vispp_safe = torch.where(
@@ -424,8 +430,11 @@ def assim8(
     )
     fgrsun_formula = amax * (one - (amax - fgrsh) * exp_term / eff_vispp_safe)
     fgrsun = torch.where(vispp_b <= 0.0, fgrsh, fgrsun_formula)
+    # fraction of sunlit leaf area (FSLLA) and local
+    # assimilation rate (FGL)
     fslla = exp_kdirbl_laic
     fgl = fslla * fgrsun + (one - fslla) * fgrsh
+    # integration
     fgros = (fgl * wg_v).sum(0)
     return fgros * lai
 
@@ -615,11 +624,60 @@ def _exist_required_external_variables(kiosk):
 
 
 class WOFOST81_Assimilation(SimulationObject):
-    """WOFOST 8.1 assimilation with CO2 and a leaf-nitrogen effect on AMAX.
+    """Class implementing a WOFOST/SUCROS style assimilation routine including
+    effect of changes in atmospheric CO2 concentration and impact of
+    leaf nitrogen content on the maximum assimilation rate.
 
-    Maximum leaf photosynthesis declines with depth in the canopy following
-    the specific leaf nitrogen. CO2 corrections come from ``CO2AMAXTB`` and
-    ``CO2EFFTB``.
+    WOFOST calculates the daily gross |CO2| assimilation rate of a crop
+    from the absorbed radiation and the photosynthesis-light response curve
+    of individual leaves. This response is dependent on temperature and
+    leaf age. The absorbed radiation is calculated from the total incoming
+    radiation and the leaf area. Daily gross |CO2| assimilation is obtained
+    by integrating the assimilation rates over the leaf layers and over the
+    day.
+
+    *Simulation parameters* (To be provided in cropdata dictionary):
+
+    | Name      | Description                                    | Type | Unit |
+    |-----------|------------------------------------------------|------|------|
+    | AMAX_LNB  | Specific leaf nitrogen below which there is    | Cr   | |kg ha-1| |
+    |           | no gross photosynthesis                        |      |      |
+    | AMAX_REF  | Maximum leaf CO2 assim. rate under reference   | TCr  | |kg ha-1 hr-1| |
+    |           | conditions and high specific leaf nitrogen.    |      |      |
+    | AMAX_SLP  | Slope of linear response of AMAX to specific   | Cr   | |kg hr-1 kg-1| |
+    |           | leaf nitrogen content at reference conditions  |      |      |
+    | KN        | Extinction coefficient of N in the canopy      | Cr   | -    |
+    | EFFTB     | Light use effic. single leaf as a function     | TCr  | |kg ha-1 hr-1 |
+    |           | of daily mean temperature                      |      | /(J m-2 s-1)| |
+    | KDIFTB    | Extinction coefficient for diffuse visible     | TCr  | -    |
+    |           | as function of DVS                             |      |      |
+    | TMPFTB    | Reduction factor of AMAX as function of        | TCr  | -    |
+    |           | daily mean temperature.                        |      |      |
+    | TMNFTB    | Reduction factor of AMAX as function of        | TCr  | -    |
+    |           | daily minimum temperature.                     |      |      |
+    | CO2AMAXTB | Correction factor for AMAX given atmos-        | TCr  | -    |
+    |           | pheric CO2 concentration.                      |      |      |
+    | CO2EFFTB  | Correction factor for EFF given atmos-         | TCr  | -    |
+    |           | pheric CO2 concentration.                      |      |      |
+    | CO2       | Atmopheric CO2 concentration                   | SCr  | ppm  |
+
+    *State and rate variables*
+
+    `WOFOST_Assimilation` has no state/rate variables, but calculates the
+    rate of assimilation which is returned directly from the `__call__()`
+    method.
+
+    *Signals sent or handled*
+
+    None
+
+    *External dependencies:*
+
+    | Name | Description            | Provided by   | Unit    |
+    |------|------------------------|---------------|---------|
+    | DVS  | Crop development stage | DVS_Phenology | -       |
+    | LAI  | Leaf area index        | leaf_dynamics | -       |
+    | NLV  | Leaf nitrogen amount   | n_dynamics    | kg ha-1 |
 
     **Gradient mapping (which parameters have a gradient):**
 
@@ -631,7 +689,7 @@ class WOFOST81_Assimilation(SimulationObject):
     [!NOTE]
     ``TMNFTB`` is applied to the mean of the emerged days in a 7-day window.
     The window itself is a buffer, not a torch operation.
-    """
+    """  # noqa: D205
 
     @property
     def device(self):
@@ -675,6 +733,7 @@ class WOFOST81_Assimilation(SimulationObject):
         params = self.params
         rates = self.rates
         kiosk = self.kiosk
+        # Published states from the kiosk.
         dvs = _broadcast_to(kiosk["DVS"], self.params.shape, dtype=self.dtype, device=self.device)
         lai = _broadcast_to(kiosk["LAI"], self.params.shape, dtype=self.dtype, device=self.device)
         nlv = _broadcast_to(
@@ -703,6 +762,7 @@ class WOFOST81_Assimilation(SimulationObject):
             day, drv["LAT"], drv["IRRAD"], dtype=self.dtype, device=self.device
         )
 
+        # Daily gross assimilation.
         # CO2 and temperature response factors of AMAX.
         tmpf = params.TMPFTB(temp)
         eff = params.EFFTB(dtemp) * params.CO2EFFTB(params.CO2)

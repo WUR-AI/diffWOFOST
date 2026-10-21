@@ -352,7 +352,7 @@ class Wofost81(SimulationObject):
             self._WST_REALLOC = torch.zeros_like(rates.DMI)
             self._realloc_latched = torch.zeros_like(rates.DMI, dtype=torch.bool)
 
-        # Start of reallocation: latch the maximum reallocatable biomass.
+        # Start of reallocation, compute max reallocatable biomass
         just_started = started & ~self._realloc_latched
         self._WLV_REALLOC = torch.where(
             just_started, kiosk.WLV * params.REALLOC_LEAF_FRACTION, self._WLV_REALLOC
@@ -362,7 +362,7 @@ class Wofost81(SimulationObject):
         )
         self._realloc_latched = self._realloc_latched | started
 
-        # Reallocation rate in terms of loss of stem/leaf dry matter.
+        # Reallocation rate in terms of loss of stem/leaf dry matter
         leaf_left = self._WLV_REALLOC - self.states.LV_REALLOCATED
         stem_left = self._WST_REALLOC - self.states.ST_REALLOCATED
         rates.REALLOC_LV = torch.where(
@@ -375,7 +375,8 @@ class Wofost81(SimulationObject):
             torch.minimum(self._WST_REALLOC * params.REALLOC_STEM_RATE, stem_left),
             torch.zeros_like(rates.DMI),
         )
-        # Increase in storage organs, including conversion losses.
+        # Reallocation rate in terms of increase in storage organs taking
+        # into account CVL/CVO ratio, CVS/CVO ratio and losses due to respiration
         rates.REALLOC_SO = (rates.REALLOC_LV + rates.REALLOC_ST) * params.REALLOC_EFFICIENCY
 
     def integrate(self, day: datetime.date, delt=1.0) -> None:

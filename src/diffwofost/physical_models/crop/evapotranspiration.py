@@ -51,7 +51,9 @@ def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
     """
     A = 0.76
     B = 1.5
+    # curve for CGNR 5, and other curves at fixed distance below it
     sweaf = 1.0 / (A + B * ET0) - (5.0 - DEPNR) * 0.10
+    # Correction for lower curves (CGNR less than 3)
     correction = (ET0 - 0.6) / (DEPNR * (DEPNR + 3.0))
     # NOTE: PCSE applies `correction` only when `DEPNR < 3` (hard switch), which
     # is non-differentiable at `DEPNR==3`.
@@ -199,7 +201,7 @@ class _BaseEvapotranspiration(SimulationObject):
         self.states = self.StateVariables(kiosk, shape=shape, IDOST=-999, IDWST=-999)
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
 
-        # Private accumulators for stress-day counters (written to states in finalize)
+        # helper variable for counting total days with water and oxygen stress (IDWST, IDOST)
         self._IDWST = torch.zeros(shape, dtype=self.dtype, device=self.device)
         self._IDOST = torch.zeros(shape, dtype=self.dtype, device=self.device)
 

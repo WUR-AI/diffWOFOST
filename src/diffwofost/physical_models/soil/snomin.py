@@ -341,6 +341,7 @@ class SNOMIN(SimulationObject):
         self._NH4I = nh4
         self._NO3I = no3
 
+        # Connect the module to the AgroManager amendment signal.
         self._connect_signal(self._on_APPLY_N_SNOMIN, signals.apply_n_snomin)
 
     def calc_rates(self, day: datetime.date, drv):
@@ -351,6 +352,7 @@ class SNOMIN(SimulationObject):
         kiosk = self.kiosk
         profile = self.soiln_profile
         delt = 1.0
+        # External inputs, converted to metres and kg m-2 where SNOMIN needs them.
         temperature = _as_tensor(drv.TEMP if hasattr(drv, "TEMP") else drv["TEMP"])
         infiltration = kiosk["RIN"] * _CM_TO_M
         flow = kiosk["Flow"] * _CM_TO_M
@@ -370,7 +372,7 @@ class SNOMIN(SimulationObject):
         rates.RNH4AM = self._RNH4AM
         rates.RNO3AM = self._RNO3AM
 
-        # Reset placeholders for amendment rates
+        # Reset placeholders for ammendment rates
         self._RAGEAM = torch.zeros_like(states.AGE)
         self._RORGMATAM = torch.zeros_like(rates.RORGMATAM)
         self._RCORGAM = torch.zeros_like(rates.RCORGAM)
@@ -378,10 +380,10 @@ class SNOMIN(SimulationObject):
         self._RNH4AM = torch.zeros_like(states.NH4)
         self._RNO3AM = torch.zeros_like(states.NO3)
 
-        # Calculate increase in apparent age of each amendment
+        # Calculate increase aparent age of each ammendment
         rates.RAGEAG = _age_increase(states.AGE, delt, pf, ph, temperature)
 
-        # Calculate dissimilation rates of each amendment
+        # Calculate dissimilation rates of each ammendment
         rates.RORGMATDIS, rates.RCORGDIS, rates.RNORGDIS = _dissimilation(
             states.AGE,
             states.ORGMAT,
@@ -393,7 +395,7 @@ class SNOMIN(SimulationObject):
             temperature,
         )
 
-        # Calculate rates of change of apparent age, organic matter and organic C
+        # Calculate rates of change apparent age, organic matter, organic C, and organic N
         rates.RAGE = rates.RAGEAG + rates.RAGEAM
         rates.RORGMAT = rates.RORGMATAM - rates.RORGMATDIS
         rates.RCORG = rates.RCORGAM - rates.RCORGDIS
@@ -410,7 +412,8 @@ class SNOMIN(SimulationObject):
             soil_moisture,
         )
 
-        # Remaining mineral nitrogen after uptake, then chemical conversion
+        # Calculate remaining amounts of NH4-N and NO3-N after uptake and calculate chemical
+        # conversion
         nh4_pre = states.NH4 - rates.RNH4UP * delt
         no3_pre = states.NO3 - rates.RNO3UP * delt
         # Amendment axis only. The result stays one mineralization rate per layer.
@@ -418,6 +421,10 @@ class SNOMIN(SimulationObject):
         rates.RNH4NITR = _nitrification(
             profile, params.KNIT_REF, params.KSORP, nh4_pre, soil_moisture, temperature
         )
+        # For each layer: if the net mineralization rate is negative (net immobilization) and there
+        # is not enough NH4-N in the layer to be taken up by the organic matter, only the amount of
+        # N that remains after denitrification is available for immobilization. RNORGDIS is updated
+        # as well to close the N balance again.
         rates.RNH4MIN, rates.RNORGDIS = _limit_immobilisation(
             nh4_pre, rates.RNH4MIN, rates.RNH4NITR, rates.RNORGDIS, delt
         )
@@ -483,17 +490,19 @@ class SNOMIN(SimulationObject):
         params = self.params
         kiosk = self.kiosk
 
-        # Organic pools
+        # Calculate apparent age and the amounts of organic matter, organic C
+        # and organic N at the next time step.
         states.AGE = states.AGE + rates.RAGE * delt
         states.ORGMAT = states.ORGMAT + rates.RORGMAT * delt
         states.CORG = states.CORG + rates.RCORG * delt
         states.NORG = states.NORG + rates.RNORG * delt
 
-        # Mineral pools
+        # Calculate the amounts of NH4-N and NO3-N at the next time step.
         states.NH4 = states.NH4 + rates.RNH4 * delt
         states.NO3 = states.NO3 + rates.RNO3 * delt
 
-        # Plant-available nitrogen
+        # Get the external rooting depth and soil moisture, then the amount of N
+        # available for root uptake in the next time step.
         rooting_depth = kiosk["RD"] * _CM_TO_M if "RD" in kiosk else _as_tensor(0.0)
         states.NAVAIL = (
             _available_nitrogen(
@@ -755,7 +764,8 @@ def _limit_immobilisation(nh4_pre, mineralization, nitrification, organic_nitrog
 
     PCSE sets the limited mineralization to the pre-uptake ammonium minus
     nitrification, then scales every amendment in that layer by the ratio of
-    the limited rate to the original amendment sum.
+    the limited rate to the original amendment sum so the nitrogen balance
+    closes. The formula uses nitrification, not denitrification.
     """
     immobilised = nh4_pre + (mineralization - nitrification) * delt < 0
     limited = torch.where(immobilised, nh4_pre - nitrification, mineralization)

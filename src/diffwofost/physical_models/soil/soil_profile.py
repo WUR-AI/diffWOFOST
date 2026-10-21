@@ -49,10 +49,13 @@ class MFPCurve(Afgen):
         # by in-place writes. Odd slots hold MFP, even slots hold pF.
         n_points = sm_from_pf.shape[0]
         mfp_values = [sm_from_pf.new_zeros(()) for _ in range(n_points)]
+        # Zero MFP at the highest pF. The paired slot keeps that pF value.
         mfp_values[-1] = sm_from_pf.new_zeros(())
         mfp_values[-2] = sm_from_pf[-2]
         for ip in range(n_points - 3, 0, -2):
+            # Copy the corresponding pF value.
             mfp_values[ip - 1] = sm_from_pf[ip - 1]
+            # Integral of conductivity over this pF interval.
             delta_pf = sm_from_pf[ip + 1] - sm_from_pf[ip - 1]
             added = sm_from_pf.new_zeros(())
             for gauss, weight in zip(self.Pgauss, self.Wgauss, strict=True):
@@ -130,6 +133,7 @@ class SoilLayer:
         self.Wtop = _as_tensor(0.0)
         self.Wpot = _as_tensor(0.0)
         self.Wund = _as_tensor(0.0)
+        # compute hash value of this layer based on pF curves for conductivity and SM
         self._hash = hash((tuple(sm_table), tuple(cond_table)))
 
     @property
@@ -150,12 +154,96 @@ class SoilLayer:
 
 
 class SoilProfile(list):
-    """Soil column as a list of ``SoilLayer`` objects.
+    """Soil column used by the layered water balance and SNOMIN.
 
-    The description is read from ``SoilProfileDescription``: a pF at field
-    capacity, a pF at wilting point, and one entry per layer. Rooting status
-    is updated from the current rooting depth. Layer properties are documented
-    on ``SoilLayer``.
+    The description is read from ``SoilProfileDescription`` on the parameter
+    provider. This is a container of ``SoilLayer`` objects, plus the rooting
+    status used for root growth and root water extraction. Layer properties
+    are documented on ``SoilLayer``.
+
+    A layer is rooted when the roots have passed its lower boundary, partially
+    rooted when the root front sits inside it, potentially rooted when it lies
+    between the current roots and the maximum rooting depth, and never rooted
+    below that depth. The maximum rooting depth must fall on a layer boundary.
+
+    The profile can be written as YAML. Layer types are defined once and then
+    reused. In the example below, two layers of 10 cm use ``TopSoil``, three
+    layers of 10, 20 and 30 cm use ``MidSoil``, a lower layer of 45 cm uses
+    ``SubSoil``, and ``SubSoilType`` is 200 cm of the same subsoil. Only the
+    top three layers contain organic matter (``FSOMI``).
+
+    ```yaml
+    SoilLayerTypes:
+        TopSoil: &TopSoil
+            SMfromPF: [-1.0, 0.366, 1.0, 0.338, 1.3, 0.304, 1.7, 0.233,
+                       2.0, 0.179, 2.3, 0.135, 2.4, 0.123, 2.7, 0.094,
+                       3.0, 0.073, 3.3, 0.059, 3.7, 0.046, 4.0, 0.039,
+                       4.17, 0.037, 4.2, 0.036, 6.0, 0.02]
+            CONDfromPF: [-1.0, 1.8451, 1.0, 1.02119, 1.3, 0.51055,
+                         1.7, -0.52288, 2.0, -1.50864, 2.3, -2.56864,
+                         2.4, -2.92082, 2.7, -4.01773, 3.0, -5.11919,
+                         3.3, -6.22185, 3.7, -7.69897, 4.0, -8.79588,
+                         4.17, -9.4318, 4.2, -9.5376, 6.0, -11.5376]
+            CRAIRC: 0.090
+            CNRatioSOMI: 9.0
+            RHOD: 1.406
+            Soil_pH: 7.4
+        MidSoil: &MidSoil
+            SMfromPF: [-1.0, 0.366, 1.0, 0.338, 1.3, 0.304, 1.7, 0.233,
+                       2.0, 0.179, 2.3, 0.135, 2.4, 0.123, 2.7, 0.094,
+                       3.0, 0.073, 3.3, 0.059, 3.7, 0.046, 4.0, 0.039,
+                       4.17, 0.037, 4.2, 0.036, 6.0, 0.02]
+            CONDfromPF: [-1.0, 1.8451, 1.0, 1.02119, 1.3, 0.51055,
+                         1.7, -0.52288, 2.0, -1.50864, 2.3, -2.56864,
+                         2.4, -2.92082, 2.7, -4.01773, 3.0, -5.11919,
+                         3.3, -6.22185, 3.7, -7.69897, 4.0, -8.79588,
+                         4.17, -9.4318, 4.2, -9.5376, 6.0, -11.5376]
+            CRAIRC: 0.090
+            CNRatioSOMI: 9.0
+            RHOD: 1.406
+            Soil_pH: 7.4
+        SubSoil: &SubSoil
+            SMfromPF: [-1.0, 0.366, 1.0, 0.338, 1.3, 0.304, 1.7, 0.233,
+                       2.0, 0.179, 2.3, 0.135, 2.4, 0.123, 2.7, 0.094,
+                       3.0, 0.073, 3.3, 0.059, 3.7, 0.046, 4.0, 0.039,
+                       4.17, 0.037, 4.2, 0.036, 6.0, 0.02]
+            CONDfromPF: [-1.0, 1.8451, 1.0, 1.02119, 1.3, 0.51055,
+                         1.7, -0.52288, 2.0, -1.50864, 2.3, -2.56864,
+                         2.4, -2.92082, 2.7, -4.01773, 3.0, -5.11919,
+                         3.3, -6.22185, 3.7, -7.69897, 4.0, -8.79588,
+                         4.17, -9.4318, 4.2, -9.5376, 6.0, -11.5376]
+            CRAIRC: 0.090
+            CNRatioSOMI: 9.0
+            RHOD: 1.406
+            Soil_pH: 7.4
+    SoilProfileDescription:
+        PFWiltingPoint: 4.2
+        PFFieldCapacity: 2.0
+        SurfaceConductivity: 70.0  # cm day-1
+        SoilLayers:
+        -   <<: *TopSoil
+            Thickness: 10
+            FSOMI: 0.02
+        -   <<: *TopSoil
+            Thickness: 10
+            FSOMI: 0.02
+        -   <<: *MidSoil
+            Thickness: 10
+            FSOMI: 0.01
+        -   <<: *MidSoil
+            Thickness: 20
+            FSOMI: 0.00
+        -   <<: *MidSoil
+            Thickness: 30
+            FSOMI: 0.00
+        -   <<: *SubSoil
+            Thickness: 45
+            FSOMI: 0.00
+        SubSoilType:
+            <<: *SubSoil
+            Thickness: 200
+        GroundWater: null
+    ```
     """
 
     def __init__(self, parvalues):
@@ -177,11 +265,17 @@ class SoilProfile(list):
             self.GroundWater = None
 
     def determine_rooting_status(self, rooting_depth, maximum_rooting_depth) -> None:
-        """Set rooted / potentially rooted weights for the current rooting depth.
+        """Set rooted, partially rooted, potentially rooted, or never-rooted weights.
 
-        The weight of a layer that the root front sits in is linear in rooting
-        depth, so that boundary stays differentiable. Crossing into another
-        layer is a hard switch, as in PCSE.
+        A layer whose lower boundary is above the rooting depth is rooted. The
+        layer that contains the root front is partially rooted. Layers below
+        the roots and above the maximum rooting depth are potentially rooted.
+        The rest are never rooted. The maximum rooting depth must fall on a
+        layer boundary.
+
+        The weight of the partially rooted layer is linear in rooting depth, so
+        that boundary stays differentiable. Crossing into the next layer is a
+        hard switch, as in PCSE.
         """
         depth = _as_tensor(rooting_depth)
         maximum = _as_tensor(maximum_rooting_depth)

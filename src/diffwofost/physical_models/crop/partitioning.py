@@ -104,6 +104,7 @@ class _BaseDVSPartitioning(SimulationObject):
         self.params = self.Parameters(parvalues, shape=shape)
         self.kiosk = kiosk
         DVS = _broadcast_to(self.kiosk["DVS"], self.params.shape)
+        # Initial partitioning factors (pf).
         FR, FL, FS, FO = self._compute_partitioning_from_tables(DVS)
         self.states = self.StateVariables(
             kiosk,

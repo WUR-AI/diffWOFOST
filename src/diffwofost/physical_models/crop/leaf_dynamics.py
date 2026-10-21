@@ -385,12 +385,14 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         tSLA = states.SLA.clone()
         tLVAGE = states.LVAGE.clone()
 
-        # Leaf death is imposed on leaves from the oldest ones.
+        # leaf death is imposed on leaves by removing leave classes from the
+        # right side of the deque.
         # Calculate the cumulative sum of weights after leaf death, and
         # find out which leaf classes are dead (negative weights)
         weight_cumsum = tLV.cumsum(dim=0) - rates.DRLV
         is_alive = weight_cumsum >= 0
 
+        # Decrease value of oldest (rightmost) leave class
         # Adjust value of oldest leaf class, i.e. the first non-zero
         # weight along the time axis (the last dimension).
         # Cast argument to int because torch.argmax requires it to be numeric
@@ -399,6 +401,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         tLV = torch.scatter(tLV, dim=0, index=idx_oldest, src=new_biomass)
 
         # Integration of physiological age
+        # remove complete leaf class from deque
         # Zero out all dead leaf classes
         # NOTE: the hard is_alive branch does not provide a gradient through
         # the branch selection itself. Parameters that influence which leaf
@@ -414,6 +417,7 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         tLV = self._apply_reallocation(tLV)
 
         # --------- leave growth ---------
+        # New leaves enter class 1, the youngest class.
         idx = int((day - self.START_DATE).days / delt)
         tLV[idx, ...] = rates.GRLV
         tSLA[idx, ...] = rates.SLAT
@@ -476,13 +480,13 @@ class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
         states = self.states
         kiosk = self.kiosk
 
-        # Nitrogen stress increases age-driven leaf death.
+        # Suggestion Allard accelarete ageing:
         emerged = kiosk["DVS"] >= self._zero
         rates.DALV = torch.minimum(rates.DALV * kiosk["NSLLV"], states.WLV)
         rates.DALV = emerged * rates.DALV
         rates.DRLV = torch.maximum(rates.DSLV, rates.DALV)
 
-        # Juvenile expansion is source-limited by water and nitrogen stress.
+        # Nutrient and water stress during juvenile stage:
         juvenile = emerged & (kiosk["DVS"] < 0.2) & (states.LAI < 0.75)
         factor = torch.where(juvenile, kiosk["RFTRA"] * kiosk["RFRGRL"], 1.0 + self._zero)
         expanding = states.LAIEXP < 6.0
@@ -495,6 +499,7 @@ class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
         )
 
     def _apply_reallocation(self, leaf_biomass: torch.Tensor) -> torch.Tensor:
+        # Uniformly reduce leaf biomass in case of reallocation
         realloc = self.kiosk["REALLOC_LV"]
         total = leaf_biomass.sum(dim=0)
         factor = torch.where(

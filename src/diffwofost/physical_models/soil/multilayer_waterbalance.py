@@ -182,6 +182,7 @@ class WaterBalanceLayered(SimulationObject):
         self._RDM = self.soil_profile.get_max_rootable_depth()
         self.soil_profile.validate_max_rooting_depth(self._RDM)
         self.params = self.Parameters(parvalues, shape=shape)
+        # Kept so a newly started crop can read its maximum rooting depth.
         self.parameter_provider = parvalues
         self._default_RD = _as_tensor(10.0)
         self.soil_profile.determine_rooting_status(self._default_RD, self._RDM)
@@ -257,11 +258,17 @@ class WaterBalanceLayered(SimulationObject):
         for layer in profile:
             rooted = layer.Wtop > 0
             potential = (layer.Wpot > 0) & ~rooted
+            # Check whether SMLIM is within boundaries.
             sm_limit = torch.clamp(params.SMLIM, min=layer.SMW, max=layer.SM0)
-            # A partly rooted layer still contributes its full capacity, as in PCSE.
+            # Also if partly rooted, the total layer capacity counts in TOPLIM.
+            # This means the water content of that layer is set as if it would be
+            # completely rooted. This water will become available after a little
+            # root growth and through numerical mixing each time step.
             top_capacity = torch.where(
                 rooted, (sm_limit - layer.SMW) * layer.Thickness, wav.new_zeros(())
             )
+            # Below the rooted zone the maximum is saturation (as for WLOW in the
+            # one-layer model). Again the full layer capacity adds to LOWLIM.
             low_capacity = torch.where(
                 potential, (layer.SM0 - layer.SMW) * layer.Thickness, wav.new_zeros(())
             )
@@ -273,6 +280,9 @@ class WaterBalanceLayered(SimulationObject):
         safe_low = torch.clamp(low_limit, min=1e-8)
         zeros = wav.new_zeros(())
         ones = wav.new_ones(())
+        # No available water leaves both reductions at zero. Water that fits in
+        # the rooted layers is scaled by WAV / TOPLIM. Any remainder fills the
+        # potentially rooted layers. Water beyond both capacities fills them.
         top_reduction = torch.where(
             wav <= 0, zeros, torch.where(wav <= top_limit, wav / safe_top, ones)
         )
@@ -291,6 +301,8 @@ class WaterBalanceLayered(SimulationObject):
         for layer, (rooted, potential, top_capacity, low_capacity) in zip(
             profile, layer_capacity, strict=True
         ):
+            # Water assigned to a partly rooted layer may sit below the root front.
+            # It becomes available through root growth.
             sm_rooted = layer.SMW + top_capacity * top_reduction / layer.Thickness
             sm_potential = layer.SMW + low_capacity * low_reduction / layer.Thickness
             sm_il = torch.where(rooted, sm_rooted, torch.where(potential, sm_potential, layer.SMW))
@@ -328,7 +340,8 @@ class WaterBalanceLayered(SimulationObject):
         # Crop transpiration and maximum evaporation rates.
         # Layered transpiration is published once any batch member has emerged.
         # Before that the kiosk has no layer-shaped TRALY, as in PCSE before
-        # emergence: no transpiration, and evaporation at the weather potentials.
+        # emergence: no transpiration, and evaporation at the weather potentials
+        # because the canopy does not shade the soil.
         # A layer-shaped TRALY does not mean every member has emerged. A member
         # with DVS < 0 keeps that pre-emergence behaviour: WTRALY and WTRA are
         # zero, and EVWMX and EVSMX are the weather E0 and ES0.
@@ -361,7 +374,9 @@ class WaterBalanceLayered(SimulationObject):
         rates.WTRALY = wtraly
         rates.WTRA = wtra
 
-        # Actual evaporation rates
+        # Actual evaporation rates.
+        # Infiltration of at least 1 cm on the previous day gives the maximum
+        # soil evaporation. Otherwise evaporation depends on days since last rain.
         heavy_infiltration = self._RINold >= 1
         evaporative_demand = evsmx * (torch.sqrt(self._DSLR + 1) - torch.sqrt(self._DSLR))
         soil_evaporation = torch.minimum(evsmx, evaporative_demand + self._RINold)
@@ -385,6 +400,8 @@ class WaterBalanceLayered(SimulationObject):
         rin_fixed = (1.0 - params.NOTINF) * rain
         rin_storm = (1.0 - params.NOTINF * self.NINFTB(rain)) * rain
         rin_pre = torch.where(params.IFUNRN == 0, rin_fixed, rin_storm)
+        # Second stage: add irrigation and surface storage. With storage present,
+        # infiltration cannot exceed the surface conductivity.
         rin_pre = rin_pre + rates.RIRR + states.SS
         available = rin_pre + rates.RIRR - rates.EVW
         rin_pre = torch.where(
@@ -408,7 +425,10 @@ class WaterBalanceLayered(SimulationObject):
         rates.DWC = dwc
         rates.BOTTOMFLOW = flow[-1]
 
-        # Surface storage and surface runoff
+        # Water that cannot infiltrate may be stored on the surface. Rainfall
+        # that does not infiltrate is assumed to reach that storage. Storage
+        # cannot grow past SSMAX; the remainder is surface runoff. DRAINT is
+        # the incoming rainfall rate.
         not_infiltrated = rain + rates.RIRR - rates.EVW - rates.RIN
         rates.DSS = torch.minimum(not_infiltrated, params.SSMAX - states.SS)
         rates.DTSR = not_infiltrated - rates.DSS
@@ -439,11 +459,14 @@ class WaterBalanceLayered(SimulationObject):
         states.SS = states.SS + rates.DSS * delt
         states.TSR = states.TSR + rates.DTSR * delt
         states.BOTTOMFLOWT = states.BOTTOMFLOWT + rates.BOTTOMFLOW * delt
+        # No groundwater, so there is no capillary rise.
         states.CRT = _as_tensor(0.0)
 
+        # Change of the root zone.
         rooting_depth = self._determine_rooting_depth()
         if torch.any(torch.abs(rooting_depth - self._RDold) > 0.001):
             profile.determine_rooting_status(rooting_depth, self._RDM)
+        # Summary water for the rooted, potentially rooted and unrooted layers.
         water = sm.new_zeros(self.params.shape)
         water_low = torch.zeros_like(water)
         water_bottom = torch.zeros_like(water)
@@ -464,11 +487,17 @@ class WaterBalanceLayered(SimulationObject):
         states.WAVUPP = available_top
         states.WAVLOW = available_low
         states.WAVBOT = available_bottom
+        # Rooting depth for which these layer contents were determined.
         self._RDold = rooting_depth
         states.SM_MEAN = states.W / torch.clamp(rooting_depth, min=1e-6)
 
     def finalize(self, day: datetime.date):
-        """Check that the free-drainage water balance closes."""
+        """Check that the free-drainage water balance closes.
+
+        The checksum is the change in surface storage and soil water, plus
+        inflows from rain and irrigation, minus transpiration, evaporation,
+        runoff and flow through the bottom of the profile.
+        """
         states = self.states
         checksum = (
             self.params.SSI
@@ -510,22 +539,54 @@ class WaterBalanceLayered(SimulationObject):
     def _maximum_boundary_flow(
         self, water_content, transpiration, pf, conductivity, matric_flux, delt
     ):
+        """Maximum flow at the top boundary of each layer."""
+        # maximum flow at Top Boundary of each layer
+        # ------------------------------------------
+        # DOWNWARD flows are calculated in two ways,
+        # (1) a "dry flow" from the matric flux potentials
+        # (2) a "wet flow" under the current layer conductivities and downward gravity.
+        # Clearly, only the dry flow may be negative (=upward). The dry flow accounts for the large
+        # gradient in potential under dry conditions (but neglects gravity). The wet flow takes into
+        # account gravity only and will dominate under wet conditions. The maximum of the dry and
+        # wet flow is taken as the downward flow, which is then further limited in order the prevent
+        # (a) oversaturation and (b) water content to decrease below field capacity.
+        #
+        # UPWARD flow is just the dry flow when it is negative. In this case the
+        # flow is limited to a certain fraction of what is required to get the
+        # layers at equal potential, taking into account, however, the
+        # contribution of an upward flow from further down. Hence, in case of
+        # upward flow from the groundwater, this upward flow is propagated
+        # upward if the suction gradient is sufficiently large.
         profile = self.soil_profile
         n_layers = len(profile)
         thickness = [layer.Thickness for layer in profile]
         flow_max = [None] * (n_layers + 1)
+        # Bottom layer conductivity limits the flow. Below field capacity there
+        # is no downward flow, so downward flow through the lower boundary can
+        # be guessed from the conductivity at field capacity.
         flow_max[n_layers] = torch.maximum(profile[-1].CondFC, conductivity[-1])
         for il in reversed(range(n_layers)):
-            if il == 0:
+            # limiting DOWNWARD flow rate
+            # == wet conditions: the soil conductivity is larger
+            #    the soil conductivity is the flow rate for gravity only
+            #    this limit is DOWNWARD only
+            # == dry conditions: the MFP gradient
+            #    the MFP gradient is larger for dry conditions
+            #    allows SOME upward flow
+            if il == 0:  # Top soil layer
                 limit_wet = profile.SurfaceConductivity
                 limit_dry = _as_tensor(0.0)
                 equal_amount = _as_tensor(0.0)
             else:
+                # the limit under wet conditions is a unit gradient
                 limit_wet = (thickness[il - 1] + thickness[il]) / (
                     thickness[il - 1] / conductivity[il - 1] + thickness[il] / conductivity[il]
                 )
+                # compute dry flow given gradients in matric flux potential
                 same_soil = profile[il - 1] == profile[il]
                 if same_soil:
+                    # Layers have the same properties: flow rates are estimated from
+                    # the gradient in Matric Flux Potential.
                     limit_dry = (
                         2.0
                         * (matric_flux[il - 1] - matric_flux[il])
@@ -536,6 +597,7 @@ class WaterBalanceLayered(SimulationObject):
                     )
                     equal_amount = water_content[il - 1] - thickness[il - 1] * mean_moisture
                 else:
+                    # iterative search to PF at layer boundary (by bisection)
                     limit_dry = self._bisect_boundary_flow(
                         profile[il - 1],
                         profile[il],
@@ -573,6 +635,8 @@ class WaterBalanceLayered(SimulationObject):
                 flow_up, flow_max[il + 1] + transpiration[il] - water_content[il] / delt
             )
             reject_upward = upward & ~dry_target if il > 0 else upward & False
+            # Downward rate: the larger of the dry and wet limits. The wet limit
+            # is always positive.
             flow_down_max = torch.maximum(limit_dry, limit_wet)
             saturation_limit = (
                 flow_max[il + 1] + (profile[il].WC0 - water_content[il]) / delt + transpiration[il]
@@ -597,7 +661,11 @@ class WaterBalanceLayered(SimulationObject):
         thickness_above,
         thickness_below,
     ):
-        """Find the pF at the interface of two different soils by bisection."""
+        """Find the pF at the interface of two different soils by bisection.
+
+        The search stops when the interval is within ``TinyFlow``, or after
+        ``MaxFlowIter`` steps. The iteration count itself is not a result.
+        """
         bound_above = pf_above
         bound_below = pf_below
         flow_above = mfp_above
@@ -642,6 +710,11 @@ class WaterBalanceLayered(SimulationObject):
         return amount
 
     def _evaporation_by_layer(self, water_content, transpiration, evaporation, infiltration, delt):
+        """Share soil evaporation over the layers, allowing upward flow in a drought.
+
+        Evaporation is reduced when the whole profile is too dry to supply it.
+        There is no evaporative flow through the lower boundary of the profile.
+        """
         remaining = evaporation
         taken = []
         for il, layer in enumerate(self.soil_profile):
@@ -664,6 +737,11 @@ class WaterBalanceLayered(SimulationObject):
     def _apply_flow_limits(
         self, water_content, transpiration, flow_max, evaporation_layer, infiltration, delt
     ):
+        """Limit downward flow so a layer does not fall below field capacity.
+
+        A negative, upward flow is left unchanged. Only water in excess of field
+        capacity can drain to the layer below.
+        """
         n_layers = len(self.soil_profile)
         evap_flow = [None] * (n_layers + 1)
         evap_flow[0] = self.rates.EVS
@@ -682,8 +760,10 @@ class WaterBalanceLayered(SimulationObject):
         return torch.stack(flow, dim=0), torch.stack(dwc, dim=0)
 
     def _determine_rooting_depth(self):
+        """Use the published rooting depth, or hold the default before the crop has one."""
         if "RD" in self.kiosk:
             return self.kiosk["RD"]
+        # Hold RD at the default value.
         return self._default_RD
 
     def _on_CROP_START(self):
@@ -696,6 +776,11 @@ class WaterBalanceLayered(SimulationObject):
         self._RIRR = _as_tensor(amount) * _as_tensor(efficiency)
 
     def _setup_new_crop(self):
+        """Read the crop maximum rooting depth and refresh the rooted-layer weights.
+
+        ``RDMCR`` is checked against the layer boundaries so the summary
+        water-balance states use the correct rooted layers.
+        """
         self._RDM = _as_tensor(self.parameter_provider["RDMCR"])
         self.soil_profile.validate_max_rooting_depth(self._RDM)
         self.soil_profile.determine_rooting_status(self._default_RD, self._RDM)
