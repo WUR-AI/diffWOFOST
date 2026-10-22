@@ -134,5 +134,5 @@ for more details.
 [hybrid_stress_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_stress_correction.ipynb
 [variational_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
 [variational_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
-[agmip_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/agmip_calibration_protocol.ipynb
-[agmip_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/agmip_calibration_protocol.ipynb
+[agmip_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/agmip-calibration-protocol/docs/notebooks/agmip_calibration_protocol.ipynb
+[agmip_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/agmip-calibration-protocol/docs/notebooks/agmip_calibration_protocol.ipynb
