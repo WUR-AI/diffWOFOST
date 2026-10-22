@@ -560,6 +560,24 @@ def _assimilation_pgass(overrides, lai, n_amount_lv, temp=18.0, dtemp=20.0):
     return WOFOST81_Assimilation(day, kiosk, provider)(day, weather)
 
 
+def test_installed_pcse_tmpftb_driver_is_recognized():
+    """Season comparisons follow the TMPFTB driver of the installed PCSE.
+
+    Released PCSE 8.1 passes the daily mean. The develop branch passes the
+    daytime temperature. Either spelling is accepted; an unrecognized call is not.
+    """
+    import inspect
+    import pcse.crop.assimilation as assimilation
+    from tests.physical_models.crop.pcse_tmpftb import pcse_wofost81_tmpftb_uses_daytime
+
+    source = inspect.getsource(assimilation.WOFOST81_Assimilation.__call__)
+    uses_daytime = pcse_wofost81_tmpftb_uses_daytime()
+    if uses_daytime:
+        assert "TMPFTB(drv.DTEMP)" in source
+    else:
+        assert "TMPFTB(drv.TEMP)" in source
+
+
 def test_wofost81_tmpftb_uses_daytime_temperature():
     """TMPFTB is evaluated at DTEMP, the daytime temperature.
 
