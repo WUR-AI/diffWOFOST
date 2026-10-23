@@ -1,0 +1,174 @@
+{
+  "note": "Stored Adam search, with NRESIDLV, NRESIDST and TCNT tried as protein candidates. after_step6 and phenology_accepted for the original parameters are the printed values; after_step7 is the weighted refit.",
+  "phenology_history": [
+    {
+      "Parameters": "TSUM1, TSUM2",
+      "SS": 2062.688000539024,
+      "AICc": 124.8676986694336,
+      "Kept": "major"
+    },
+    {
+      "Parameters": "TSUM1, TSUM2, VERNSAT",
+      "SS": 1075.2604254937119,
+      "AICc": 109.14718627929688,
+      "Kept": "yes"
+    },
+    {
+      "Parameters": "TSUM1, TSUM2, VERNSAT, VERNBASE",
+      "SS": 1167.2564070697,
+      "AICc": 114.1849136352539,
+      "Kept": "no"
+    },
+    {
+      "Parameters": "TSUM1, TSUM2, VERNSAT, DLO",
+      "SS": 1246.8383994597323,
+      "AICc": 116.03166198730469,
+      "Kept": "no"
+    }
+  ],
+  "phenology_accepted": {
+    "TSUM1": 620.55,
+    "TSUM2": 882.36,
+    "VERNSAT": 51.63,
+    "VERNBASE": 9.0,
+    "DLO": 16.3
+  },
+  "phenology_selected": [
+    "TSUM1",
+    "TSUM2",
+    "VERNSAT"
+  ],
+  "phenology_error_variance": 43.01041701974847,
+  "selected": [
+    "TSUM1",
+    "TSUM2",
+    "VERNSAT",
+    "AMAX_REF",
+    "SPAN",
+    "RNUPTAKEMAX",
+    "REALLOC_STEM_FRACTION",
+    "NMAXSO"
+  ],
+  "after_step6": {
+    "AMAX_REF": 34.88,
+    "CVO": 0.709,
+    "DLO": 16.3,
+    "NMAXSO": 0.01891,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "REALLOC_STEM_FRACTION": 0.2541,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 3.469,
+    "SPAN": 30.38,
+    "TCNT": 10.0,
+    "TDWI": 593.0,
+    "TSUM1": 620.55,
+    "TSUM2": 882.36,
+    "VERNBASE": 9.0,
+    "VERNSAT": 51.63
+  },
+  "after_step7": {
+    "AMAX_REF": 32.074880113500434,
+    "CVO": 0.709,
+    "DLO": 16.3,
+    "NMAXSO": 0.01956119293187475,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "REALLOC_STEM_FRACTION": 0.2007172251693552,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 2.774383958872381,
+    "SPAN": 33.433672065364824,
+    "TCNT": 10.0,
+    "TDWI": 593.0,
+    "TSUM1": 632.9265017722106,
+    "TSUM2": 958.9336591569593,
+    "VERNBASE": 9.0,
+    "VERNSAT": 56.952363073354135
+  },
+  "group_rows": [
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN",
+      "SS": 1.9083445741165488,
+      "AICc": -133.77728271484375,
+      "Kept": "major"
+    },
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN, TDWI",
+      "SS": 1.9292356313704575,
+      "AICc": -130.99087524414062,
+      "Kept": "no"
+    },
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN, RGRLAI",
+      "SS": 2.07529565281168,
+      "AICc": -127.77977752685547,
+      "Kept": "no"
+    },
+    {
+      "Group": "plant_N_content",
+      "Parameters": "RNUPTAKEMAX",
+      "SS": 0.7075603042003126,
+      "AICc": -20.316986083984375,
+      "Kept": "major"
+    },
+    {
+      "Group": "plant_N_content",
+      "Parameters": "RNUPTAKEMAX, NMAXSO",
+      "SS": 0.5646198233518699,
+      "AICc": -18.919445037841797,
+      "Kept": "no"
+    },
+    {
+      "Group": "yield",
+      "Parameters": "REALLOC_STEM_FRACTION",
+      "SS": 181340.37707002956,
+      "AICc": 126.42499542236328,
+      "Kept": "major"
+    },
+    {
+      "Group": "yield",
+      "Parameters": "REALLOC_STEM_FRACTION, CVO",
+      "SS": 178972.6142618901,
+      "AICc": 129.0904998779297,
+      "Kept": "no"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO",
+      "SS": 11.717594465601767,
+      "AICc": 1.0134843587875366,
+      "Kept": "major"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO, NRESIDLV",
+      "SS": 11.122674995993643,
+      "AICc": 3.1724741458892822,
+      "Kept": "no"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO, NRESIDST",
+      "SS": 11.122674995993656,
+      "AICc": 3.1724741458892822,
+      "Kept": "no"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO, TCNT",
+      "SS": 11.12267499599365,
+      "AICc": 3.1724741458892822,
+      "Kept": "no"
+    }
+  ],
+  "group_variance": {
+    "phenology": 43.01041701974847,
+    "biomass": 0.045436775574203545,
+    "nitrogen": 0.08844503802503907,
+    "yield": 15111.69808916913,
+    "protein": 0.976466205466814
+  }
+}

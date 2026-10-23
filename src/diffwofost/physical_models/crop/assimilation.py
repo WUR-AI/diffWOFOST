@@ -740,9 +740,9 @@ class WOFOST81_Assimilation(SimulationObject):
             kiosk["NamountLV"], self.params.shape, dtype=self.dtype, device=self.device
         )
         irrad = drv["IRRAD"]
-        # TMPFTB uses the daily mean temperature. EFFTB uses the daytime
-        # temperature, matching PCSE's WOFOST 8.1 assimilation.
-        temp = drv["TEMP"]
+        # Both response tables use the daytime temperature. WOFOST 7.2 already
+        # did; PCSE 8.1 passed the daily mean into TMPFTB and that was corrected
+        # on its develop branch.
         dtemp = drv["DTEMP"]
         tmin = drv["TMIN"]
 
@@ -764,7 +764,7 @@ class WOFOST81_Assimilation(SimulationObject):
 
         # Daily gross assimilation.
         # CO2 and temperature response factors of AMAX.
-        tmpf = params.TMPFTB(temp)
+        tmpf = params.TMPFTB(dtemp)
         eff = params.EFFTB(dtemp) * params.CO2EFFTB(params.CO2)
 
         # Gross assimilation, then the low-minimum-temperature correction.

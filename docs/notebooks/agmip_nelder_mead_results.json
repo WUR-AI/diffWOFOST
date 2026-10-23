@@ -1,0 +1,1012 @@
+{
+  "note": "Nelder-Mead on the same objectives as the stored Adam search. Phenology uses SciPy's adaptive Nelder-Mead in logit space (xatol 0.03, fatol 1, maxfev 80 for two parameters and 40 for one), 20 Latin-hypercube starts for the majors (seed 20241022) and 5 starts for each candidate. The growth probe is 8 evaluations from 3 starts, set to the wall time of four Adam steps and then capped. Adam phenology is 10 steps on the majors and 8 on each candidate; Adam growth is the stored four-step group search.",
+  "phenology": {
+    "evaluation_seconds": 3.915139233984519,
+    "default_ss": 7368.098426312764,
+    "adam_seconds": 241.65904985798988,
+    "adam_selected": [
+      "TSUM1",
+      "TSUM2",
+      "VERNSAT"
+    ],
+    "adam_values": {
+      "TSUM1": 620.5549479084212,
+      "TSUM2": 882.3642022015207,
+      "VERNSAT": 51.63479982129614,
+      "VERNBASE": 9.0,
+      "DLO": 16.3
+    },
+    "adam_history": [
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2"
+        ],
+        "ss": 2062.688000539024,
+        "aicc": 124.8676986694336,
+        "kept": true
+      },
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2",
+          "VERNSAT"
+        ],
+        "ss": 1075.2604254937119,
+        "aicc": 109.14718627929688,
+        "kept": true
+      },
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2",
+          "VERNSAT",
+          "VERNBASE"
+        ],
+        "ss": 1167.2564070697,
+        "aicc": 114.1849136352539,
+        "kept": false
+      },
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2",
+          "VERNSAT",
+          "DLO"
+        ],
+        "ss": 1246.8383994597323,
+        "aicc": 116.03166198730469,
+        "kept": false
+      }
+    ],
+    "rounds": [
+      {
+        "names": [
+          "TSUM1",
+          "TSUM2"
+        ],
+        "role": "majors",
+        "kept": true,
+        "aicc": 99.80834197998047,
+        "best_ss": 842.8491979535597,
+        "best_was_previous_start": false,
+        "best_hit_evaluation_ceiling": true,
+        "n_starts": 20,
+        "n_met_stopping_test": 11,
+        "seconds": 6076.814219299005,
+        "evaluations": 1401,
+        "best_final": {
+          "TSUM1": 618.5440487825837,
+          "TSUM2": 961.2861511509092
+        },
+        "runs": [
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 847.5016919013202,
+            "evaluations": 76,
+            "seconds": 327.6541420739959,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 886.0,
+              "TSUM2": 860.0
+            },
+            "final": {
+              "TSUM1": 620.1289545015002,
+              "TSUM2": 959.6802761535123
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 847.460205629904,
+            "evaluations": 65,
+            "seconds": 279.8500634350057,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 759.1271093453117,
+              "TSUM2": 435.1979685187604
+            },
+            "final": {
+              "TSUM1": 620.2081771984416,
+              "TSUM2": 959.1412799803139
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 912.4738011962818,
+            "evaluations": 26,
+            "seconds": 112.68667528999504,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 594.3395858266954,
+              "TSUM2": 911.4990180272687
+            },
+            "final": {
+              "TSUM1": 643.5709832349758,
+              "TSUM2": 914.1748339654808
+            }
+          },
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 843.099567604319,
+            "evaluations": 80,
+            "seconds": 345.3127798520145,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 800.1656262410088,
+              "TSUM2": 1169.4845224815267
+            },
+            "final": {
+              "TSUM1": 618.4002734511747,
+              "TSUM2": 971.2752744610234
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 888.7253799095765,
+            "evaluations": 53,
+            "seconds": 232.34412560099736,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 712.7240811346259,
+              "TSUM2": 940.6019372386361
+            },
+            "final": {
+              "TSUM1": 634.6754909461454,
+              "TSUM2": 925.6433989653173
+            }
+          },
+          {
+            "index": 6,
+            "previous_best_start": false,
+            "ss": 851.4861512375309,
+            "evaluations": 74,
+            "seconds": 318.99896176700713,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 1166.843046125677,
+              "TSUM2": 1041.2042070305647
+            },
+            "final": {
+              "TSUM1": 618.4609446016539,
+              "TSUM2": 943.2733981531779
+            }
+          },
+          {
+            "index": 7,
+            "previous_best_start": false,
+            "ss": 850.8047940086733,
+            "evaluations": 80,
+            "seconds": 350.540630915988,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 919.0818803238199,
+              "TSUM2": 1115.3852811971465
+            },
+            "final": {
+              "TSUM1": 620.888719909236,
+              "TSUM2": 952.8397206207757
+            }
+          },
+          {
+            "index": 8,
+            "previous_best_start": false,
+            "ss": 847.1706849965462,
+            "evaluations": 58,
+            "seconds": 253.91508438097662,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 630.7747369151333,
+              "TSUM2": 554.0145442120879
+            },
+            "final": {
+              "TSUM1": 621.1900072997456,
+              "TSUM2": 959.5491017977968
+            }
+          },
+          {
+            "index": 9,
+            "previous_best_start": false,
+            "ss": 842.8491979535597,
+            "evaluations": 80,
+            "seconds": 349.0726026330085,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 1090.734021101546,
+              "TSUM2": 684.0903607938305
+            },
+            "final": {
+              "TSUM1": 618.5440487825837,
+              "TSUM2": 961.2861511509092
+            }
+          },
+          {
+            "index": 10,
+            "previous_best_start": false,
+            "ss": 884.7060984387598,
+            "evaluations": 80,
+            "seconds": 348.5777060489927,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 1321.0991598589867,
+              "TSUM2": 1009.2269093047463
+            },
+            "final": {
+              "TSUM1": 604.9394312339655,
+              "TSUM2": 990.3638611588418
+            }
+          },
+          {
+            "index": 11,
+            "previous_best_start": false,
+            "ss": 847.5360599697677,
+            "evaluations": 64,
+            "seconds": 279.2449626640009,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 1041.4862347167837,
+              "TSUM2": 466.84268662001944
+            },
+            "final": {
+              "TSUM1": 620.2290753463941,
+              "TSUM2": 960.5012302607468
+            }
+          },
+          {
+            "index": 12,
+            "previous_best_start": false,
+            "ss": 843.2373695466049,
+            "evaluations": 80,
+            "seconds": 346.3059969759779,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 1203.5246305136552,
+              "TSUM2": 593.0806111135204
+            },
+            "final": {
+              "TSUM1": 618.6150597531408,
+              "TSUM2": 962.6728250124692
+            }
+          },
+          {
+            "index": 13,
+            "previous_best_start": false,
+            "ss": 847.3239114453794,
+            "evaluations": 66,
+            "seconds": 289.8333172079874,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 1289.1561783506406,
+              "TSUM2": 1230.837755591851
+            },
+            "final": {
+              "TSUM1": 620.6341487142813,
+              "TSUM2": 959.1599256850222
+            }
+          },
+          {
+            "index": 14,
+            "previous_best_start": false,
+            "ss": 847.5052776202677,
+            "evaluations": 80,
+            "seconds": 345.4721418150002,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 938.3115220979784,
+              "TSUM2": 1290.9172459839438
+            },
+            "final": {
+              "TSUM1": 620.1505793339561,
+              "TSUM2": 959.8691388649469
+            }
+          },
+          {
+            "index": 15,
+            "previous_best_start": false,
+            "ss": 842.9033149759379,
+            "evaluations": 80,
+            "seconds": 346.19688456199947,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 423.1974153147374,
+              "TSUM2": 1308.079562339092
+            },
+            "final": {
+              "TSUM1": 618.538592705572,
+              "TSUM2": 960.2236547439121
+            }
+          },
+          {
+            "index": 16,
+            "previous_best_start": false,
+            "ss": 844.8538478397737,
+            "evaluations": 80,
+            "seconds": 346.26915557301254,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 865.6362938301946,
+              "TSUM2": 616.4751648565135
+            },
+            "final": {
+              "TSUM1": 618.4610427705747,
+              "TSUM2": 973.5788434304919
+            }
+          },
+          {
+            "index": 17,
+            "previous_best_start": false,
+            "ss": 890.3301121612308,
+            "evaluations": 72,
+            "seconds": 311.24954536600853,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 1374.677633307201,
+              "TSUM2": 752.0635418980742
+            },
+            "final": {
+              "TSUM1": 613.4629861330934,
+              "TSUM2": 957.5013646799661
+            }
+          },
+          {
+            "index": 18,
+            "previous_best_start": false,
+            "ss": 847.5089331545652,
+            "evaluations": 65,
+            "seconds": 283.10360463502,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 511.4551836181343,
+              "TSUM2": 1379.4415080232234
+            },
+            "final": {
+              "TSUM1": 620.3247637232047,
+              "TSUM2": 960.5366868043426
+            }
+          },
+          {
+            "index": 19,
+            "previous_best_start": false,
+            "ss": 913.6351367889977,
+            "evaluations": 80,
+            "seconds": 348.1878693049948,
+            "met_stopping_test": false,
+            "start": {
+              "TSUM1": 1016.3822585364835,
+              "TSUM2": 856.1691715063444
+            },
+            "final": {
+              "TSUM1": 627.8329933890668,
+              "TSUM2": 925.0282809196668
+            }
+          },
+          {
+            "index": 20,
+            "previous_best_start": false,
+            "ss": 847.2195315757191,
+            "evaluations": 62,
+            "seconds": 261.99796919702203,
+            "met_stopping_test": true,
+            "start": {
+              "TSUM1": 452.79080058544713,
+              "TSUM2": 813.1034674788535
+            },
+            "final": {
+              "TSUM1": 620.9823622179005,
+              "TSUM2": 959.0754997158922
+            }
+          }
+        ]
+      },
+      {
+        "names": [
+          "VERNSAT"
+        ],
+        "role": "candidate",
+        "kept": false,
+        "aicc": 102.16439819335938,
+        "best_ss": 837.9287491022557,
+        "best_was_previous_start": true,
+        "best_hit_evaluation_ceiling": false,
+        "n_starts": 5,
+        "n_met_stopping_test": 5,
+        "seconds": 163.1839263360016,
+        "evaluations": 38,
+        "best_final": {
+          "VERNSAT": 43.52689880284375
+        },
+        "runs": [
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 837.9287491022557,
+            "evaluations": 4,
+            "seconds": 16.37043040699791,
+            "met_stopping_test": true,
+            "start": {
+              "VERNSAT": 44.0
+            },
+            "final": {
+              "VERNSAT": 43.52689880284375
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 883.033980421696,
+            "evaluations": 12,
+            "seconds": 51.67668070399668,
+            "met_stopping_test": true,
+            "start": {
+              "VERNSAT": 34.379667859371985
+            },
+            "final": {
+              "VERNSAT": 37.34512921061304
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 880.0722555324242,
+            "evaluations": 2,
+            "seconds": 8.16261936398223,
+            "met_stopping_test": true,
+            "start": {
+              "VERNSAT": 57.580733316919506
+            },
+            "final": {
+              "VERNSAT": 57.46033498573754
+            }
+          },
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 936.0583270327376,
+            "evaluations": 12,
+            "seconds": 53.965634075022535,
+            "met_stopping_test": true,
+            "start": {
+              "VERNSAT": 85.6735609496105
+            },
+            "final": {
+              "VERNSAT": 82.72048229581034
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 887.3972091436449,
+            "evaluations": 8,
+            "seconds": 33.00856178600225,
+            "met_stopping_test": true,
+            "start": {
+              "VERNSAT": 69.0390504205578
+            },
+            "final": {
+              "VERNSAT": 68.1831421678637
+            }
+          }
+        ]
+      },
+      {
+        "names": [
+          "VERNBASE"
+        ],
+        "role": "candidate",
+        "kept": false,
+        "aicc": 102.16024017333984,
+        "best_ss": 837.8042537084718,
+        "best_was_previous_start": false,
+        "best_hit_evaluation_ceiling": false,
+        "n_starts": 5,
+        "n_met_stopping_test": 5,
+        "seconds": 113.92302732498501,
+        "evaluations": 28,
+        "best_final": {
+          "VERNBASE": 8.941629116262247
+        },
+        "runs": [
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 842.8491979535597,
+            "evaluations": 2,
+            "seconds": 8.028254632023163,
+            "met_stopping_test": true,
+            "start": {
+              "VERNBASE": 9.0
+            },
+            "final": {
+              "VERNBASE": 9.0
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 837.8042537084718,
+            "evaluations": 4,
+            "seconds": 16.500376551994123,
+            "met_stopping_test": true,
+            "start": {
+              "VERNBASE": 8.991676891973452
+            },
+            "final": {
+              "VERNBASE": 8.941629116262247
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 870.9718693752413,
+            "evaluations": 10,
+            "seconds": 40.095693534996826,
+            "met_stopping_test": true,
+            "start": {
+              "VERNBASE": 18.7778875387542
+            },
+            "final": {
+              "VERNBASE": 19.5119353640079
+            }
+          },
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 882.2296591939262,
+            "evaluations": 10,
+            "seconds": 40.93370386099559,
+            "met_stopping_test": true,
+            "start": {
+              "VERNBASE": 4.939642105700996
+            },
+            "final": {
+              "VERNBASE": 5.757393197230333
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 846.6282450733466,
+            "evaluations": 2,
+            "seconds": 8.36499874497531,
+            "met_stopping_test": true,
+            "start": {
+              "VERNBASE": 11.976553951969898
+            },
+            "final": {
+              "VERNBASE": 12.072593900458877
+            }
+          }
+        ]
+      },
+      {
+        "names": [
+          "DLO"
+        ],
+        "role": "candidate",
+        "kept": false,
+        "aicc": 102.32726287841797,
+        "best_ss": 842.8168608731402,
+        "best_was_previous_start": false,
+        "best_hit_evaluation_ceiling": false,
+        "n_starts": 5,
+        "n_met_stopping_test": 5,
+        "seconds": 279.13398052501725,
+        "evaluations": 68,
+        "best_final": {
+          "DLO": 16.300989212900028
+        },
+        "runs": [
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 842.8491979535597,
+            "evaluations": 5,
+            "seconds": 20.38113515099394,
+            "met_stopping_test": true,
+            "start": {
+              "DLO": 16.3
+            },
+            "final": {
+              "DLO": 16.3
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 847.5076932832624,
+            "evaluations": 14,
+            "seconds": 57.55525087800925,
+            "met_stopping_test": true,
+            "start": {
+              "DLO": 13.890898964283547
+            },
+            "final": {
+              "DLO": 16.330903960407376
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 842.8168608731402,
+            "evaluations": 19,
+            "seconds": 78.21333992801374,
+            "met_stopping_test": true,
+            "start": {
+              "DLO": 15.326893532190692
+            },
+            "final": {
+              "DLO": 16.300989212900028
+            }
+          },
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 847.7305548489925,
+            "evaluations": 16,
+            "seconds": 65.83335942501435,
+            "met_stopping_test": true,
+            "start": {
+              "DLO": 18.84244438183662
+            },
+            "final": {
+              "DLO": 16.321357169692014
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 873.3941058941392,
+            "evaluations": 14,
+            "seconds": 57.15089514298597,
+            "met_stopping_test": true,
+            "start": {
+              "DLO": 17.81849875452322
+            },
+            "final": {
+              "DLO": 16.356209742608826
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "growth_probe": {
+    "forward_seconds": 84.28930453700013,
+    "adam_step_seconds": 246.89399813700584,
+    "evaluations_per_start": 8,
+    "n_starts": 3,
+    "default_biomass_ss": 7.864707635372181,
+    "groups": [
+      {
+        "name": "plant_biomass",
+        "label": "Biomass",
+        "names": [
+          "AMAX_REF",
+          "SPAN"
+        ],
+        "adam_ss": 1.9083445741165488,
+        "adam_steps": 4,
+        "runs": [
+          {
+            "index": 1,
+            "arminda_start": true,
+            "ss": 7.39062265550339,
+            "evaluations": 8,
+            "seconds": 666.3688522500161,
+            "start": {
+              "AMAX_REF": 40.2,
+              "SPAN": 35.0
+            },
+            "final": {
+              "AMAX_REF": 39.213640260075245,
+              "SPAN": 34.9875000016276
+            },
+            "trace": [
+              7.864707635372181,
+              7.753030023564804,
+              7.864770143343394,
+              7.752996217617376,
+              7.696939862772313,
+              7.585727563399736,
+              7.445900141214599,
+              7.39062265550339
+            ]
+          },
+          {
+            "index": 2,
+            "arminda_start": false,
+            "ss": 2.784760173154597,
+            "evaluations": 8,
+            "seconds": 627.6941160669958,
+            "start": {
+              "AMAX_REF": 31.584857979680457,
+              "SPAN": 33.447565181438264
+            },
+            "final": {
+              "AMAX_REF": 29.47326869463468,
+              "SPAN": 33.31234694060105
+            },
+            "trace": [
+              3.6668276732294642,
+              3.433642512794682,
+              3.6649118945497197,
+              3.431913184267903,
+              3.320253178861381,
+              3.1132111883890308,
+              2.874874276045217,
+              2.784760173154597
+            ]
+          },
+          {
+            "index": 3,
+            "arminda_start": false,
+            "ss": 15.330718629082764,
+            "evaluations": 8,
+            "seconds": 645.6459407809889,
+            "start": {
+              "AMAX_REF": 63.55861249470854,
+              "SPAN": 42.6499412200414
+            },
+            "final": {
+              "AMAX_REF": 60.37247927654122,
+              "SPAN": 43.24372794115573
+            },
+            "trace": [
+              16.078778853056242,
+              16.194990194974,
+              16.0836464150786,
+              15.95472451604391,
+              15.820334339754666,
+              15.814960949364554,
+              15.664700419497793,
+              15.330718629082764
+            ]
+          }
+        ]
+      },
+      {
+        "name": "plant_N_content",
+        "label": "Plant nitrogen",
+        "names": [
+          "RNUPTAKEMAX"
+        ],
+        "adam_ss": 0.7075603042003126,
+        "adam_steps": 4,
+        "runs": [
+          {
+            "index": 1,
+            "arminda_start": true,
+            "ss": 0.37875916862339676,
+            "evaluations": 8,
+            "seconds": 682.8543253609969,
+            "start": {
+              "RNUPTAKEMAX": 4.26
+            },
+            "final": {
+              "RNUPTAKEMAX": 4.728034881358619
+            },
+            "trace": [
+              0.38745853922125445,
+              0.3877367792683256,
+              0.3871857557453345,
+              0.38657939902421007,
+              0.3856283809431528,
+              0.38382610652708987,
+              0.38173531831539004,
+              0.37875916862339676
+            ]
+          },
+          {
+            "index": 2,
+            "arminda_start": false,
+            "ss": 0.33214545710570925,
+            "evaluations": 7,
+            "seconds": 546.8661268249853,
+            "start": {
+              "RNUPTAKEMAX": 1.9882037662431946
+            },
+            "final": {
+              "RNUPTAKEMAX": 1.8446541798044125
+            },
+            "trace": [
+              0.34388651591758074,
+              0.3365458583909134,
+              0.33214545710570925,
+              0.3391697661343669,
+              0.33265864189390426,
+              0.33328634299013704,
+              0.33214545710570925
+            ]
+          },
+          {
+            "index": 3,
+            "arminda_start": false,
+            "ss": 0.3684990807698728,
+            "evaluations": 8,
+            "seconds": 619.0759168119985,
+            "start": {
+              "RNUPTAKEMAX": 6.9797052657270555
+            },
+            "final": {
+              "RNUPTAKEMAX": 6.726189791388112
+            },
+            "trace": [
+              0.3685306711034206,
+              0.36853127943110553,
+              0.3685301256884182,
+              0.3684990807698728,
+              0.3696090265437404,
+              0.3685113460483447,
+              0.368880476872703,
+              0.36850051246978305
+            ]
+          }
+        ]
+      },
+      {
+        "name": "yield",
+        "label": "Yield",
+        "names": [
+          "REALLOC_STEM_FRACTION"
+        ],
+        "adam_ss": 181340.37707002956,
+        "adam_steps": 4,
+        "runs": [
+          {
+            "index": 1,
+            "arminda_start": true,
+            "ss": 251033.60910773173,
+            "evaluations": 8,
+            "seconds": 614.7043069869978,
+            "start": {
+              "REALLOC_STEM_FRACTION": 0.2
+            },
+            "final": {
+              "REALLOC_STEM_FRACTION": 0.16557355364716508
+            },
+            "trace": [
+              260653.0961513267,
+              257840.66343714437,
+              255559.98867339743,
+              252479.8930782598,
+              251033.60910773173,
+              256699.292247154,
+              252690.25468535756,
+              251071.83412188338
+            ]
+          },
+          {
+            "index": 2,
+            "arminda_start": false,
+            "ss": 251031.28871364813,
+            "evaluations": 8,
+            "seconds": 626.9626869860222,
+            "start": {
+              "REALLOC_STEM_FRACTION": 0.11576842235273455
+            },
+            "final": {
+              "REALLOC_STEM_FRACTION": 0.16570953627934354
+            },
+            "trace": [
+              273405.4946278663,
+              278578.2194726012,
+              268431.8482880001,
+              259571.21701412371,
+              251524.6690027041,
+              276294.1947885731,
+              254809.0085474142,
+              251031.28871364813
+            ]
+          },
+          {
+            "index": 3,
+            "arminda_start": false,
+            "ss": 310836.0914658535,
+            "evaluations": 8,
+            "seconds": 618.8574534840009,
+            "start": {
+              "REALLOC_STEM_FRACTION": 0.5707138420888289
+            },
+            "final": {
+              "REALLOC_STEM_FRACTION": 0.08354244730801277
+            },
+            "trace": [
+              1714718.8556216203,
+              1742508.1468721237,
+              1683444.1060029608,
+              1609212.7951580435,
+              1464715.2444091775,
+              1055219.2758098955,
+              417793.51476582105,
+              310836.0914658535
+            ]
+          }
+        ]
+      },
+      {
+        "name": "seed_protein",
+        "label": "Protein",
+        "names": [
+          "NMAXSO"
+        ],
+        "adam_ss": 11.717594465601767,
+        "adam_steps": 4,
+        "runs": [
+          {
+            "index": 1,
+            "arminda_start": true,
+            "ss": 10.570454484470526,
+            "evaluations": 8,
+            "seconds": 620.6078413730138,
+            "start": {
+              "NMAXSO": 0.02035
+            },
+            "final": {
+              "NMAXSO": 0.019643044120902852
+            },
+            "trace": [
+              13.773403250000005,
+              13.534457016081726,
+              13.304490384711954,
+              12.87145904668003,
+              12.289004656525496,
+              11.364291539819018,
+              10.570454484470526,
+              11.050365957595744
+            ]
+          },
+          {
+            "index": 2,
+            "arminda_start": false,
+            "ss": 10.900121113493142,
+            "evaluations": 8,
+            "seconds": 622.3944635069929,
+            "start": {
+              "NMAXSO": 0.02059586897311203
+            },
+            "final": {
+              "NMAXSO": 0.01979408658257594
+            },
+            "trace": [
+              15.876828734529552,
+              15.68497641082454,
+              15.496602769944248,
+              15.130290004624218,
+              14.606897759257786,
+              13.65388707427444,
+              12.458105859548564,
+              10.900121113493142
+            ]
+          },
+          {
+            "index": 3,
+            "arminda_start": false,
+            "ss": 13.840405771356291,
+            "evaluations": 8,
+            "seconds": 621.206159652007,
+            "start": {
+              "NMAXSO": 0.021674750525484565
+            },
+            "final": {
+              "NMAXSO": 0.02035886974450875
+            },
+            "trace": [
+              31.14345105812096,
+              31.77680980428789,
+              30.51928114190988,
+              29.298638999440286,
+              27.537385209171084,
+              24.26859431143991,
+              20.008865121677257,
+              13.840405771356291
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}
