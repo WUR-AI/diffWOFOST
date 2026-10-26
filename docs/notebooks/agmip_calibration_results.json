@@ -1,5 +1,5 @@
 {
-  "note": "Wallach multi-start Adam search on Snellius, job 28541150, copied 2026-10-26. Finished through the protein candidate NRESIDLV. The allocation ended during NRESIDST at step 37, so that round is not a result, and TCNT was never started. after_step6 is the vector kept by the finished rounds. after_step7 is the best finished start of the weighted refit, job 28583854 start 1, which stopped by patience. The other weighted starts were still running and their scores were higher. weighted_ss is that start's joint objective on Adam's own step-6 variances.",
+  "note": "Wallach multi-start Adam search on Snellius, job 28541150, copied 2026-10-26. Finished through the protein candidate NRESIDLV. The allocation ended during NRESIDST at step 37, so that round is not a result, and TCNT was never started. after_step6 is the vector kept by the finished rounds. after_step7 is the best finished start of the joint weighted refit, job 28583854 start 3, which reached the step ceiling. It began at a Latin-hypercube point, not at the step 6 vector. The other finished starts had higher scores, and the refit had not completed all 20 starts. weighted_ss is the joint objective on one shared set of variances, the five variances from Adam's own step 6. Nelder-Mead's joint refit is scored with those same variances when it is compared.",
   "phenology_history": [
     {
       "Parameters": "TSUM1, TSUM2",
@@ -67,24 +67,24 @@
     "TCNT": 10.0
   },
   "after_step7": {
-    "TSUM1": 618.4510613360943,
-    "TSUM2": 961.5667641036606,
+    "TSUM1": 629.3866615482409,
+    "TSUM2": 957.4075746357939,
     "VERNSAT": 44.0,
     "VERNBASE": 9.0,
     "DLO": 16.3,
-    "AMAX_REF": 29.979330501871306,
-    "SPAN": 51.871187470329446,
-    "TDWI": 321.01724352657664,
+    "AMAX_REF": 31.992139675004537,
+    "SPAN": 35.74195468973853,
+    "TDWI": 286.42533488639504,
     "RGRLAI": 0.007,
-    "RNUPTAKEMAX": 1.2865359981586728,
-    "NMAXSO": 0.01965028724374702,
-    "REALLOC_STEM_FRACTION": 0.12916815324193456,
+    "RNUPTAKEMAX": 1.5684809777296587,
+    "NMAXSO": 0.019477713271466433,
+    "REALLOC_STEM_FRACTION": 0.20251556176661234,
     "CVO": 0.709,
     "NRESIDLV": 0.004,
     "NRESIDST": 0.002,
     "TCNT": 10.0
   },
-  "weighted_ss": 98.06424013561319,
+  "weighted_ss": 93.1150931961977,
   "weighted_complete": false,
   "group_rows": [
     {
