@@ -1,5 +1,5 @@
 {
-  "note": "Wallach multi-start Adam search on Snellius, job 28541150, copied 2026-10-26. Finished through the protein candidate NRESIDLV. The allocation ended during NRESIDST at step 37, so that round is not a result, and TCNT was never started. after_step6 is the vector kept by the finished rounds. after_step7 is the best finished start of the joint weighted refit, job 28583854 start 3, which reached the step ceiling. It began at a Latin-hypercube point, not at the step 6 vector. The other finished starts had higher scores, and the refit had not completed all 20 starts. weighted_ss is the joint objective on one shared set of variances, the five variances from Adam's own step 6. Nelder-Mead's joint refit is scored with those same variances when it is compared.",
+  "note": "Wallach multi-start Adam search on Snellius, job 28541150, copied 2026-10-26. Finished through the protein candidate NRESIDLV. The allocation ended during NRESIDST at step 37, so that round is not a result, and TCNT was never started. after_step6 is the vector kept by the finished rounds. after_step7 is the best finished start of the joint weighted refit, job 28583854 start 3, which reached the step ceiling. It began at a Latin-hypercube point, not at the step 6 vector. All 20 starts have since finished. Start 3 remained the best, and the other starts had higher scores. weighted_ss is the joint objective on one shared set of variances, the five variances from Adam's own step 6. Nelder-Mead's joint refit is scored with those same variances when it is compared.",
   "phenology_history": [
     {
       "Parameters": "TSUM1, TSUM2",
@@ -85,7 +85,7 @@
     "TCNT": 10.0
   },
   "weighted_ss": 93.1150931961977,
-  "weighted_complete": false,
+  "weighted_complete": true,
   "group_rows": [
     {
       "Group": "plant_biomass",
