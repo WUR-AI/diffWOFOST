@@ -1,0 +1,205 @@
+{
+  "note": "Step 7 joint weighted sum of squares for each finished start. Each group's sum of squares is divided by the variance from Adam's step 6, and the five terms are added. Adam job 28583854 finished all 20 starts. Nelder-Mead job 28599462 had finished 15 of 20 starts when this file was copied.",
+  "adam": {
+    "complete": true,
+    "n_planned": 20,
+    "runs": [
+      {
+        "index": 1,
+        "ss": 98.06424013561319,
+        "stopped": "patience"
+      },
+      {
+        "index": 4,
+        "ss": 101.70383366076798,
+        "stopped": "patience"
+      },
+      {
+        "index": 8,
+        "ss": 105.36196585053158,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 2,
+        "ss": 93.88730354242135,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 7,
+        "ss": 163.5054764259493,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 6,
+        "ss": 104.6226913324131,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 5,
+        "ss": 144.1182241101677,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 3,
+        "ss": 93.1150931961977,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 9,
+        "ss": 119.00401040973847,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 12,
+        "ss": 295.31955984610414,
+        "stopped": "patience"
+      },
+      {
+        "index": 11,
+        "ss": 351.3588658865659,
+        "stopped": "patience"
+      },
+      {
+        "index": 10,
+        "ss": 295.1249248861536,
+        "stopped": "patience"
+      },
+      {
+        "index": 13,
+        "ss": 150.13419493173103,
+        "stopped": "patience"
+      },
+      {
+        "index": 15,
+        "ss": 182.29568422935247,
+        "stopped": "patience"
+      },
+      {
+        "index": 14,
+        "ss": 103.45873810564247,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 16,
+        "ss": 98.07966240077572,
+        "stopped": "ceiling"
+      },
+      {
+        "index": 19,
+        "ss": 386.52955350875794,
+        "stopped": "patience"
+      },
+      {
+        "index": 17,
+        "ss": 137.0420213495161,
+        "stopped": "patience"
+      },
+      {
+        "index": 18,
+        "ss": 101.32149276018632,
+        "stopped": "patience"
+      },
+      {
+        "index": 20,
+        "ss": 102.30816317596425,
+        "stopped": "ceiling"
+      }
+    ]
+  },
+  "nelder_mead": {
+    "complete": false,
+    "n_planned": 20,
+    "runs": [
+      {
+        "index": 4,
+        "ss": 434.27857431815283,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 5,
+        "ss": 395.80288207882285,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 3,
+        "ss": 170.04080330971848,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 2,
+        "ss": 462.2217774819813,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 1,
+        "ss": 111.8070809309656,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 10,
+        "ss": 1906.082611196993,
+        "evaluations": 157,
+        "met_stopping_test": true
+      },
+      {
+        "index": 6,
+        "ss": 208.43527524688088,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 7,
+        "ss": 214.16265563291535,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 8,
+        "ss": 159.14877210296234,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 9,
+        "ss": 313.8054860580449,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 11,
+        "ss": 149.429608519438,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 12,
+        "ss": 406.9074307951156,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 13,
+        "ss": 361.96928771206797,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 14,
+        "ss": 203.72242883310133,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 15,
+        "ss": 467.09740504464537,
+        "evaluations": 201,
+        "met_stopping_test": false
+      }
+    ]
+  }
+}
