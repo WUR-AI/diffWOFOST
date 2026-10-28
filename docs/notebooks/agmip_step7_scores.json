@@ -1,5 +1,5 @@
 {
-  "note": "Step 7 joint weighted sum of squares for each finished start. Each group's sum of squares is divided by the variance from Adam's step 6, and the five terms are added. Adam job 28583854 finished all 20 starts. Nelder-Mead job 28599462 had finished 15 of 20 starts when this file was copied.",
+  "note": "Step 7 joint weighted sum of squares for each start. Each group's sum of squares is divided by the variance from Adam's step 6, and the five terms are added. Adam job 28583854 and Nelder-Mead job 28599462 each finished all 20 starts. The 20 initial vectors were the same. Nelder-Mead's best is start 1.",
   "adam": {
     "complete": true,
     "n_planned": 20,
@@ -107,8 +107,19 @@
     ]
   },
   "nelder_mead": {
-    "complete": false,
+    "complete": true,
     "n_planned": 20,
+    "best_index": 1,
+    "best_final": {
+      "TSUM1": 618.3870760686247,
+      "TSUM2": 962.6877843652098,
+      "AMAX_REF": 30.383993941885812,
+      "SPAN": 50.022941967500245,
+      "TDWI": 307.41359294678165,
+      "RNUPTAKEMAX": 1.2535672234857118,
+      "REALLOC_STEM_FRACTION": 0.1309844113169934,
+      "NMAXSO": 0.019614248334248983
+    },
     "runs": [
       {
         "index": 4,
@@ -197,6 +208,36 @@
       {
         "index": 15,
         "ss": 467.09740504464537,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 16,
+        "ss": 211.63695335762563,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 17,
+        "ss": 297.5763084506996,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 18,
+        "ss": 243.09484933259557,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 19,
+        "ss": 289.4027122573297,
+        "evaluations": 201,
+        "met_stopping_test": false
+      },
+      {
+        "index": 20,
+        "ss": 206.23259588848887,
         "evaluations": 201,
         "met_stopping_test": false
       }

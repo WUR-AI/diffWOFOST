@@ -1,5 +1,5 @@
 {
-  "note": "Nelder-Mead group search on Snellius, job 28541151, finished 2026-10-25 07:56. Phenology and every growth group completed. The weighted refit, job 28585243, had not finished a start when this file was written, and the kept vector had not improved on its first evaluation, so there is no step-7 vector. after_step6 is the AICc selection. Sums of squares are each method's own ordinary-least-squares objective.",
+  "note": "Nelder-Mead group search on Snellius, job 28541151, finished 2026-10-25 07:56. Phenology and every growth group completed. after_step6 is the AICc selection. The joint weighted refit, job 28599462, finished all 20 starts on 2026-10-27. after_step7 is its best start, start 1, which began at Adam's step 6 vector. Sums of squares in the group tables are each method's own ordinary-least-squares objective.",
   "arminda": {
     "TSUM1": 886.0,
     "TSUM2": 860.0,
@@ -664,5 +664,23 @@
       "Nelder-Mead AICc": 1.7386381804014237,
       "Nelder-Mead kept": "no"
     }
-  ]
+  ],
+  "after_step7": {
+    "TSUM1": 618.3870760686247,
+    "TSUM2": 962.6877843652098,
+    "VERNSAT": 44.0,
+    "VERNBASE": 9.0,
+    "DLO": 16.3,
+    "AMAX_REF": 30.383993941885812,
+    "SPAN": 50.022941967500245,
+    "TDWI": 307.41359294678165,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 1.2535672234857118,
+    "NMAXSO": 0.019614248334248983,
+    "REALLOC_STEM_FRACTION": 0.1309844113169934,
+    "CVO": 0.709,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "TCNT": 10.0
+  }
 }
