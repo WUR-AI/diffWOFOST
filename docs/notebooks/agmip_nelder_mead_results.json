@@ -1,0 +1,686 @@
+{
+  "note": "Nelder-Mead group search on Snellius, job 28541151, finished 2026-10-25 07:56. Phenology and every growth group completed. after_step6 is the AICc selection. The joint weighted refit, job 28599462, finished all 20 starts on 2026-10-27. after_step7 is its best start, start 1, which began at Adam's step 6 vector. Sums of squares in the group tables are each method's own ordinary-least-squares objective.",
+  "arminda": {
+    "TSUM1": 886.0,
+    "TSUM2": 860.0,
+    "VERNSAT": 44.0,
+    "VERNBASE": 9.0,
+    "DLO": 16.3,
+    "AMAX_REF": 40.2,
+    "SPAN": 35.0,
+    "TDWI": 593.0,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 4.26,
+    "NMAXSO": 0.02035,
+    "REALLOC_STEM_FRACTION": 0.2,
+    "CVO": 0.709,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "TCNT": 10.0
+  },
+  "selected": [
+    "TSUM1",
+    "TSUM2",
+    "AMAX_REF",
+    "SPAN",
+    "TDWI",
+    "RNUPTAKEMAX",
+    "REALLOC_STEM_FRACTION",
+    "NMAXSO"
+  ],
+  "after_step6": {
+    "TSUM1": 618.4469222374531,
+    "TSUM2": 961.402143030325,
+    "VERNSAT": 44.0,
+    "VERNBASE": 9.0,
+    "DLO": 16.3,
+    "AMAX_REF": 31.982424792591914,
+    "SPAN": 34.10072907808867,
+    "TDWI": 283.7206535270323,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 1.308626324800484,
+    "NMAXSO": 0.01946253922421255,
+    "REALLOC_STEM_FRACTION": 0.32712520609581186,
+    "CVO": 0.709,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "TCNT": 10.0
+  },
+  "phenology": {
+    "n_observations": 28,
+    "adam_history": [
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2"
+        ],
+        "ss": 839.0501275827137,
+        "aicc": 99.68184635718698,
+        "kept": true
+      },
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2",
+          "VERNSAT"
+        ],
+        "ss": 839.0501275827137,
+        "aicc": 102.20184635718698,
+        "kept": false
+      },
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2",
+          "VERNBASE"
+        ],
+        "ss": 839.0501275827137,
+        "aicc": 102.20184635718698,
+        "kept": false
+      },
+      {
+        "parameters": [
+          "TSUM1",
+          "TSUM2",
+          "DLO"
+        ],
+        "ss": 839.0501275827137,
+        "aicc": 102.20184635718698,
+        "kept": false
+      }
+    ],
+    "adam_selected": [
+      "TSUM1",
+      "TSUM2"
+    ],
+    "adam_values": {
+      "TSUM1": 618.4277418756441,
+      "TSUM2": 956.0941690685213,
+      "VERNSAT": 44.0,
+      "VERNBASE": 9.0,
+      "DLO": 16.3
+    },
+    "rounds": [
+      {
+        "names": [
+          "TSUM1",
+          "TSUM2"
+        ],
+        "role": "majors",
+        "kept": true,
+        "aicc": 99.64279270471766,
+        "best_ss": 837.8806586269508,
+        "best_final": {
+          "TSUM1": 618.4469222374531,
+          "TSUM2": 961.402143030325
+        },
+        "n_starts": 20,
+        "n_met_stopping_test": 20,
+        "evaluations": 1526,
+        "seconds": 6296.379038802001,
+        "runs": [
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 847.5016919013202,
+            "evaluations": 76,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.1289545015002,
+              "TSUM2": 959.6802761535123
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 847.460205629904,
+            "evaluations": 65,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.2081771984416,
+              "TSUM2": 959.1412799803139
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 912.4738011962818,
+            "evaluations": 26,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 643.5709832349758,
+              "TSUM2": 914.1748339654808
+            }
+          },
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 842.9129173773273,
+            "evaluations": 97,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 618.4680362331866,
+              "TSUM2": 971.0440756352484
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 888.7253799095765,
+            "evaluations": 53,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 634.6754909461454,
+              "TSUM2": 925.6433989653173
+            }
+          },
+          {
+            "index": 6,
+            "previous_best_start": false,
+            "ss": 851.4861512375309,
+            "evaluations": 74,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 618.4609446016539,
+              "TSUM2": 943.2733981531779
+            }
+          },
+          {
+            "index": 7,
+            "previous_best_start": false,
+            "ss": 847.4475006924733,
+            "evaluations": 85,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.6658826023895,
+              "TSUM2": 957.8007307372092
+            }
+          },
+          {
+            "index": 8,
+            "previous_best_start": false,
+            "ss": 847.1706849965462,
+            "evaluations": 58,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 621.1900072997456,
+              "TSUM2": 959.5491017977968
+            }
+          },
+          {
+            "index": 9,
+            "previous_best_start": false,
+            "ss": 837.8806586269508,
+            "evaluations": 98,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 618.4469222374531,
+              "TSUM2": 961.402143030325
+            }
+          },
+          {
+            "index": 10,
+            "previous_best_start": false,
+            "ss": 876.0048110875545,
+            "evaluations": 96,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 605.2948797717886,
+              "TSUM2": 977.5307334951212
+            }
+          },
+          {
+            "index": 11,
+            "previous_best_start": false,
+            "ss": 847.5360599697677,
+            "evaluations": 64,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.2290753463941,
+              "TSUM2": 960.5012302607468
+            }
+          },
+          {
+            "index": 13,
+            "previous_best_start": false,
+            "ss": 847.3239114453794,
+            "evaluations": 66,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.6341487142813,
+              "TSUM2": 959.1599256850222
+            }
+          },
+          {
+            "index": 14,
+            "previous_best_start": false,
+            "ss": 847.5052776202677,
+            "evaluations": 82,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.1505793339561,
+              "TSUM2": 959.8691388649469
+            }
+          },
+          {
+            "index": 12,
+            "previous_best_start": false,
+            "ss": 843.2308596362134,
+            "evaluations": 107,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 618.621014624703,
+              "TSUM2": 962.6469995810214
+            }
+          },
+          {
+            "index": 15,
+            "previous_best_start": false,
+            "ss": 842.8879908513115,
+            "evaluations": 87,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 618.5871166584111,
+              "TSUM2": 960.1797274734873
+            }
+          },
+          {
+            "index": 16,
+            "previous_best_start": false,
+            "ss": 844.8143199924165,
+            "evaluations": 90,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 618.4782201684548,
+              "TSUM2": 973.5298123980825
+            }
+          },
+          {
+            "index": 18,
+            "previous_best_start": false,
+            "ss": 847.5089331545652,
+            "evaluations": 65,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.3247637232047,
+              "TSUM2": 960.5366868043426
+            }
+          },
+          {
+            "index": 17,
+            "previous_best_start": false,
+            "ss": 890.3301121612308,
+            "evaluations": 72,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 613.4629861330934,
+              "TSUM2": 957.5013646799661
+            }
+          },
+          {
+            "index": 20,
+            "previous_best_start": false,
+            "ss": 847.2195315757191,
+            "evaluations": 62,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.9823622179005,
+              "TSUM2": 959.0754997158922
+            }
+          },
+          {
+            "index": 19,
+            "previous_best_start": false,
+            "ss": 847.3540620201171,
+            "evaluations": 103,
+            "met_stopping_test": true,
+            "final": {
+              "TSUM1": 620.792690329173,
+              "TSUM2": 960.4532530621802
+            }
+          }
+        ]
+      },
+      {
+        "names": [
+          "TSUM1",
+          "TSUM2",
+          "VERNSAT"
+        ],
+        "role": "candidate",
+        "kept": false,
+        "aicc": 102.16279270471766,
+        "best_ss": 837.8806586269508,
+        "best_final": {
+          "VERNSAT": 44.0
+        },
+        "n_starts": 5,
+        "n_met_stopping_test": 5,
+        "evaluations": 33,
+        "seconds": 123.98908900100014,
+        "runs": [
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 892.4348312902146,
+            "evaluations": 2,
+            "met_stopping_test": true,
+            "final": {
+              "VERNSAT": 64.662750696334
+            }
+          },
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 837.8806586269508,
+            "evaluations": 6,
+            "met_stopping_test": true,
+            "final": {
+              "VERNSAT": 44.0
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 847.2125805412206,
+            "evaluations": 8,
+            "met_stopping_test": true,
+            "final": {
+              "VERNSAT": 49.16552722102348
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 842.886571870419,
+            "evaluations": 9,
+            "met_stopping_test": true,
+            "final": {
+              "VERNSAT": 44.1795300443173
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 920.7675147683337,
+            "evaluations": 8,
+            "met_stopping_test": true,
+            "final": {
+              "VERNSAT": 73.80216517369277
+            }
+          }
+        ]
+      },
+      {
+        "names": [
+          "TSUM1",
+          "TSUM2",
+          "VERNBASE"
+        ],
+        "role": "candidate",
+        "kept": false,
+        "aicc": 102.16279270471766,
+        "best_ss": 837.8806586269508,
+        "best_final": {
+          "VERNBASE": 9.0
+        },
+        "n_starts": 5,
+        "n_met_stopping_test": 5,
+        "evaluations": 36,
+        "seconds": 133.24301057000048,
+        "runs": [
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 837.8806586269508,
+            "evaluations": 2,
+            "met_stopping_test": true,
+            "final": {
+              "VERNBASE": 9.0
+            }
+          },
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 886.5707325188546,
+            "evaluations": 2,
+            "met_stopping_test": true,
+            "final": {
+              "VERNBASE": 8.040096651476553
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 846.4656063752287,
+            "evaluations": 2,
+            "met_stopping_test": true,
+            "final": {
+              "VERNBASE": 12.62931629527178
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 889.4391827166819,
+            "evaluations": 12,
+            "met_stopping_test": true,
+            "final": {
+              "VERNBASE": 0.7844045350325474
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 871.0050991064462,
+            "evaluations": 18,
+            "met_stopping_test": true,
+            "final": {
+              "VERNBASE": 19.64927846695423
+            }
+          }
+        ]
+      },
+      {
+        "names": [
+          "TSUM1",
+          "TSUM2",
+          "DLO"
+        ],
+        "role": "candidate",
+        "kept": false,
+        "aicc": 102.16279270471766,
+        "best_ss": 837.8806586269508,
+        "best_final": {
+          "DLO": 16.3
+        },
+        "n_starts": 5,
+        "n_met_stopping_test": 5,
+        "evaluations": 70,
+        "seconds": 259.04067153999995,
+        "runs": [
+          {
+            "index": 1,
+            "previous_best_start": true,
+            "ss": 837.8806586269508,
+            "evaluations": 5,
+            "met_stopping_test": true,
+            "final": {
+              "DLO": 16.3
+            }
+          },
+          {
+            "index": 2,
+            "previous_best_start": false,
+            "ss": 873.4456089555365,
+            "evaluations": 12,
+            "met_stopping_test": true,
+            "final": {
+              "DLO": 16.372775416388826
+            }
+          },
+          {
+            "index": 4,
+            "previous_best_start": false,
+            "ss": 873.4420979170201,
+            "evaluations": 16,
+            "met_stopping_test": true,
+            "final": {
+              "DLO": 16.36667428094199
+            }
+          },
+          {
+            "index": 3,
+            "previous_best_start": false,
+            "ss": 847.813240819876,
+            "evaluations": 18,
+            "met_stopping_test": true,
+            "final": {
+              "DLO": 16.322684753326428
+            }
+          },
+          {
+            "index": 5,
+            "previous_best_start": false,
+            "ss": 847.6134978898622,
+            "evaluations": 19,
+            "met_stopping_test": true,
+            "final": {
+              "DLO": 16.33119051781283
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "groups": [
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN",
+      "Adam SS": 1.638284801785974,
+      "Adam AICc": -140.49106791840316,
+      "Adam kept": "major",
+      "Nelder-Mead SS": 1.6371268050271144,
+      "Nelder-Mead AICc": -140.52217964763238,
+      "Nelder-Mead kept": "major"
+    },
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN, TDWI",
+      "Adam SS": 1.3431659728385879,
+      "Adam AICc": -146.92304617608173,
+      "Adam kept": "yes",
+      "Nelder-Mead SS": 1.2743175415774544,
+      "Nelder-Mead AICc": -149.23826984525053,
+      "Nelder-Mead kept": "yes"
+    },
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN, TDWI, RGRLAI",
+      "Adam SS": 1.3404610606949707,
+      "Adam AICc": -144.58610314992862,
+      "Adam kept": "no",
+      "Nelder-Mead SS": 1.2743175415774548,
+      "Nelder-Mead AICc": -146.8126288196095,
+      "Nelder-Mead kept": "no"
+    },
+    {
+      "Group": "plant_N_content",
+      "Parameters": "RNUPTAKEMAX",
+      "Adam SS": 0.39803729551202344,
+      "Adam AICc": -25.494478761539227,
+      "Adam kept": "major",
+      "Nelder-Mead SS": 0.27892535158655163,
+      "Nelder-Mead AICc": -28.69489243457932,
+      "Nelder-Mead kept": "major"
+    },
+    {
+      "Group": "plant_N_content",
+      "Parameters": "RNUPTAKEMAX, NMAXSO",
+      "Adam SS": 0.3789726895138669,
+      "Adam AICc": -22.507641418462452,
+      "Adam kept": "no",
+      "Nelder-Mead SS": 0.2611639524193552,
+      "Nelder-Mead AICc": -25.85848328420583,
+      "Nelder-Mead kept": "no"
+    },
+    {
+      "Group": "yield",
+      "Parameters": "REALLOC_STEM_FRACTION",
+      "Adam SS": 355936.07018538995,
+      "Adam AICc": 135.19187811913943,
+      "Adam kept": "major",
+      "Nelder-Mead SS": 203051.24312071688,
+      "Nelder-Mead AICc": 127.89507223599315,
+      "Nelder-Mead kept": "major"
+    },
+    {
+      "Group": "yield",
+      "Parameters": "REALLOC_STEM_FRACTION, CVO",
+      "Adam SS": 340437.479284853,
+      "Adam AICc": 137.44948640560654,
+      "Adam kept": "no",
+      "Nelder-Mead SS": 191217.98800518346,
+      "Nelder-Mead AICc": 129.9508599640903,
+      "Nelder-Mead kept": "no"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO",
+      "Adam SS": 10.258798252599137,
+      "Adam AICc": -0.7149411377837939,
+      "Adam kept": "major",
+      "Nelder-Mead SS": 10.419347744828164,
+      "Nelder-Mead AICc": -0.5130675906590244,
+      "Nelder-Mead kept": "major"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO, NRESIDLV",
+      "Adam SS": 9.842139216383714,
+      "Adam AICc": 1.5824084901775357,
+      "Adam kept": "no",
+      "Nelder-Mead SS": 9.727805828213581,
+      "Nelder-Mead AICc": 1.4305070971086071,
+      "Nelder-Mead kept": "no"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO, NRESIDST",
+      "Adam SS": null,
+      "Adam AICc": null,
+      "Adam kept": "cut off at step 37",
+      "Nelder-Mead SS": 10.115242544613576,
+      "Nelder-Mead AICc": 1.9382231905000038,
+      "Nelder-Mead kept": "no"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO, TCNT",
+      "Adam SS": null,
+      "Adam AICc": null,
+      "Adam kept": "not started",
+      "Nelder-Mead SS": 9.961132360564795,
+      "Nelder-Mead AICc": 1.7386381804014237,
+      "Nelder-Mead kept": "no"
+    }
+  ],
+  "after_step7": {
+    "TSUM1": 618.3870760686247,
+    "TSUM2": 962.6877843652098,
+    "VERNSAT": 44.0,
+    "VERNBASE": 9.0,
+    "DLO": 16.3,
+    "AMAX_REF": 30.383993941885812,
+    "SPAN": 50.022941967500245,
+    "TDWI": 307.41359294678165,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 1.2535672234857118,
+    "NMAXSO": 0.019614248334248983,
+    "REALLOC_STEM_FRACTION": 0.1309844113169934,
+    "CVO": 0.709,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "TCNT": 10.0
+  }
+}

@@ -527,7 +527,7 @@ def test_wofost81_assimilation_matches_pcse():
         )
 
 
-def _assimilation_pgass(overrides, lai, n_amount_lv):
+def _assimilation_pgass(overrides, lai, n_amount_lv, temp=18.0, dtemp=20.0):
     """One day of WOFOST 8.1 assimilation with the given parameter overrides."""
     import datetime
     from pcse.base.parameter_providers import ParameterProvider
@@ -556,8 +556,41 @@ def _assimilation_pgass(overrides, lai, n_amount_lv):
     for name, value in states.items():
         kiosk.register_variable(0, name, type="S", publish=True)
         kiosk.set_variable(0, name, torch.tensor(value, dtype=torch.float64))
-    weather = {"IRRAD": 15e6, "TEMP": 18.0, "DTEMP": 20.0, "TMIN": 10.0, "LAT": 52.0}
+    weather = {"IRRAD": 15e6, "TEMP": temp, "DTEMP": dtemp, "TMIN": 10.0, "LAT": 52.0}
     return WOFOST81_Assimilation(day, kiosk, provider)(day, weather)
+
+
+def test_installed_pcse_tmpftb_driver_is_recognized():
+    """Season comparisons follow the TMPFTB driver of the installed PCSE.
+
+    Released PCSE 8.1 passes the daily mean. The develop branch passes the
+    daytime temperature. Either spelling is accepted; an unrecognized call is not.
+    """
+    import inspect
+    import pcse.crop.assimilation as assimilation
+    from tests.physical_models.crop.pcse_tmpftb import pcse_wofost81_tmpftb_uses_daytime
+
+    source = inspect.getsource(assimilation.WOFOST81_Assimilation.__call__)
+    uses_daytime = pcse_wofost81_tmpftb_uses_daytime()
+    if uses_daytime:
+        assert "TMPFTB(drv.DTEMP)" in source
+    else:
+        assert "TMPFTB(drv.TEMP)" in source
+
+
+def test_wofost81_tmpftb_uses_daytime_temperature():
+    """TMPFTB is evaluated at DTEMP, the daytime temperature.
+
+    A released PCSE 8.1 evaluates this table at TEMP, the daily mean. That was
+    corrected on the PCSE develop branch. The table here falls with temperature,
+    so the two drivers give different assimilation.
+    """
+    slope = {"TMPFTB": [0.0, 1.0, 40.0, 0.0]}
+    at_daytime = _assimilation_pgass(slope, 2.0, 40.0)
+    colder_day = _assimilation_pgass(slope, 2.0, 40.0, dtemp=10.0)
+    warmer_mean = _assimilation_pgass(slope, 2.0, 40.0, temp=30.0)
+    assert colder_day > at_daytime
+    torch.testing.assert_close(warmer_mean, at_daytime)
 
 
 def _assert_scalar_gradient(evaluate, name, value):
