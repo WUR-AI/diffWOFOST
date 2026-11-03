@@ -202,7 +202,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
 
         # TODO check if parvalues are already torch.nn.Parameters
         self.params = self.Parameters(parvalues, shape=shape)
-        self.rates = self.RateVariables(kiosk, shape=shape)
+        self.rates = self.RateVariables(
+            kiosk, publish=getattr(self, "PUBLISH_RATES", None), shape=shape
+        )
 
         # Create scalar constants once at the beginning to avoid recreating them
         self._zero = torch.tensor(0.0, dtype=self.dtype, device=self.device)
@@ -357,15 +359,18 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             states.SLA[gap] = 0.0
             states.LVAGE[gap] = 0.0
 
-        # leaf death and the new leaf class
-        states.DLVCUM, LV_formed, LA_formed = _leaf_death_and_growth(
-            _row(states.LVCUM, last),
-            _row(states.LACUM, last),
-            states.DLVCUM,
-            rates.DRLV,
-            rates.GRLV,
-            rates.SLAT,
-        )
+        LV_prev = _row(states.LVCUM, last)
+        LA_prev = _row(states.LACUM, last)
+
+        # Leaf death
+        states.DLVCUM = _leaf_death(LV_prev, states.DLVCUM, rates.DRLV)
+
+        # Apply reallocation of assimilates to the living leaf classes
+        LV_formed, LA_formed = self._apply_reallocation(LV_prev, LA_prev)
+
+        # Leaf growth for the new leaf class
+        LV_formed, LA_formed = _leaf_growth(LV_formed, LA_formed, rates.GRLV, rates.SLAT)
+
         _set(states.LVCUM, idx, LV_formed)
         _set(states.LACUM, idx, LA_formed)
         _set(states.SLA, idx, rates.SLAT)
@@ -398,6 +403,13 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             rates.GLAIEX,
             rates.DRLV,
         )
+
+    def _apply_reallocation(self, LV_formed, LA_formed) -> torch.Tensor:
+        """Scale living leaf classes when assimilates are reallocated.
+
+        WOFOST 7.2 does not reallocate leaf biomass. WOFOST 8.1 overrides this.
+        """
+        return LV_formed, LA_formed
 
 
 @kernel
@@ -461,10 +473,11 @@ def _leaf_rates(
     is_lai_exp = LAIEXP < 6.0
     DTEFF = torch.clamp(TEMP - TBASE, 0.0)
 
-    # NOTE: conditional statements do not allow for the gradient to be
-    # tracked through the condition. Thus, the gradient with respect to
-    # parameters that contribute to `is_lai_exp` (e.g. RGRLAI and TBASE)
-    # are expected to be incorrect.
+    # NOTE: the hard LAIEXP < 6 branch does not provide a gradient
+    # through the branch selection itself. Parameters that influence LAIEXP
+    # (e.g. RGRLAI and TBASE) therefore receive the derivative of the
+    # currently selected branch, but not a gradient contribution associated
+    # with crossing the LAIEXP = 6 threshold.
 
     GLAIEX = torch.where(
         dvs_mask,
@@ -492,20 +505,19 @@ def _leaf_rates(
 
 
 @kernel
-def _leaf_death_and_growth(LV_formed, LA_formed, DLVCUM, DRLV, GRLV, SLAT):
-    """Leaf death and the new leaf class, see `WOFOST_Leaf_Dynamics.integrate`.
-
-    `LV_formed` and `LA_formed` are the running totals of the youngest leaf class.
-    """
+def _leaf_death(LV_formed, DLVCUM, DRLV):
     # --------- leave death ---------
     # Leaf death is imposed on leaves from the oldest ones: the living
     # biomass is the formed biomass minus DLVCUM, at most all of it.
-    # NOTE: the gradient is not tracked through the choice of the oldest
-    # living class.
-    DLVCUM = torch.minimum(DLVCUM + DRLV, LV_formed)
+    # NOTE: the gradient is not tracked through the choice of the oldest living class.
+    return torch.minimum(DLVCUM + DRLV, LV_formed)
 
-    # --------- leave growth ---------
-    return DLVCUM, LV_formed + GRLV, LA_formed + GRLV * SLAT
+
+@kernel
+def _leaf_growth(LV_formed, LA_formed, GRLV, SLAT):
+    """ `LV_formed` and `LA_formed` are the running totals of the youngest leaf class.
+    """
+    return LV_formed + GRLV, LA_formed + GRLV * SLAT
 
 
 @kernel(dynamic=None)
@@ -546,6 +558,36 @@ def _leaf_area_and_weight(
     DWLV = DWLV + DRLV
     TWLV = WLV + DWLV
     return LASUM, LAI, LAIMAX, LAIEXP, WLV, DWLV, TWLV
+
+
+@kernel
+def _reallocate(LVCUM, LACUM, SLA, DLVCUM, LV_formed, LA_formed, realloc, zero, epsilon):
+    """Uniformly reduce the living leaf biomass, see `WOFOST_Leaf_Dynamics._apply_reallocation`."""
+    total = LV_formed - DLVCUM  # living biomass
+    factor = torch.where(
+        (realloc > zero) & (realloc < total),
+        (total - realloc) / torch.clamp(total, min=epsilon),
+        1.0 + zero,
+    )
+
+    # biomass is already at DLVCUM, leaf area at the death line:
+    oldest = _search(LVCUM, DLVCUM)
+    LA_ref = _take(LACUM, oldest) - (_take(LVCUM, oldest) - DLVCUM) * _take(SLA, oldest)
+
+    # classes not formed yet hold +inf: keep them out of the arithmetic
+    formed = torch.isfinite(LVCUM)
+    alive = formed & (LVCUM >= DLVCUM)
+    LV_safe = torch.where(formed, LVCUM, 0.0)
+    LA_safe = torch.where(formed, LACUM, 0.0)
+
+    LVCUM = torch.where(alive, DLVCUM + factor * (LV_safe - DLVCUM), LVCUM)
+    LACUM = torch.where(alive, LA_ref + factor * (LA_safe - LA_ref), LACUM)
+
+    # the running totals of the youngest class get the same transform
+    LV_formed = DLVCUM + factor * (LV_formed - DLVCUM)
+    LA_formed = LA_ref + factor * (LA_formed - LA_ref)
+    return LVCUM, LACUM, LV_formed, LA_formed
+
 
 
 class _TakeClass(torch.autograd.Function):
@@ -617,6 +659,67 @@ def _row(src, index):
 def _set(dst, index, value):
     """Set the leaf class `index` of dst in place."""
     dst[index] = value
+
+
+class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
+    """Leaf dynamics with nitrogen-stress effects on ageing and juvenile expansion.
+
+    This is the WOFOST 8.1 leaf module. Relative to ``WOFOST_Leaf_Dynamics`` it
+    multiplies age-driven leaf death by the nitrogen stress factor ``NSLLV`` and
+    reduces exponential leaf expansion under nitrogen and water stress while
+    DVS < 0.2 and LAI < 0.75. Leaf biomass can also be reallocated to storage organs.
+
+    **Gradient mapping (which parameters have a gradient):**
+
+    The ``WOFOST_Leaf_Dynamics`` table still applies. This subclass adds:
+
+    | Output | Parameters influencing it          |
+    |--------|------------------------------------|
+    | LAI    | NSLLV, RFRGRL, REALLOC_LV          |
+    | TWLV   | REALLOC_LV                         |
+
+    [!NOTE]
+    ``DVS < 0.2`` and ``LAI < 0.75`` are fixed cutoffs, not parameters.
+    ``SPAN`` keeps the straight-through estimator of the parent class when it is calibrated.
+    """
+
+    PUBLISH_RATES = ["DRLV", "GRLV"]
+
+    def calc_rates(self, day: datetime.date, drv: dict) -> None:
+        """Calculate leaf rates, then apply the nitrogen-stress corrections."""
+        super().calc_rates(day, drv)
+        rates = self.rates
+        states = self.states
+        kiosk = self.kiosk
+
+        # Suggestion Allard accelarete ageing:
+        emerged = kiosk["DVS"] >= self._zero
+        rates.DALV = torch.minimum(rates.DALV * kiosk["NSLLV"], states.WLV)
+        rates.DALV = emerged * rates.DALV
+        rates.DRLV = torch.maximum(rates.DSLV, rates.DALV)
+
+        # Nutrient and water stress during juvenile stage:
+        juvenile = emerged & (kiosk["DVS"] < 0.2) & (states.LAI < 0.75)
+        factor = torch.where(juvenile, kiosk["RFTRA"] * kiosk["RFRGRL"], 1.0 + self._zero)
+        expanding = states.LAIEXP < 6.0
+        rates.GLAIEX = torch.where(expanding & emerged, rates.GLAIEX * factor, rates.GLAIEX)
+        leaf_area_growth = torch.minimum(rates.GLAIEX, rates.GLASOL)
+        rates.SLAT = torch.where(
+            emerged & expanding & (rates.GRLV > self._epsilon),
+            leaf_area_growth / (rates.GRLV + self._epsilon),
+            rates.SLAT,
+        )
+
+    def _apply_reallocation(self, LV_formed, LA_formed) -> torch.Tensor:
+        # Uniformly reduce leaf biomass in case of reallocation
+        states = self.states
+        LVCUM, LACUM, LV_formed, LA_formed = _reallocate(
+            states.LVCUM, states.LACUM, states.SLA, states.DLVCUM,
+            LV_formed, LA_formed, self.kiosk["REALLOC_LV"], self._zero, self._epsilon,
+        )
+        states.LVCUM.copy_(LVCUM)  # in place, like _set
+        states.LACUM.copy_(LACUM)
+        return LV_formed, LA_formed
 
 
 def _exist_required_external_variables(kiosk):

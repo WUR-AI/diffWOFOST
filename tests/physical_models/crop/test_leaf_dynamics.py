@@ -1,10 +1,16 @@
+import datetime
 import warnings
+from types import SimpleNamespace
 from unittest.mock import patch
 import pytest
 import torch
+from pcse.base.parameter_providers import ParameterProvider
+from pcse.base.variablekiosk import VariableKiosk
+from pcse.crop.leaf_dynamics import WOFOST_Leaf_Dynamics_N as PcseLeafDynamicsN
 from pcse.models import Wofost72_PP
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
+from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics_N
 from diffwofost.physical_models.test import EngineTestHelper
 from diffwofost.physical_models.test import calculate_numerical_grad
 from diffwofost.physical_models.test import get_test_data
@@ -618,3 +624,81 @@ class TestDiffLeafDynamicsGradients:
                 + f"'{output_name}' is zero: {grads.data}",
                 UserWarning,
             )
+
+
+def _close(actual, expected):
+    expected_tensor = torch.tensor(expected, dtype=actual.dtype, device=actual.device)
+    assert torch.isclose(actual, expected_tensor, rtol=1e-7, atol=1e-9)
+
+
+def _kiosk(values):
+    kiosk = VariableKiosk()
+    for name, value in values.items():
+        kiosk.register_variable(0, name, type="S", publish=True)
+        kiosk.set_variable(0, name, value)
+    return kiosk
+
+
+def _leaf_parameters(span):
+    return ParameterProvider(
+        cropdata={
+            "RGRLAI": 0.02,
+            "SPAN": span,
+            "TBASE": 0.0,
+            "PERDL": 0.03,
+            "TDWI": 100.0,
+            "SLATB": [0.0, 0.002, 2.0, 0.002],
+            "KDIFTB": [0.0, 0.6, 2.0, 0.6],
+        }
+    )
+
+
+def _leaf_states(dvs, nsllv, rfrgrl, realloc_lv, rftra):
+    return {
+        "DVS": dvs,
+        "FL": 0.6,
+        "FR": 0.2,
+        "SAI": 0.0,
+        "PAI": 0.0,
+        "ADMI": 20.0,
+        "RFTRA": rftra,
+        "NSLLV": nsllv,
+        "RFRGRL": rfrgrl,
+        "REALLOC_LV": realloc_lv,
+    }
+
+
+def _leaf_pair(dvs, nsllv, rfrgrl, span, realloc_lv=0.0, rftra=1.0):
+    day = datetime.date(2010, 6, 1)
+    states = _leaf_states(dvs, nsllv, rfrgrl, realloc_lv, rftra)
+    parameters = _leaf_parameters(span)
+    pcse = PcseLeafDynamicsN(day, _kiosk(states), parameters)
+    tensor_states = {name: torch.tensor(value) for name, value in states.items()}
+    diff = WOFOST_Leaf_Dynamics_N(day, _kiosk(tensor_states), parameters)
+    weather = {"TEMP": 15.0}
+    pcse.calc_rates(day, SimpleNamespace(**weather))
+    diff.calc_rates(day, {name: torch.tensor(value) for name, value in weather.items()})
+    return day, pcse, diff
+
+
+def test_nitrogen_stress_scales_age_driven_leaf_death():
+    """Age-driven leaf death follows PCSE when NSLLV is above and below one."""
+    for nsllv in (0.5, 1.5):
+        _day, pcse, diff = _leaf_pair(dvs=1.0, nsllv=nsllv, rfrgrl=1.0, span=-1.0)
+        _close(diff.rates.DALV, pcse.rates.DALV)
+        _close(diff.rates.DRLV, pcse.rates.DRLV)
+
+
+def test_juvenile_expansion_follows_water_and_nitrogen_stress():
+    """Sink-limited leaf expansion follows PCSE while the canopy is still juvenile."""
+    _day, pcse, diff = _leaf_pair(dvs=0.1, nsllv=1.0, rfrgrl=0.5, span=40.0, rftra=0.4)
+    _close(diff.rates.GLAIEX, pcse.rates.GLAIEX)
+
+
+def test_leaf_reallocation_scales_living_biomass():
+    """Reallocation removes the same fraction of living leaf biomass as PCSE."""
+    day, pcse, diff = _leaf_pair(dvs=1.5, nsllv=1.0, rfrgrl=1.0, span=40.0, realloc_lv=10.0)
+    next_day = day + datetime.timedelta(days=1)
+    pcse.integrate(next_day)
+    diff.integrate(next_day)
+    _close(diff.states.WLV, pcse.states.WLV)
