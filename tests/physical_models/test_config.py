@@ -214,8 +214,8 @@ class TestComputeConfig:
         # 3. Assertions
         assert model1.dtype == torch.float32, "Model 1 should retain float32"
         assert model2.dtype == torch.float64, "Model 2 should use float64"
-        assert model1.states.LV[0].dtype == torch.float32, "Model 1 states should be float32"
-        assert model2.states.LV[0].dtype == torch.float64, "Model 2 states should be float64"
+        assert model1.states.LVCUM[0].dtype == torch.float32, "Model 1 states should be float32"
+        assert model2.states.LVCUM[0].dtype == torch.float64, "Model 2 states should be float64"
 
         # Cleanup
         ComputeConfig.reset_to_defaults()

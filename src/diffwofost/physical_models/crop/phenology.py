@@ -13,15 +13,20 @@ from pcse import signals
 from pcse.base import SimulationObject
 from pcse.traitlets import Enum
 from pcse.traitlets import Instance
+from pcse.util import doy
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.deferred import defer
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
+from diffwofost.physical_models.utils import _raise_latitude_error
 from diffwofost.physical_models.utils import _restore_state
 from diffwofost.physical_models.utils import _snapshot_state
-from diffwofost.physical_models.utils import daylength
+from diffwofost.physical_models.utils import daylength_core
+from diffwofost.physical_models.utils import solar_declination_table
 
 
 class Vernalisation(SimulationObject):
@@ -206,8 +211,7 @@ class Vernalisation(SimulationObject):
         )
 
         # mark per-element force flags for elements that passed VERNDVS but aren't vernalised
-        if torch.any(past_threshold_mask):
-            self._force_vernalisation = self._force_vernalisation | past_threshold_mask
+        self._force_vernalisation = self._force_vernalisation | past_threshold_mask
 
     def integrate(self, day, delt=1.0):
         """Advance vernalisation state.
@@ -242,21 +246,24 @@ class Vernalisation(SimulationObject):
 
         # set DOV only for newly reached elements
         newly_reached_and_no_dov = reached & (states.DOV < 0.0)
-        if torch.any(newly_reached_and_no_dov):
-            day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
-            states.DOV = torch.where(newly_reached_and_no_dov, day_ordinal, states.DOV)
-            self.logger.info(f"Vernalization requirements reached at day {day}.")
+        states.DOV = torch.where(newly_reached_and_no_dov, float(day.toordinal()), states.DOV)
+        defer(
+            torch.any(newly_reached_and_no_dov),
+            lambda: self.logger.info(f"Vernalization requirements reached at day {day}."),
+        )
 
         # forced vernalisation per-element
         forced_mask = self._force_vernalisation & (~states.ISVERNALISED)
-        if torch.any(forced_mask):
-            states.ISVERNALISED = states.ISVERNALISED | forced_mask
-            self.logger.warning(
+        states.ISVERNALISED = states.ISVERNALISED | forced_mask
+        defer(
+            torch.any(forced_mask),
+            lambda: self.logger.warning(
                 "Critical DVS for vernalization (VERNDVS) reached at"
                 + f" day {day} for some elements; forcing vernalization now."
-            )
-            # clear force bits for those elements
-            self._force_vernalisation = self._force_vernalisation & (~forced_mask)
+            ),
+        )
+        # clear force bits for those elements
+        self._force_vernalisation = self._force_vernalisation & (~forced_mask)
 
 
 class DVS_Phenology(SimulationObject):
@@ -435,6 +442,10 @@ class DVS_Phenology(SimulationObject):
         self._zeros = torch.zeros(self.params.shape, dtype=self.dtype, device=self.device)
         self._nan = torch.full(self.params.shape, torch.nan, dtype=self.dtype, device=self.device)
         self._epsilon = torch.tensor(1e-8, dtype=self.dtype, device=self.device)
+        self._solar = solar_declination_table(self.dtype, self.device)
+        # day ordinal of the start day on the device, see integrate()
+        self._day0 = day.toordinal()
+        self._ordinal0 = torch.tensor(float(self._day0), dtype=self.dtype, device=self.device)
 
         # Initialize rates and kiosk
         self.rates = self.RateVariables(kiosk, shape=shape)
@@ -548,69 +559,38 @@ class DVS_Phenology(SimulationObject):
         p = self.params
         r = self.rates
         s = self.states
-        # Day length sensitivity
-        # daylength returns a Tensor directly; broadcast to parameter shape.
-        DAYLP = daylength(day, drv["LAT"], dtype=self.dtype, device=self.device)
-        # Compute DVRED conditionally based on IDSL >= 1
-        safe_den = p.DLO - p.DLC
-        safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), self._epsilon)
-        dvred_active = torch.clamp((DAYLP - p.DLC) / safe_den, 0.0, 1.0)
-        DVRED = torch.where(p.IDSL >= 1, dvred_active, self._ones)
-
         # Vernalisation factor - always computed if module exists, even before CROP_START_DATE is
         # reached; harmless since VERNFAC is unused outside STAGE==1.
         # Revisit if per-element vernalisation timing matters.
-        VERNFAC = self._ones
+        VERNFAC = None
         if self.vernalisation is not None:
             # Always call calc_rates (it handles stage internally now)
             self.vernalisation.calc_rates(day, drv)
-            # Apply vernalisation only where IDSL >= 2 AND in vegetative stage
-            is_vegetative = s.STAGE == 1
-            VERNFAC = torch.where(
-                (p.IDSL >= 2) & is_vegetative,
-                self.kiosk["VERNFAC"],
-                self._ones,
-            )
+            VERNFAC = self.kiosk["VERNFAC"]
 
-        TEMP = drv["TEMP"]
-
-        # Initialize all rate variables
-        r.DTSUME = self._zeros
-        r.DTSUM = self._zeros
-        r.DVR = self._zeros
-
-        # Emerging stage (STAGE == 0)
-        is_emerging = s.STAGE == 0
-        temp_diff = TEMP - p.TBASEM
-        max_diff = torch.clamp(p.TEFFMX - p.TBASEM, min=0.0)
-        dtsume_emerging = torch.minimum(torch.clamp(temp_diff, min=0.0), max_diff)
-        safe_den_em = p.TSUMEM.sign() * torch.maximum(torch.abs(p.TSUMEM), self._epsilon)
-        dvr_emerging = 0.1 * dtsume_emerging / safe_den_em
-        r.DTSUME = torch.where(is_emerging, dtsume_emerging, r.DTSUME)
-        r.DVR = torch.where(is_emerging, dvr_emerging, r.DVR)
-
-        # Vegetative stage (STAGE == 1)
-        is_vegetative = s.STAGE == 1
-        dtsum_vegetative = p.DTSMTB(TEMP) * VERNFAC * DVRED
-        safe_den_v1 = p.TSUM1.sign() * torch.maximum(torch.abs(p.TSUM1), self._epsilon)
-        dvr_vegetative = dtsum_vegetative / safe_den_v1
-        r.DTSUM = torch.where(is_vegetative, dtsum_vegetative, r.DTSUM)
-        r.DVR = torch.where(is_vegetative, dvr_vegetative, r.DVR)
-
-        # Reproductive stage (STAGE == 2)
-        is_reproductive = s.STAGE == 2
-        dtsum_reproductive = p.DTSMTB(TEMP)
-        safe_den_v2 = p.TSUM2.sign() * torch.maximum(torch.abs(p.TSUM2), self._epsilon)
-        dvr_reproductive = dtsum_reproductive / safe_den_v2
-        r.DTSUM = torch.where(is_reproductive, dtsum_reproductive, r.DTSUM)
-        r.DVR = torch.where(is_reproductive, dvr_reproductive, r.DVR)
-
-        # Mature stage (STAGE == 3) keeps zeros (already initialised).
-        # Not-yet-started (STAGE == -1) elements report invalid rates rather than
-        # the (physically meaningless) zeros above.
-        r.DTSUME = torch.where(s.IS_ACTIVE, r.DTSUME, self._nan)
-        r.DTSUM = torch.where(s.IS_ACTIVE, r.DTSUM, self._nan)
-        r.DVR = torch.where(s.IS_ACTIVE, r.DVR, self._nan)
+        latitude = torch.as_tensor(drv["LAT"], dtype=self.dtype, device=self.device)
+        defer(torch.any(latitude.abs() > 90.0), _raise_latitude_error)
+        r.DTSUME, r.DTSUM, r.DVR = _phenology_rates(
+            s.STAGE,
+            s.IS_ACTIVE,
+            drv["TEMP"],
+            latitude,
+            self._solar[doy(day)],
+            VERNFAC,
+            p.IDSL,
+            p.DLO,
+            p.DLC,
+            p.TBASEM,
+            p.TEFFMX,
+            p.TSUMEM,
+            p.TSUM1,
+            p.TSUM2,
+            p.DTSMTB,
+            self._ones,
+            self._zeros,
+            self._nan,
+            self._epsilon,
+        )
 
         msg = "Finished rate calculation for %s"
         self.logger.debug(msg % day)
@@ -672,71 +652,48 @@ class DVS_Phenology(SimulationObject):
                     torch.where(mask_IDSL, vernalisation_states, state_copy[name]),
                 )
 
-        # Integrate phenologic states
-        s.TSUME = s.TSUME + r.DTSUME
-        s.DVS = s.DVS + r.DVR
-        s.TSUM = s.TSUM + r.DTSUM
-
-        day_ordinal = torch.tensor(day.toordinal(), dtype=self.dtype, device=self.device)
-
-        # Check transition for not started -> emerging/vegetative (STAGE -1 -> 0/1)
-        is_pending = s.STAGE == -1
-        should_start = is_pending & (day_ordinal >= self._start_ordinal)
-        if p.CROP_START_TYPE == "emergence":
-            start_stage = 1.0
-            start_dvs = p.DVSI
-        else:
-            start_stage = 0.0
-            start_dvs = -0.1 * self._ones
-
-        s.STAGE = torch.where(should_start, start_stage, s.STAGE)
-        s.DOE = torch.where(should_start & (p.CROP_START_TYPE == "emergence"), day_ordinal, s.DOE)
-        s.DOS = torch.where(should_start & (p.CROP_START_TYPE == "sowing"), day_ordinal, s.DOS)
-        s.DVS = torch.where(should_start, start_dvs, s.DVS)
-        s.TSUM = torch.where(should_start, self._zeros, s.TSUM)
-        s.TSUME = torch.where(should_start, self._zeros, s.TSUME)
-
-        # Check transitions for emerging -> vegetative (STAGE 0 -> 1)
-        is_emerging = s.STAGE == 0
-        should_emerge = is_emerging & (s.DVS >= 0.0)
-        s.STAGE = torch.where(should_emerge, 1.0, s.STAGE)
-        s.DOE = torch.where(should_emerge, day_ordinal, s.DOE)
-        s.DVS = torch.where(should_emerge, torch.clamp(s.DVS, max=0.0), s.DVS)
-
-        # Check transitions for vegetative -> reproductive (STAGE 1 -> 2)
-        is_vegetative = s.STAGE == 1
-        should_flower = is_vegetative & (s.DVS >= 1.0)
-        s.STAGE = torch.where(should_flower, 2.0, s.STAGE)
-        s.DOA = torch.where(should_flower, day_ordinal, s.DOA)
-        s.DVS = torch.where(should_flower, torch.clamp(s.DVS, max=1.0), s.DVS)
-
-        # Check transitions for reproductive -> mature (STAGE 2 -> 3)
-        is_reproductive = s.STAGE == 2
-        should_mature = is_reproductive & (s.DVS >= p.DVSEND)
-        s.STAGE = torch.where(should_mature, 3.0, s.STAGE)
-        s.DOM = torch.where(should_mature, day_ordinal, s.DOM)
-        s.DVS = torch.where(should_mature, torch.minimum(s.DVS, p.DVSEND), s.DVS)
-
-        # An element is active from the day it starts onwards, including after it
-        # individually reaches maturity: a matured element keeps reporting its
-        # frozen final DVS/TSUM/TSUME and zero rates. Only an element that has not
-        # yet reached its own start date is inactive. DOS/DOE/DOA/DOM/DOH are
-        # historical markers and are not masked here.
-        IS_ACTIVE = s.STAGE != -1
-        s.DVS = torch.where(IS_ACTIVE, s.DVS, self._nan)
-        s.TSUM = torch.where(IS_ACTIVE, s.TSUM, self._nan)
-        s.TSUME = torch.where(IS_ACTIVE, s.TSUME, self._nan)
-        s.IS_ACTIVE = IS_ACTIVE
+        # Day ordinal as a device tensor (a Python number that changes every day
+        # would recompile the compiled kernel every day)
+        day_ordinal = self._ordinal0 + float(day.toordinal() - self._day0)
+        (s.TSUME, s.DVS, s.TSUM, s.STAGE, s.DOS, s.DOE, s.DOA, s.DOM, s.IS_ACTIVE) = (
+            _phenology_integrate(
+                s.TSUME,
+                s.DVS,
+                s.TSUM,
+                s.STAGE,
+                s.DOS,
+                s.DOE,
+                s.DOA,
+                s.DOM,
+                r.DTSUME,
+                r.DVR,
+                r.DTSUM,
+                day_ordinal,
+                self._start_ordinal,
+                p.CROP_START_TYPE == "emergence",
+                p.DVSI,
+                p.DVSEND,
+                self._ones,
+                self._zeros,
+                self._nan,
+            )
+        )
 
         # Send crop_finish signal if maturity reached for all elements that have
         # started (elements still pending a future start have STAGE == -1, which
         # keeps this condition False, so the run is not terminated early).
-        if torch.all(s.STAGE == 3) and p.CROP_END_TYPE in ["maturity", "earliest"]:
-            self._send_signal(
-                signal=signals.crop_finish,
-                day=day,
-                finish_type="maturity",
-                crop_delete=True,
+        # The condition is evaluated at the end of the simulated day (see
+        # `diffwofost.physical_models.deferred`); the engine acts on the signal in
+        # the next time step either way.
+        if p.CROP_END_TYPE in ["maturity", "earliest"]:
+            defer(
+                s.STAGE == 3,
+                lambda: self._send_signal(
+                    signal=signals.crop_finish,
+                    day=day,
+                    finish_type="maturity",
+                    crop_delete=True,
+                ),
             )
 
         msg = "Finished state integration for %s"
@@ -761,3 +718,124 @@ class DVS_Phenology(SimulationObject):
             self._for_finalize["DOH"] = torch.full(
                 self.params.shape, day.toordinal(), dtype=self.dtype, device=self.device
             )
+
+
+@kernel
+def _phenology_rates(
+    STAGE, IS_ACTIVE, TEMP, latitude, solar, VERNFAC,
+    IDSL, DLO, DLC, TBASEM, TEFFMX, TSUMEM, TSUM1, TSUM2, DTSMTB, ones, zeros, nan, epsilon,
+):  # fmt: skip
+    """Daily phenological development rates, see `DVS_Phenology.calc_rates`."""
+    # Day length sensitivity
+    DAYLP = daylength_core(latitude, solar[0], solar[1])
+    # Compute DVRED conditionally based on IDSL >= 1
+    safe_den = DLO - DLC
+    safe_den = safe_den.sign() * torch.maximum(torch.abs(safe_den), epsilon)
+    dvred_active = torch.clamp((DAYLP - DLC) / safe_den, 0.0, 1.0)
+    DVRED = torch.where(IDSL >= 1, dvred_active, ones)
+
+    # Apply vernalisation only where IDSL >= 2 AND in vegetative stage
+    if VERNFAC is None:
+        VERNFAC = ones
+    else:
+        VERNFAC = torch.where((IDSL >= 2) & (STAGE == 1), VERNFAC, ones)
+
+    # Initialize all rate variables
+    DTSUME = zeros
+    DTSUM = zeros
+    DVR = zeros
+
+    # Emerging stage (STAGE == 0)
+    is_emerging = STAGE == 0
+    temp_diff = TEMP - TBASEM
+    max_diff = torch.clamp(TEFFMX - TBASEM, min=0.0)
+    dtsume_emerging = torch.minimum(torch.clamp(temp_diff, min=0.0), max_diff)
+    safe_den_em = TSUMEM.sign() * torch.maximum(torch.abs(TSUMEM), epsilon)
+    dvr_emerging = 0.1 * dtsume_emerging / safe_den_em
+    DTSUME = torch.where(is_emerging, dtsume_emerging, DTSUME)
+    DVR = torch.where(is_emerging, dvr_emerging, DVR)
+
+    # Vegetative stage (STAGE == 1)
+    is_vegetative = STAGE == 1
+    dtsum_vegetative = DTSMTB(TEMP) * VERNFAC * DVRED
+    safe_den_v1 = TSUM1.sign() * torch.maximum(torch.abs(TSUM1), epsilon)
+    dvr_vegetative = dtsum_vegetative / safe_den_v1
+    DTSUM = torch.where(is_vegetative, dtsum_vegetative, DTSUM)
+    DVR = torch.where(is_vegetative, dvr_vegetative, DVR)
+
+    # Reproductive stage (STAGE == 2)
+    is_reproductive = STAGE == 2
+    dtsum_reproductive = DTSMTB(TEMP)
+    safe_den_v2 = TSUM2.sign() * torch.maximum(torch.abs(TSUM2), epsilon)
+    dvr_reproductive = dtsum_reproductive / safe_den_v2
+    DTSUM = torch.where(is_reproductive, dtsum_reproductive, DTSUM)
+    DVR = torch.where(is_reproductive, dvr_reproductive, DVR)
+
+    # Mature stage (STAGE == 3) keeps zeros (already initialised).
+    # Not-yet-started (STAGE == -1) elements report invalid rates rather than
+    # the (physically meaningless) zeros above.
+    DTSUME = torch.where(IS_ACTIVE, DTSUME, nan)
+    DTSUM = torch.where(IS_ACTIVE, DTSUM, nan)
+    DVR = torch.where(IS_ACTIVE, DVR, nan)
+    return DTSUME, DTSUM, DVR
+
+
+@kernel
+def _phenology_integrate(
+    TSUME, DVS, TSUM, STAGE, DOS, DOE, DOA, DOM, DTSUME, DVR, DTSUM,
+    day_ordinal, start_ordinal, start_at_emergence, DVSI, DVSEND, ones, zeros, nan,
+):  # fmt: skip
+    """Phenology states and stage transitions, see `DVS_Phenology.integrate`."""
+    # Integrate phenologic states
+    TSUME = TSUME + DTSUME
+    DVS = DVS + DVR
+    TSUM = TSUM + DTSUM
+
+    # Check transition for not started -> emerging/vegetative (STAGE -1 -> 0/1)
+    is_pending = STAGE == -1
+    should_start = is_pending & (day_ordinal >= start_ordinal)
+    if start_at_emergence:
+        start_stage = 1.0
+        start_dvs = DVSI
+    else:
+        start_stage = 0.0
+        start_dvs = -0.1 * ones
+
+    STAGE = torch.where(should_start, start_stage, STAGE)
+    DOE = torch.where(should_start & start_at_emergence, day_ordinal, DOE)
+    DOS = torch.where(should_start & (not start_at_emergence), day_ordinal, DOS)
+    DVS = torch.where(should_start, start_dvs, DVS)
+    TSUM = torch.where(should_start, zeros, TSUM)
+    TSUME = torch.where(should_start, zeros, TSUME)
+
+    # Check transitions for emerging -> vegetative (STAGE 0 -> 1)
+    is_emerging = STAGE == 0
+    should_emerge = is_emerging & (DVS >= 0.0)
+    STAGE = torch.where(should_emerge, 1.0, STAGE)
+    DOE = torch.where(should_emerge, day_ordinal, DOE)
+    DVS = torch.where(should_emerge, torch.clamp(DVS, max=0.0), DVS)
+
+    # Check transitions for vegetative -> reproductive (STAGE 1 -> 2)
+    is_vegetative = STAGE == 1
+    should_flower = is_vegetative & (DVS >= 1.0)
+    STAGE = torch.where(should_flower, 2.0, STAGE)
+    DOA = torch.where(should_flower, day_ordinal, DOA)
+    DVS = torch.where(should_flower, torch.clamp(DVS, max=1.0), DVS)
+
+    # Check transitions for reproductive -> mature (STAGE 2 -> 3)
+    is_reproductive = STAGE == 2
+    should_mature = is_reproductive & (DVS >= DVSEND)
+    STAGE = torch.where(should_mature, 3.0, STAGE)
+    DOM = torch.where(should_mature, day_ordinal, DOM)
+    DVS = torch.where(should_mature, torch.minimum(DVS, DVSEND), DVS)
+
+    # An element is active from the day it starts onwards, including after it
+    # individually reaches maturity: a matured element keeps reporting its
+    # frozen final DVS/TSUM/TSUME and zero rates. Only an element that has not
+    # yet reached its own start date is inactive. DOS/DOE/DOA/DOM/DOH are
+    # historical markers and are not masked here.
+    IS_ACTIVE = STAGE != -1
+    DVS = torch.where(IS_ACTIVE, DVS, nan)
+    TSUM = torch.where(IS_ACTIVE, TSUM, nan)
+    TSUME = torch.where(IS_ACTIVE, TSUME, nan)
+    return TSUME, DVS, TSUM, STAGE, DOS, DOE, DOA, DOM, IS_ACTIVE

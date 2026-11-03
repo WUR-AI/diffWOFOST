@@ -7,6 +7,7 @@ from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
@@ -172,27 +173,15 @@ class WOFOST_Stem_Dynamics(SimulationObject):
         p = self.params
         k = self.kiosk
 
-        # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
-        # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
-        DVS = k["DVS"]
-        dvs_mask = DVS >= 0
-
-        FS = k["FS"]
-        ADMI = k["ADMI"]
-        RDRSTB = p.RDRSTB
-
-        # Growth/death rate stems
-        r.GRST = dvs_mask * ADMI * FS
-        r.DRST = dvs_mask * s.WST * RDRSTB(DVS)
-
         # Check if REALLOC_ST exists in kiosk, if not use 0
-        REALLOC_ST = torch.zeros_like(r.GRST)
+        REALLOC_ST = None
         if "REALLOC_ST" in k:
             REALLOC_ST = _broadcast_to(
                 k["REALLOC_ST"], p.shape, dtype=self.dtype, device=self.device
             )
-
-        r.GWST = r.GRST - r.DRST - REALLOC_ST
+        r.GRST, r.DRST, r.GWST = _stem_rates(
+            k["DVS"], k["FS"], k["ADMI"], s.WST, REALLOC_ST, p.RDRSTB
+        )
 
     def integrate(self, day: datetime.date, delt: float = 1.0) -> None:
         """Integrate the state variables using the rates of change.
@@ -205,15 +194,9 @@ class WOFOST_Stem_Dynamics(SimulationObject):
         r = self.rates
         s = self.states
 
-        # Stem biomass (living, dead, total)
-        s.WST = s.WST + r.GWST
-        s.DWST = s.DWST + r.DRST
-        s.TWST = s.WST + s.DWST
-
-        # Calculate Stem Area Index (SAI)
-        DVS = self.kiosk["DVS"]
-        SSATB = p.SSATB
-        s.SAI = s.WST * SSATB(DVS)
+        s.WST, s.DWST, s.TWST, s.SAI = _stem_integrate(
+            s.WST, s.DWST, r.GWST, r.DRST, self.kiosk["DVS"], p.SSATB
+        )
 
     def _set_variable_WST(self, nWST):
         """Set the WST state variable and update dependent variables.
@@ -241,3 +224,30 @@ class WOFOST_Stem_Dynamics(SimulationObject):
 
         increments = {"WST": s.WST - oWST, "SAI": s.SAI - oSAI, "TWST": s.TWST - oTWST}
         return increments
+
+
+@kernel
+def _stem_rates(DVS, FS, ADMI, WST, REALLOC_ST, RDRSTB):
+    """Rates of change of the stem dynamics, see `WOFOST_Stem_Dynamics.calc_rates`."""
+    # If DVS < 0, the crop has not yet emerged, so we zerofy the rates using mask.
+    # Make a mask (0 if DVS < 0, 1 if DVS >= 0)
+    dvs_mask = DVS >= 0
+
+    # Growth/death rate stems
+    GRST = dvs_mask * ADMI * FS
+    DRST = dvs_mask * WST * RDRSTB(DVS)
+    if REALLOC_ST is None:
+        REALLOC_ST = torch.zeros_like(GRST)
+    return GRST, DRST, GRST - DRST - REALLOC_ST
+
+
+@kernel
+def _stem_integrate(WST, DWST, GWST, DRST, DVS, SSATB):
+    """State integration of the stem dynamics, see `WOFOST_Stem_Dynamics.integrate`."""
+    # Stem biomass (living, dead, total)
+    WST = WST + GWST
+    DWST = DWST + DRST
+    TWST = WST + DWST
+
+    # Calculate Stem Area Index (SAI)
+    return WST, DWST, TWST, WST * SSATB(DVS)
