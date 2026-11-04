@@ -28,6 +28,7 @@ from diffwofost.physical_models.soil.soil_wrappers import SoilModuleWrapper_PP
 from diffwofost.physical_models.test import calculate_numerical_grad
 from diffwofost.physical_models.test import get_test_data
 from diffwofost.physical_models.variablekiosk import VariableKiosk
+from tests.physical_models.crop.pcse_tmpftb import pcse_reference_matching_daytime_tmpftb
 
 _WEATHER = (
     Path(__file__).resolve().parents[1] / "test_data" / "test_potentialproduction_wofost72_05.yaml"
@@ -127,14 +128,17 @@ def _close(actual, expected):
 def _run_pcse(n_days=None):
     crop, soil, site, agro = _inputs()
     rows = _weather_rows(n_days)
-    model = Wofost81_PP(
-        PcseParameterProvider(cropdata=crop, soildata=soil, sitedata=site),
-        _CallableWeather(rows),
-        agro,
-        output_vars=list(_DAILY),
-    )
-    model.run_till(rows[-1]["DAY"])
-    return model.get_output()
+    # Released PCSE 8.1 still passes the daily mean to TMPFTB. The reference
+    # uses daytime temperature until that package does.
+    with pcse_reference_matching_daytime_tmpftb():
+        model = Wofost81_PP(
+            PcseParameterProvider(cropdata=crop, soildata=soil, sitedata=site),
+            _CallableWeather(rows),
+            agro,
+            output_vars=list(_DAILY),
+        )
+        model.run_till(rows[-1]["DAY"])
+        return model.get_output()
 
 
 def _tensor_weather(rows):

@@ -1,0 +1,161 @@
+{
+  "note": "Wallach multi-start Adam search on Snellius, job 28541150, copied 2026-10-26. Finished through the protein candidate NRESIDLV. The allocation ended during NRESIDST at step 37, so that round is not a result, and TCNT was never started. after_step6 is the vector kept by the finished rounds. after_step7 is the best finished start of the joint weighted refit, job 28583854 start 3, which reached the step ceiling. It began at a Latin-hypercube point, not at the step 6 vector. All 20 starts have since finished. Start 3 remained the best, and the other starts had higher scores. weighted_ss is the joint objective on one shared set of variances, the five variances from Adam's own step 6. Nelder-Mead's joint refit is scored with those same variances when it is compared.",
+  "phenology_history": [
+    {
+      "Parameters": "TSUM1, TSUM2",
+      "SS": 839.0501275827137,
+      "AICc": 99.68184635718698,
+      "Kept": "major"
+    },
+    {
+      "Parameters": "TSUM1, TSUM2, VERNSAT",
+      "SS": 839.0501275827137,
+      "AICc": 102.20184635718698,
+      "Kept": "no"
+    },
+    {
+      "Parameters": "TSUM1, TSUM2, VERNBASE",
+      "SS": 839.0501275827137,
+      "AICc": 102.20184635718698,
+      "Kept": "no"
+    },
+    {
+      "Parameters": "TSUM1, TSUM2, DLO",
+      "SS": 839.0501275827137,
+      "AICc": 102.20184635718698,
+      "Kept": "no"
+    }
+  ],
+  "phenology_accepted": {
+    "TSUM1": 618.4277418756441,
+    "TSUM2": 956.0941690685213,
+    "VERNSAT": 44.0,
+    "VERNBASE": 9.0,
+    "DLO": 16.3
+  },
+  "phenology_selected": [
+    "TSUM1",
+    "TSUM2"
+  ],
+  "phenology_error_variance": 32.2711587531813,
+  "selected": [
+    "TSUM1",
+    "TSUM2",
+    "AMAX_REF",
+    "SPAN",
+    "TDWI",
+    "RNUPTAKEMAX",
+    "REALLOC_STEM_FRACTION",
+    "NMAXSO"
+  ],
+  "after_step6": {
+    "TSUM1": 618.4277418756441,
+    "TSUM2": 956.0941690685213,
+    "VERNSAT": 44.0,
+    "VERNBASE": 9.0,
+    "DLO": 16.3,
+    "AMAX_REF": 29.906972974069305,
+    "SPAN": 51.784512458816195,
+    "TDWI": 325.13110305528573,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 1.2941780154849454,
+    "NMAXSO": 0.019537045061829662,
+    "REALLOC_STEM_FRACTION": 0.1312003007654455,
+    "CVO": 0.709,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "TCNT": 10.0
+  },
+  "after_step7": {
+    "TSUM1": 629.3866615482409,
+    "TSUM2": 957.4075746357939,
+    "VERNSAT": 44.0,
+    "VERNBASE": 9.0,
+    "DLO": 16.3,
+    "AMAX_REF": 31.992139675004537,
+    "SPAN": 35.74195468973853,
+    "TDWI": 286.42533488639504,
+    "RGRLAI": 0.007,
+    "RNUPTAKEMAX": 1.5684809777296587,
+    "NMAXSO": 0.019477713271466433,
+    "REALLOC_STEM_FRACTION": 0.20251556176661234,
+    "CVO": 0.709,
+    "NRESIDLV": 0.004,
+    "NRESIDST": 0.002,
+    "TCNT": 10.0
+  },
+  "weighted_ss": 93.1150931961977,
+  "weighted_complete": true,
+  "group_rows": [
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN",
+      "SS": 1.638284801785974,
+      "AICc": -140.49106791840316,
+      "Kept": "major"
+    },
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN, TDWI",
+      "SS": 1.3431659728385879,
+      "AICc": -146.92304617608173,
+      "Kept": "yes"
+    },
+    {
+      "Group": "plant_biomass",
+      "Parameters": "AMAX_REF, SPAN, TDWI, RGRLAI",
+      "SS": 1.3404610606949707,
+      "AICc": -144.58610314992862,
+      "Kept": "no"
+    },
+    {
+      "Group": "plant_N_content",
+      "Parameters": "RNUPTAKEMAX",
+      "SS": 0.39803729551202344,
+      "AICc": -25.494478761539227,
+      "Kept": "major"
+    },
+    {
+      "Group": "plant_N_content",
+      "Parameters": "RNUPTAKEMAX, NMAXSO",
+      "SS": 0.3789726895138669,
+      "AICc": -22.507641418462452,
+      "Kept": "no"
+    },
+    {
+      "Group": "yield",
+      "Parameters": "REALLOC_STEM_FRACTION",
+      "SS": 355936.07018538995,
+      "AICc": 135.19187811913943,
+      "Kept": "major"
+    },
+    {
+      "Group": "yield",
+      "Parameters": "REALLOC_STEM_FRACTION, CVO",
+      "SS": 340437.479284853,
+      "AICc": 137.44948640560654,
+      "Kept": "no"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO",
+      "SS": 10.258798252599137,
+      "AICc": -0.7149411377837939,
+      "Kept": "major"
+    },
+    {
+      "Group": "seed_protein",
+      "Parameters": "NMAXSO, NRESIDLV",
+      "SS": 9.842139216383714,
+      "AICc": 1.5824084901775357,
+      "Kept": "no"
+    }
+  ],
+  "group_variance": {
+    "phenology": 32.2711587531813,
+    "biomass": 0.032760145678989945,
+    "nitrogen": 0.04975466193900293,
+    "yield": 29661.33918211583,
+    "protein": 0.8548998543832614
+  }
+}

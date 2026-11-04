@@ -33,6 +33,7 @@ from diffwofost.physical_models.soil.snomin import _sum_soil
 from diffwofost.physical_models.soil.soil_wrappers import SoilModuleWrapper_NWLP_MLWB_SNOMIN
 from diffwofost.physical_models.test import calculate_numerical_grad
 from diffwofost.physical_models.test import get_test_data
+from tests.physical_models.crop.pcse_tmpftb import pcse_reference_matching_daytime_tmpftb
 
 _WEATHER = (
     Path(__file__).resolve().parents[1] / "test_data" / "test_potentialproduction_wofost72_05.yaml"
@@ -216,14 +217,17 @@ def _run_pcse(output_vars, site_overrides=None, timed_events="null", n_days=None
     if site_overrides:
         site = {**site, **site_overrides}
     rows = _weather_rows(n_days)
-    reference = Wofost81_NWLP_MLWB_SNOMIN(
-        PcseParameterProvider(cropdata=crop, soildata=soil, sitedata=site),
-        _CallableWeather(rows),
-        agro,
-        output_vars=output_vars,
-    )
-    reference.run_till(rows[-1]["DAY"])
-    return reference.get_output()
+    # Released PCSE 8.1 still passes the daily mean to TMPFTB. The reference
+    # uses daytime temperature until that package does.
+    with pcse_reference_matching_daytime_tmpftb():
+        reference = Wofost81_NWLP_MLWB_SNOMIN(
+            PcseParameterProvider(cropdata=crop, soildata=soil, sitedata=site),
+            _CallableWeather(rows),
+            agro,
+            output_vars=output_vars,
+        )
+        reference.run_till(rows[-1]["DAY"])
+        return reference.get_output()
 
 
 def _run_diff(overrides=None, timed_events="null", n_days=None):

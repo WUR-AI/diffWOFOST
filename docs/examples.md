@@ -26,6 +26,18 @@ We provide an example notebook showing optimization of models' parameters with
     output w.r.t the parameter will be close to zero, which may not provide
     useful information for optimization.
 
+## AgMIP calibration protocol
+
+The AgMIP calibration workgroup uses a fixed sequence: phenology, then biomass,
+then nitrogen, yield and protein, with AICc deciding which extra parameters are
+estimated. The notebook runs that phenology step on their public French wheat
+trials. Phenology is estimated first. Biomass, plant nitrogen, yield and grain
+protein then use WOFOST 8.1 with SNOMIN, which is on main.
+
+| Model | Open the notebook | Access the source | View the notebook |
+|-------|-------------------|-------------------|-------------------|
+| AgMIP protocol, phenology | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][agmip_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][agmip_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/agmip_calibration_protocol.ipynb) |
+
 ## Hybrid modeling with diffWOFOST
 
 The differentiable nature of `diffWOFOST` allows for integration of machine
@@ -122,3 +134,5 @@ for more details.
 [hybrid_stress_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_stress_correction.ipynb
 [variational_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
 [variational_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
+[agmip_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/agmip-calibration-protocol/docs/notebooks/agmip_calibration_protocol.ipynb
+[agmip_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/agmip-calibration-protocol/docs/notebooks/agmip_calibration_protocol.ipynb
