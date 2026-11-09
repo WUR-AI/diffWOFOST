@@ -681,9 +681,13 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         n_layers = len(self.soil_profile)
         self._n_layers = n_layers
         self._layer_smw = _stack_layer_property("SMW", self.soil_profile, self.dtype, self.device)
-        self._layer_smfcf = _stack_layer_property("SMFCF", self.soil_profile, self.dtype, self.device)
+        self._layer_smfcf = _stack_layer_property(
+            "SMFCF", self.soil_profile, self.dtype, self.device
+        )
         self._layer_sm0 = _stack_layer_property("SM0", self.soil_profile, self.dtype, self.device)
-        self._layer_crairc = _stack_layer_property("CRAIRC", self.soil_profile, self.dtype, self.device)
+        self._layer_crairc = _stack_layer_property(
+            "CRAIRC", self.soil_profile, self.dtype, self.device
+        )
         thicknesses = _stack_layer_property("Thickness", self.soil_profile, self.dtype, self.device)
 
         self._layer_depth_hi = torch.cumsum(thicknesses, dim=0)
@@ -810,12 +814,12 @@ def _layered_rates(
     # - torch.Tensor with shape (n_layers, *params_shape)
     # - list/tuple of length n_layers, each element scalar or tensor
     tensor_kwargs = {"dtype": dvs.dtype, "device": dvs.device}
-    if not isinstance(sm_layers, (torch.Tensor, list, tuple)):
+    if not isinstance(sm_layers, torch.Tensor | list | tuple):
         sm_layers = torch.as_tensor(sm_layers, **tensor_kwargs)
         if sm_layers.dim() == 1:
             sm_layers = list(sm_layers)  # per-layer scalars
 
-    if isinstance(sm_layers, (list, tuple)):
+    if isinstance(sm_layers, list | tuple):
         sm_layers_t = torch.stack(
             [_broadcast_to(sm_i, params_shape, **tensor_kwargs) for sm_i in sm_layers],
             dim=0,

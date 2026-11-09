@@ -351,16 +351,17 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             msg = f"Leaf class {idx} was already formed (last class is {last})."
             raise ValueError(msg)
 
+        LV_prev = states.LVCUM[last].clone() if torch.is_grad_enabled() else states.LVCUM[last]
+        LA_prev = states.LACUM[last].clone() if torch.is_grad_enabled() else states.LACUM[last]
+
         if idx > last + 1:
             # days on which integrate() was skipped (before emergence) form empty classes
             gap = slice(last + 1, idx)
-            states.LVCUM[gap] = states.LVCUM[last].clone() if torch.is_grad_enabled() else states.LVCUM[last]
-            states.LACUM[gap] = states.LACUM[last].clone() if torch.is_grad_enabled() else states.LACUM[last]
+            states.LVCUM[gap] = LV_prev
+            states.LACUM[gap] = LA_prev
             states.SLA[gap] = 0.0
             states.LVAGE[gap] = 0.0
 
-        LV_prev = states.LVCUM[last].clone() if torch.is_grad_enabled() else states.LVCUM[last]
-        LA_prev = states.LACUM[last].clone() if torch.is_grad_enabled() else states.LACUM[last]
 
         # Leaf death
         states.DLVCUM = _leaf_death(LV_prev, states.DLVCUM, rates.DRLV)
