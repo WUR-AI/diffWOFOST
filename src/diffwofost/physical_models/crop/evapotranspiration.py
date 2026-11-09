@@ -721,7 +721,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         et0 = torch.as_tensor(drv["ET0"])
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
-        r.EVWMX, r.EVSMX, r.TRAMX, r.RFTRA, r.TRA, r.TRALY,r.RFWS, r.RFOS = _layered_rates(
+        r.EVWMX, r.EVSMX, r.TRAMX, r.RFTRA, r.TRA, r.TRALY, r.RFWS, r.RFOS = _layered_rates(
             dvs,
             p.IAIRDU,
             p.IOX,
@@ -763,6 +763,7 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         self._IDWST = self._IDWST + rfws_stress
         self._IDOST = self._IDOST + rfos_stress
 
+
 @kernel
 def _layered_rates(
     dvs,
@@ -788,8 +789,7 @@ def _layered_rates(
     DEPNR,
     KDIFTB,
     _epsilon,
-):# fmt: skip
-
+):  # fmt: skip
     # If DVS < 0, the crop has not yet emerged, so we zero the rates using a mask
     # A mask (1 if DVS >= 0, 0 if DVS < 0)
     dvs_mask = (dvs >= 0.0).to(dtype=dvs.dtype)
@@ -844,13 +844,12 @@ def _layered_rates(
 
     # Vectorised RFWS across all layers: (n_layers, *params_shape)
     smcr = (1.0 - swdep) * (layer_smfcf - layer_smw) + layer_smw
-    denom = torch.where(
-        (smcr - layer_smw).abs() > _epsilon, smcr - layer_smw, _epsilon
-    )
+    denom = torch.where((smcr - layer_smw).abs() > _epsilon, smcr - layer_smw, _epsilon)
+
     # Reduction factor for transpiration in case of water shortage (RFWS)
-    RFWS = dvs_mask_layers * torch.clamp(
-        (sm_layers_t - layer_smw) / denom, min=0.0, max=1.0
-    ) + (1.0 - dvs_mask_layers)
+    RFWS = dvs_mask_layers * torch.clamp((sm_layers_t - layer_smw) / denom, min=0.0, max=1.0) + (
+        1.0 - dvs_mask_layers
+    )
 
     # Vectorised root fraction across all layers: (n_layers, *params_shape)
     root_len = torch.clamp(torch.minimum(rd, depth_hi) - depth_lo, min=0.0)
@@ -872,9 +871,7 @@ def _layered_rates(
                 torch.clamp(_dsos + 1.0, max=4.0),
                 0.0,
             )
-            denom_ox = torch.where(
-                layer_crairc[i].abs() > _epsilon, layer_crairc[i], _epsilon
-            )
+            denom_ox = torch.where(layer_crairc[i].abs() > _epsilon, layer_crairc[i], _epsilon)
             rfosmx = torch.clamp((layer_sm0[i] - sm_layers_t[i]) / denom_ox, min=0.0, max=1.0)
             RFOS[i] = rfosmx + (1.0 - torch.clamp(_dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
 

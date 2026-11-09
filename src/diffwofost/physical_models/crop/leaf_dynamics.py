@@ -362,7 +362,6 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
             states.SLA[gap] = 0.0
             states.LVAGE[gap] = 0.0
 
-
         # Leaf death
         states.DLVCUM = _leaf_death(LV_prev, states.DLVCUM, rates.DRLV)
 
@@ -589,7 +588,6 @@ def _reallocate(LVCUM, LACUM, SLA, DLVCUM, LV_formed, LA_formed, realloc, zero, 
     return LVCUM, LACUM, LV_formed, LA_formed
 
 
-
 class _TakeClass(torch.autograd.Function):
     """Gather along the leaf-class axis without saving the source for the backward pass.
 
@@ -698,8 +696,15 @@ class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
         # Uniformly reduce leaf biomass in case of reallocation
         states = self.states
         LVCUM, LACUM, LV_formed, LA_formed = _reallocate(
-            states.LVCUM, states.LACUM, states.SLA, states.DLVCUM,
-            LV_formed, LA_formed, self.kiosk["REALLOC_LV"], self._zero, self._epsilon,
+            states.LVCUM,
+            states.LACUM,
+            states.SLA,
+            states.DLVCUM,
+            LV_formed,
+            LA_formed,
+            self.kiosk["REALLOC_LV"],
+            self._zero,
+            self._epsilon,
         )
         states.LVCUM.copy_(LVCUM)  # in place
         states.LACUM.copy_(LACUM)

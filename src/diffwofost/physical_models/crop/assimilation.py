@@ -830,7 +830,7 @@ class WOFOST81_Assimilation(SimulationObject):
             params.KDIFTB,
             params.EFFTB,
             params.TMNFTB,
-            self._epsilon
+            self._epsilon,
         )
         return rates.PGASS
 
