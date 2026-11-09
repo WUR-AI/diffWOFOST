@@ -515,8 +515,7 @@ def _leaf_death(LV_formed, DLVCUM, DRLV):
 
 @kernel
 def _leaf_growth(LV_formed, LA_formed, GRLV, SLAT):
-    """ `LV_formed` and `LA_formed` are the running totals of the youngest leaf class.
-    """
+    """`LV_formed` and `LA_formed` are the running totals of the youngest leaf class."""
     return LV_formed + GRLV, LA_formed + GRLV * SLAT
 
 
