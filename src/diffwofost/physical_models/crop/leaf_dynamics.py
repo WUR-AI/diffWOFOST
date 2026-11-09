@@ -354,13 +354,13 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         if idx > last + 1:
             # days on which integrate() was skipped (before emergence) form empty classes
             gap = slice(last + 1, idx)
-            states.LVCUM[gap] = _row(states.LVCUM, last)
-            states.LACUM[gap] = _row(states.LACUM, last)
+            states.LVCUM[gap] = states.LVCUM[last].clone() if torch.is_grad_enabled() else states.LVCUM[last]
+            states.LACUM[gap] = states.LACUM[last].clone() if torch.is_grad_enabled() else states.LACUM[last]
             states.SLA[gap] = 0.0
             states.LVAGE[gap] = 0.0
 
-        LV_prev = _row(states.LVCUM, last)
-        LA_prev = _row(states.LACUM, last)
+        LV_prev = states.LVCUM[last].clone() if torch.is_grad_enabled() else states.LVCUM[last]
+        LA_prev = states.LACUM[last].clone() if torch.is_grad_enabled() else states.LACUM[last]
 
         # Leaf death
         states.DLVCUM = _leaf_death(LV_prev, states.DLVCUM, rates.DRLV)
@@ -371,9 +371,9 @@ class WOFOST_Leaf_Dynamics(SimulationObject):
         # Leaf growth for the new leaf class
         LV_formed, LA_formed = _leaf_growth(LV_formed, LA_formed, rates.GRLV, rates.SLAT)
 
-        _set(states.LVCUM, idx, LV_formed)
-        _set(states.LACUM, idx, LA_formed)
-        _set(states.SLA, idx, rates.SLAT)
+        states.LVCUM[idx] = LV_formed
+        states.LACUM[idx] = LA_formed
+        states.SLA[idx] = rates.SLAT
         self._last = idx
 
         # Integration of physiological age of the classes formed before today
@@ -644,22 +644,6 @@ def _search(sorted_seq, values, max_index=None):
     return torch.clamp(lo, max=max_index)
 
 
-def _row(src, index):
-    """Leaf class `index` of src; a copy if autograd records.
-
-    src is updated in place later, and operations such as torch.minimum save their
-    inputs for the backward pass even when those do not require gradients.
-    """
-    if torch.is_grad_enabled():
-        return src[index].clone()
-    return src[index]
-
-
-def _set(dst, index, value):
-    """Set the leaf class `index` of dst in place."""
-    dst[index] = value
-
-
 class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
     """Leaf dynamics with nitrogen-stress effects on ageing and juvenile expansion.
 
@@ -716,7 +700,7 @@ class WOFOST_Leaf_Dynamics_N(WOFOST_Leaf_Dynamics):
             states.LVCUM, states.LACUM, states.SLA, states.DLVCUM,
             LV_formed, LA_formed, self.kiosk["REALLOC_LV"], self._zero, self._epsilon,
         )
-        states.LVCUM.copy_(LVCUM)  # in place, like _set
+        states.LVCUM.copy_(LVCUM)  # in place
         states.LACUM.copy_(LACUM)
         return LV_formed, LA_formed
 
