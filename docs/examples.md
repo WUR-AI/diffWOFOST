@@ -26,6 +26,26 @@ We provide an example notebook showing optimization of models' parameters with
     output w.r.t the parameter will be close to zero, which may not provide
     useful information for optimization.
 
+## Calibration on a multi-site dataset
+
+`diffWOFOST` simulates a batch of sites in one engine run when the model
+parameters are tensors with one value per element, and one calendar serves every
+element. This notebook uses that batching for a calibration: 600 sites in 5
+groups, each group with its own `TSUM1` and `TSUM2`, and the dates of anthesis and
+maturity read from the daily `DVS` trajectory as a differentiable crossing. The
+observations are produced by the model itself, so the fit is a recovery test of
+the 10 temperature sums behind them.
+
+| Model | Open the notebook | Access the source | View the notebook |
+|-------|-------------------|-------------------|-------------------|
+| Phenology, 5 groups of sites | [![Open In Colab](https://colab.research.google.com/assets/colab-badge.svg)][multisite_colab_link] | [![Access the source code](https://img.shields.io/badge/GitHub_Repository-000.svg?logo=github&labelColor=gray&color=blue)][multisite_source_link] | [![here](https://img.shields.io/badge/View_Notebook-orange.svg?logo=jupyter&labelColor=gray)](./notebooks/calibrate_phenology_aez.ipynb) |
+
+After 72 steps of Adam the fitted temperature sums lie within 25 degree-days of
+the values that produced the observations, which is 1.8% of the largest `TSUM1`
+and 3.1% of the largest `TSUM2`, and the RMSE of the dates falls from 8.27 to 0.71
+day for anthesis and from 12.89 to 2.33 days for maturity. One forward and
+backward pass over the 600 sites takes about 2 s on a CPU.
+
 ## Hybrid modeling with diffWOFOST
 
 The differentiable nature of `diffWOFOST` allows for integration of machine
@@ -122,3 +142,5 @@ for more details.
 [hybrid_stress_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/hybrid_stress_correction.ipynb
 [variational_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
 [variational_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/variational_data_assimilation.ipynb
+[multisite_colab_link]: https://colab.research.google.com/github/WUR-AI/diffWOFOST/blob/main/docs/notebooks/calibrate_phenology_aez.ipynb
+[multisite_source_link]: https://github.com/WUR-AI/diffWOFOST/blob/main/docs/notebooks/calibrate_phenology_aez.ipynb
