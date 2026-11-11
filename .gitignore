@@ -77,3 +77,5 @@ venv.bak/
 tests/physical_models/test_data/*.yaml
 docs/notebooks/data
 docs/notebooks/data_temp
+docs/notebooks/snomin_calibration_data/crop/YAMLCropDataProvider.pkl
+docs/notebooks/phenomodelling

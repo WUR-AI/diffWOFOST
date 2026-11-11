@@ -27,6 +27,8 @@ from diffwofost.physical_models.crop.stem_dynamics import WOFOST_Stem_Dynamics a
 from diffwofost.physical_models.crop.storage_organ_dynamics import (
     WOFOST_Storage_Organ_Dynamics as Storage_Organ_Dynamics,
 )
+from diffwofost.physical_models.deferred import defer
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 
 
@@ -211,21 +213,27 @@ class Wofost72(SimulationObject):
             msg = "Error in partitioning of initial biomass (TDWI)!"
             raise exc.PartitioningError(msg)
 
+        # whether all elements are still emerging, see integrate()
+        self._all_emerging = None
+
         # assign handler for CROP_FINISH signal
         self._connect_signal(self._on_CROP_FINISH, signal=signals.crop_finish)
 
     @staticmethod
     def _check_carbon_balance(day, DMI, GASS, MRES, CVF, pf):
-        """Check that carbon flows are balanced on the current day."""
-        # [!] This check runs every day and can be costly on GPU, so we can think about removing it
-        # and sanitize the parameters instead.
+        """Check that carbon flows are balanced on the current day.
+
+        The check is evaluated at the end of the simulated day (see
+        `diffwofost.physical_models.deferred`), so that it does not stall the device.
+        """
         (FR, FL, FS, FO) = pf
         checksum = (
             (GASS - MRES - (FR + (FL + FS + FO) * (1.0 - FR)) * DMI / CVF)
             * 1.0
             / (torch.clamp(GASS, min=0.0001))
         )
-        if torch.any(torch.abs(checksum) >= 0.0001):
+
+        def fail():
             msg = f"Carbon flows not balanced on day {day}\n"
             msg += (
                 f"Checksum: {checksum.mean().item():f}, GASS: {GASS.mean().item():f},"
@@ -237,6 +245,8 @@ class Wofost72(SimulationObject):
                 f" DMI: {DMI.mean().item():f}, CVF: {CVF.mean().item():f}\n"
             )
             raise exc.CarbonBalanceError(msg)
+
+        defer(torch.any(torch.abs(checksum) >= 0.0001), fail)
 
     def calc_rates(self, day: datetime.date, drv: dict) -> None:
         """Calculate the rates of change of the state variables.
@@ -253,12 +263,10 @@ class Wofost72(SimulationObject):
         # Phenology
         self.pheno.calc_rates(day, drv)
 
-        # if before emergence there is no need to continue
-        # because only the phenology is running.
-        # TODO: revisit this when fixing #60
-        if torch.all(self.pheno.states.STAGE == 0):
-            self.evtra(day, drv)
-            return
+        # The rates are also calculated when all elements are still emerging: the
+        # components mask the elements that have not emerged, and testing for that
+        # case here would make the host wait for the device every day. The rates are
+        # only integrated after an element has emerged (see integrate()).
 
         # Potential assimilation
         PGASS = self.assim(day, drv)
@@ -266,23 +274,15 @@ class Wofost72(SimulationObject):
         # (evapo)transpiration rates
         self.evtra(day, drv)
 
-        # water stress reduction
-        r.GASS = PGASS * k.RFTRA
-
         # Respiration
         PMRES = self.mres(day, drv)
-        r.MRES = torch.minimum(r.GASS, PMRES)
-
-        # Net available assimilates
-        r.ASRC = r.GASS - r.MRES
 
         # DM partitioning factors (pf), conversion factor (CVF),
         # dry matter increase (DMI) and check on carbon balance
         pf = self.part.calc_rates(day, drv)
-        CVF = 1.0 / (
-            (pf.FL / p.CVL + pf.FS / p.CVS + pf.FO / p.CVO) * (1.0 - pf.FR) + pf.FR / p.CVR
+        r.GASS, r.MRES, r.ASRC, CVF, r.DMI, r.ADMI = _dry_matter_increase(
+            PGASS, k.RFTRA, PMRES, pf.FR, pf.FL, pf.FS, pf.FO, p.CVL, p.CVS, p.CVO, p.CVR
         )
-        r.DMI = CVF * r.ASRC
         self._check_carbon_balance(day, r.DMI, r.GASS, r.MRES, CVF, pf)
 
         # distribution over plant organ
@@ -294,9 +294,8 @@ class Wofost72(SimulationObject):
 
         # Below-ground dry matter increase and root dynamics
         self.ro_dynamics.calc_rates(day, drv)
-        # Aboveground dry matter increase and distribution over stems,
+        # Aboveground dry matter increase (r.ADMI above) and distribution over stems,
         # leaves, organs
-        r.ADMI = (1.0 - pf.FR) * r.DMI
         self.st_dynamics.calc_rates(day, drv)
         self.so_dynamics.calc_rates(day, drv)
         self.lv_dynamics.calc_rates(day, drv)
@@ -311,20 +310,22 @@ class Wofost72(SimulationObject):
         rates = self.rates
         states = self.states
 
-        # Capture stage *before* integration (phenology will advance it).
-        # STAGE == 0 means "emerging"; read directly from the tensor to avoid
-        # a GPU→CPU sync from get_variable() / .item().
-        crop_stage_before = self.pheno.states.STAGE.clone()
+        # Whether all elements were still emerging *before* this integration
+        # (phenology will advance the stage); evaluated at the end of the previous day.
+        if self._all_emerging is None:
+            self._all_emerging = defer(self.pheno.states.STAGE == 0)
+        all_emerging = self._all_emerging.get()
 
         # Phenology
         self.pheno.integrate(day, delt)
+        self._all_emerging = defer(self.pheno.states.STAGE == 0)
 
         # if before emergence there is no need to continue
         # because only the phenology is running.
         # Just run a touch() to to ensure that all state variables are available
         # in the kiosk
         # TODO: revisit this when fixing #60
-        if torch.all(crop_stage_before == 0):
+        if all_emerging:
             self.touch()
             return
 
@@ -337,16 +338,11 @@ class Wofost72(SimulationObject):
         self.st_dynamics.integrate(day, delt)
         self.lv_dynamics.integrate(day, delt)
 
-        # Integrate total (living+dead) above-ground biomass of the crop
-        states.TAGP = self.kiosk.TWLV + self.kiosk.TWST + self.kiosk.TWSO
-
-        # total gross assimilation and maintenance respiration
-        states.GASST = states.GASST + rates.GASS
-        states.MREST = states.MREST + rates.MRES
-
-        # total crop transpiration and soil evaporation
-        states.CTRAT = states.CTRAT + self.kiosk.TRA
-        states.CEVST = states.CEVST + self.kiosk.EVS
+        k = self.kiosk
+        states.TAGP, states.GASST, states.MREST, states.CTRAT, states.CEVST = _crop_totals(
+            k.TWLV, k.TWST, k.TWSO, states.GASST, states.MREST, states.CTRAT, states.CEVST,
+            rates.GASS, rates.MRES, k.TRA, k.EVS,
+        )  # fmt: skip
 
     def finalize(self, day: datetime.date) -> None:
         """Finalize the crop simulation by computing the Harvest Index."""
@@ -365,3 +361,40 @@ class Wofost72(SimulationObject):
         """Handler for setting day of finish (DOF) and reason for crop finishing (FINISH)."""
         self._for_finalize["DOF"] = day
         self._for_finalize["FINISH_TYPE"] = finish_type
+
+
+@kernel
+def _dry_matter_increase(PGASS, RFTRA, PMRES, FR, FL, FS, FO, CVL, CVS, CVO, CVR):
+    """Assimilation, respiration and dry matter increase, see `Wofost72.calc_rates`."""
+    # water stress reduction
+    GASS = PGASS * RFTRA
+
+    # Respiration
+    MRES = torch.minimum(GASS, PMRES)
+
+    # Net available assimilates
+    ASRC = GASS - MRES
+
+    # conversion factor (CVF) and dry matter increase (DMI)
+    CVF = 1.0 / ((FL / CVL + FS / CVS + FO / CVO) * (1.0 - FR) + FR / CVR)
+    DMI = CVF * ASRC
+
+    # Aboveground dry matter increase
+    ADMI = (1.0 - FR) * DMI
+    return GASS, MRES, ASRC, CVF, DMI, ADMI
+
+
+@kernel
+def _crop_totals(TWLV, TWST, TWSO, GASST, MREST, CTRAT, CEVST, GASS, MRES, TRA, EVS):
+    """Crop totals after integration, see `Wofost72.integrate`."""
+    # Integrate total (living+dead) above-ground biomass of the crop
+    TAGP = TWLV + TWST + TWSO
+
+    # total gross assimilation and maintenance respiration
+    GASST = GASST + GASS
+    MREST = MREST + MRES
+
+    # total crop transpiration and soil evaporation
+    CTRAT = CTRAT + TRA
+    CEVST = CEVST + EVS
+    return TAGP, GASST, MREST, CTRAT, CEVST
