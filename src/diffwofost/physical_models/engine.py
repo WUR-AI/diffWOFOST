@@ -172,6 +172,13 @@ class Engine(PcseEngine):
         """
         with self._deferred.active():
             self._run_day()
+            # A terminate raised inside the step was already handled by _run_day.
+            terminated_in_step = self.flag_terminate
+
+        if self.flag_crop_finish:
+            self._finish_cropsimulation(self.day)
+        if self.flag_terminate and not terminated_in_step:
+            self._terminate_simulation(self.day)
 
     def _run_day(self):
         """Make one time step of the simulation (the PCSE engine step)."""

@@ -408,9 +408,16 @@ class Afgen:
 
         x = torch.as_tensor(x, dtype=self.x_list.dtype, device=self.x_list.device)
 
+        # A 0-d query (a simulation without a batch dimension) is evaluated as a
+        # one-element batch: take() with a 0-d index does not compile, see
+        # `diffwofost.physical_models.kernels`.
+        unbatched = x.dim() == 0
+        if unbatched:
+            x = x.unsqueeze(0)
+
         # Ensure contiguous memory layout for searchsorted
         x_list_contig = self.x_list.contiguous()
-        x_contig = x.contiguous() if isinstance(x, torch.Tensor) and x.dim() > 0 else x
+        x_contig = x.contiguous()
 
         # Find interval index using torch.searchsorted for differentiability
         i = torch.searchsorted(x_list_contig, x_contig, right=False) - 1
@@ -427,7 +434,7 @@ class Afgen:
             torch.where(x >= self.x_list[-1], self.y_list[-1], interp_value),
         )
 
-        return result
+        return result.squeeze(0) if unbatched else result
 
     def to(self, device=None, dtype=None):
         """Move internal tensors to a different device/dtype (PyTorch-style).

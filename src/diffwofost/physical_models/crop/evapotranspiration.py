@@ -32,6 +32,32 @@ def _stack_layer_property(soil_properties, soil_profile, dtype, device) -> torch
     return torch.stack(columns)
 
 
+def _stack_layers(sm_layers, n_layers, params_shape, dtype, device) -> torch.Tensor:
+    """Stack layered soil moisture to shape (n_layers, *params_shape).
+
+    The value can be a tensor, a sequence of per-layer values, or a sequence of
+    scalars. Raises when the number of layers does not match the soil profile.
+    """
+    if not isinstance(sm_layers, torch.Tensor | list | tuple):
+        sm_layers = torch.as_tensor(sm_layers, dtype=dtype, device=device)
+        if sm_layers.dim() == 1:
+            sm_layers = list(sm_layers)  # per-layer scalars
+
+    if isinstance(sm_layers, list | tuple):
+        stacked = torch.stack(
+            [_broadcast_to(sm_i, params_shape, dtype=dtype, device=device) for sm_i in sm_layers],
+            dim=0,
+        )
+    else:
+        stacked = sm_layers.to(dtype=dtype, device=device)
+
+    if stacked.shape[0] != n_layers:
+        raise ValueError(
+            f"Layered evapotranspiration expects SM with {n_layers} layers, got {stacked.shape[0]}."
+        )
+    return stacked
+
+
 def SWEAF(ET0: torch.Tensor, DEPNR: torch.Tensor) -> torch.Tensor:
     """Soil Water Easily Available Fraction (SWEAF).
 
@@ -721,13 +747,27 @@ class EvapotranspirationCO2Layered(_BaseEvapotranspiration):
         et0 = torch.as_tensor(drv["ET0"])
         rf_tramx_co2 = self._rf_tramx_co2(drv, et0)
 
-        r.EVWMX, r.EVSMX, r.TRAMX, r.RFTRA, r.TRA, r.TRALY, r.RFWS, r.RFOS = _layered_rates(
+        # Normalise the layered soil moisture outside the kernel: the layer-count
+        # check raises, which cannot be part of a compiled graph.
+        sm_layers = _stack_layers(k["SM"], self._n_layers, params_shape, self.dtype, self.device)
+
+        (
+            r.EVWMX,
+            r.EVSMX,
+            r.TRAMX,
+            r.RFTRA,
+            r.TRA,
+            r.TRALY,
+            r.RFWS,
+            r.RFOS,
+            self._dsos,
+        ) = _layered_rates(
             dvs,
             p.IAIRDU,
             p.IOX,
             k["RD"],
             self._n_layers,
-            k["SM"],
+            sm_layers,
             self._dsos,
             self._layer_smw,
             self._layer_smfcf,
@@ -810,29 +850,6 @@ def _layered_rates(
     # Critical soil moisture
     swdep = SWEAF(et0_crop, DEPNR)
 
-    # Layered soil moisture can be provided as:
-    # - torch.Tensor with shape (n_layers, *params_shape)
-    # - list/tuple of length n_layers, each element scalar or tensor
-    tensor_kwargs = {"dtype": dvs.dtype, "device": dvs.device}
-    if not isinstance(sm_layers, torch.Tensor | list | tuple):
-        sm_layers = torch.as_tensor(sm_layers, **tensor_kwargs)
-        if sm_layers.dim() == 1:
-            sm_layers = list(sm_layers)  # per-layer scalars
-
-    if isinstance(sm_layers, list | tuple):
-        sm_layers_t = torch.stack(
-            [_broadcast_to(sm_i, params_shape, **tensor_kwargs) for sm_i in sm_layers],
-            dim=0,
-        )
-    else:
-        sm_layers_t = sm_layers.to(**tensor_kwargs)
-
-    if sm_layers_t.shape[0] != n_layers:
-        raise ValueError(
-            f"Layered evapotranspiration expects SM with {n_layers} layers, "
-            f"got {sm_layers_t.shape[0]}."
-        )
-
     # Reshape pre-stacked layer properties for broadcasting against
     # (n_layers, *params_shape) tensors: (n_layers,) → (n_layers, 1, 1, ...)
     ndim = len(params_shape)
@@ -847,7 +864,7 @@ def _layered_rates(
     denom = torch.where((smcr - layer_smw).abs() > _epsilon, smcr - layer_smw, _epsilon)
 
     # Reduction factor for transpiration in case of water shortage (RFWS)
-    RFWS = dvs_mask_layers * torch.clamp((sm_layers_t - layer_smw) / denom, min=0.0, max=1.0) + (
+    RFWS = dvs_mask_layers * torch.clamp((sm_layers - layer_smw) / denom, min=0.0, max=1.0) + (
         1.0 - dvs_mask_layers
     )
 
@@ -855,25 +872,29 @@ def _layered_rates(
     root_len = torch.clamp(torch.minimum(rd, depth_hi) - depth_lo, min=0.0)
     root_fraction = torch.where(rd > _epsilon, root_len / rd, 0.0)
 
-    # Oxygen-stress reduction factor (sequential across layers due to
-    # temporal _dsos accumulator that feeds forward between layers).
+    # Oxygen-stress reduction factor. The accumulator feeds forward through the
+    # layers, so the layers are still processed in order. The IAIRDU/IOX switch is
+    # applied with torch.where instead of a Python `if` on a tensor value, and the
+    # accumulation is written with torch.stack instead of per-element assignment:
+    # the kernel is compiled with fullgraph=True, where a data-dependent branch or
+    # an in-place item write would break the graph.
     # reduction in transpiration in case of oxygen shortage (RFOS)
     # for non-rice crops, and possibly deficient land drainage
-    RFOS = torch.ones_like(RFWS)
-    mask_ox = (IAIRDU == 0) & (IOX == 1)
-    if bool(torch.any(mask_ox)):
-        layer_sm0 = _layer_sm0.view(expand)
-        layer_crairc = _layer_crairc.view(expand)
-        for i in range(n_layers):
-            smair = layer_sm0[i] - layer_crairc[i]
-            _dsos = torch.where(
-                sm_layers_t[i] >= smair,
-                torch.clamp(_dsos + 1.0, max=4.0),
-                0.0,
-            )
-            denom_ox = torch.where(layer_crairc[i].abs() > _epsilon, layer_crairc[i], _epsilon)
-            rfosmx = torch.clamp((layer_sm0[i] - sm_layers_t[i]) / denom_ox, min=0.0, max=1.0)
-            RFOS[i] = rfosmx + (1.0 - torch.clamp(_dsos, max=4.0) / 4.0) * (1.0 - rfosmx)
+    layer_sm0 = _layer_sm0.view(expand)
+    layer_crairc = _layer_crairc.view(expand)
+    any_ox = torch.any((IAIRDU == 0) & (IOX == 1))
+    dsos = _dsos
+    rfos_layers = []
+    for i in range(n_layers):
+        saturated = sm_layers[i] >= (layer_sm0[i] - layer_crairc[i])
+        dsos = torch.where(saturated, torch.clamp(dsos + 1.0, max=4.0), 0.0)
+        denom_ox = torch.where(layer_crairc[i].abs() > _epsilon, layer_crairc[i], _epsilon)
+        rfosmx = torch.clamp((layer_sm0[i] - sm_layers[i]) / denom_ox, min=0.0, max=1.0)
+        rfos_layers.append(rfosmx + (1.0 - torch.clamp(dsos, max=4.0) / 4.0) * (1.0 - rfosmx))
+    RFOS = torch.stack(rfos_layers, dim=0)
+    # The oxygen-stress branch is inactive: no reduction and the counter stays put
+    RFOS = torch.where(any_ox, RFOS, torch.ones_like(RFOS))
+    _dsos = torch.where(any_ox, dsos, _dsos)
 
     # Transpiration per layer
     rftra = RFOS * RFWS
@@ -884,4 +905,6 @@ def _layered_rates(
 
     # Pre-emergence: RFOS = 1.0
     RFOS = dvs_mask_layers * RFOS + (1.0 - dvs_mask_layers)
-    return EVWMX, EVSMX, TRAMX, RFTRA, TRA, TRALY, RFWS, RFOS
+    # The accumulator must persist between days: the caller stores it back on the
+    # module. Returning it (rather than mutating the argument) keeps the kernel pure.
+    return EVWMX, EVSMX, TRAMX, RFTRA, TRA, TRALY, RFWS, RFOS, _dsos

@@ -683,8 +683,9 @@ class DVS_Phenology(SimulationObject):
         # started (elements still pending a future start have STAGE == -1, which
         # keeps this condition False, so the run is not terminated early).
         # The condition is evaluated at the end of the simulated day (see
-        # `diffwofost.physical_models.deferred`); the engine acts on the signal in
-        # the next time step either way.
+        # `diffwofost.physical_models.deferred`). The engine then finalizes the crop
+        # and handles the termination that the agromanager sends in response to this
+        # signal in the same step, see `Engine._run`.
         if p.CROP_END_TYPE in ["maturity", "earliest"]:
             defer(
                 s.STAGE == 3,

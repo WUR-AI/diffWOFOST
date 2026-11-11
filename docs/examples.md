@@ -100,6 +100,25 @@ device = ComputeConfig.get_device()  # Returns: torch.device('cpu')
 dtype = ComputeConfig.get_dtype()    # Returns: torch.float32
 ```
 
+**Compiling the numerical kernels (optional):**
+
+The numerical kernels of the simulation components can be compiled with
+`torch.compile`. Compilation is off by default.
+
+```python
+from diffwofost.physical_models.config import ComputeConfig
+
+ComputeConfig.set_compile(True)
+```
+
+The kernels are compiled on first use, for each device, dtype and tensor shape,
+which takes a while and requires a PyTorch build with Inductor (and Triton on
+GPU). Compiled kernels are cached on disk by PyTorch, so compilation pays off
+for long runs and large batches, not for a single short simulation. Results are
+the same as without compilation (see the `diffwofost.physical_models.kernels`
+module). The layered evapotranspiration module
+(`EvapotranspirationCO2Layered`) is not compilable yet.
+
 **More info:**
 
 See the [ComputeConfig API
