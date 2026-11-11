@@ -256,7 +256,7 @@ class TestKernelCompilation:
         assert len(calls) == 1
         assert calls[0]["fullgraph"] is True
 
-    def test_compiled_kernel_matches_eager(self):
+    def test_compiled_kernel_matches_eager(self, inductor_compiler):
         """Compiling a kernel must not change its results (see `kernels` docstring)."""
         args = [torch.tensor([v]) for v in (10.0, 2.0, 20.0, 0.5, 0.25, 0.5)]
         eager = _root_integrate.eager(*args)

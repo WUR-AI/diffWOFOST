@@ -101,6 +101,18 @@ class TestEngine:
 
         assert engine.day > start_day
 
+    def test_engine_derives_temp_and_dtemp_when_weather_lacks_them(self):
+        """PCSE weather files store no TEMP/DTEMP; the engine derives them as PCSE does."""
+        _, (provider, weather, agromanagement, _) = _get_engine_inputs()
+        weather = [
+            {name: value for name, value in row.items() if name not in ("TEMP", "DTEMP")}
+            for row in weather
+        ]
+
+        engine = Engine(config=config).setup(provider, weather, agromanagement)
+
+        assert {"TEMP", "DTEMP"} <= set(engine.drv)
+
     def test_engine_setup_reuses_instance(self):
         _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             _get_engine_inputs()

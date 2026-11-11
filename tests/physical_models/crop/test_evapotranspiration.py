@@ -750,12 +750,13 @@ class TestEvapotranspirationVariants:
         rfosmx = [(0.40 - 0.39) / 0.06, (0.41 - 0.39) / 0.06]
         assert module.rates.RFOS.tolist() == pytest.approx(rfosmx)
 
-    def test_layered_kernel_compiles_and_matches_eager(self):
+    def test_layered_kernel_compiles_and_matches_eager(self, inductor_compiler):
         """`_layered_rates` must compile with fullgraph=True and give eager results.
 
         The kernel switches the oxygen-stress branch on parameters and validates the
         layer count; a Python `if` on a tensor value or a `raise` inside the kernel
-        breaks the graph, which is what this test guards against.
+        breaks the graph, which is what this test guards against. Skipped where
+        inductor has no C++ compiler to build the generated kernel.
         """
         module, drv = self._layered_module("cpu")
         module.calc_rates(datetime.date(2000, 1, 2), drv)

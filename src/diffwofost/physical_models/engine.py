@@ -253,6 +253,12 @@ class Engine(PcseEngine):
         drv = next(self.weatherdataprovider)
         if "DAY" in drv:
             assert drv["DAY"] == day, "Wrong day!"
+        # Temperature sums are not stored by PCSE weather files; derive them as the
+        # PCSE engine does (pcse/engine.py).
+        if "TEMP" not in drv:
+            drv["TEMP"] = (drv["TMIN"] + drv["TMAX"]) / 2.0
+        if "DTEMP" not in drv:
+            drv["DTEMP"] = (drv["TEMP"] + drv["TMAX"]) / 2.0
         return drv
 
 
