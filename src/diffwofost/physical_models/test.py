@@ -1,3 +1,5 @@
+import copy
+import functools
 import pandas as pd
 import torch
 import yaml
@@ -14,7 +16,7 @@ from diffwofost.physical_models.weather import to_weather_data_iterator
 class EngineTestHelper(Engine):
     """An engine which is purely for running the YAML unit tests."""
 
-    def _run(self):
+    def _run_day(self):
         """Make one time step of the simulation."""
         # Update timer
         self.day, delt = self.timer()
@@ -135,9 +137,19 @@ def prepare_engine_input(
 
 
 def get_test_data(test_data_path):
-    """Get the test data from the YAML file."""
+    """Get the test data from the YAML file.
+
+    Returns a fresh copy, so callers are free to modify it.
+    """
+    return copy.deepcopy(_load_test_data(str(test_data_path)))
+
+
+@functools.lru_cache(maxsize=128)
+def _load_test_data(test_data_path):
+    """Parse a YAML test file once; many parametrized tests reuse the same file."""
+    loader = getattr(yaml, "CSafeLoader", yaml.SafeLoader)
     with open(test_data_path) as f:
-        return yaml.safe_load(f)
+        return yaml.load(f, Loader=loader)
 
 
 def calculate_numerical_grad(get_model_fn, param_name, param_value, out_name):

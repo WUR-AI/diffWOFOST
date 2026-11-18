@@ -3,6 +3,7 @@ from pathlib import Path
 from unittest.mock import Mock
 import pytest
 import torch
+from pcse import signals
 from pcse.base import ParameterProvider
 from pcse.base import SimulationObject
 from pcse.base.variablekiosk import VariableKiosk
@@ -10,6 +11,7 @@ from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.phenology import DVS_Phenology
 from diffwofost.physical_models.crop.wofost72 import Wofost72
+from diffwofost.physical_models.deferred import defer
 from diffwofost.physical_models.engine import Engine
 from diffwofost.physical_models.engine import _get_params_shape
 from diffwofost.physical_models.soil.classic_waterbalance import WaterbalancePP
@@ -99,6 +101,18 @@ class TestEngine:
 
         assert engine.day > start_day
 
+    def test_engine_derives_temp_and_dtemp_when_weather_lacks_them(self):
+        """PCSE weather files store no TEMP/DTEMP; the engine derives them as PCSE does."""
+        _, (provider, weather, agromanagement, _) = _get_engine_inputs()
+        weather = [
+            {name: value for name, value in row.items() if name not in ("TEMP", "DTEMP")}
+            for row in weather
+        ]
+
+        engine = Engine(config=config).setup(provider, weather, agromanagement)
+
+        assert {"TEMP", "DTEMP"} <= set(engine.drv)
+
     def test_engine_setup_reuses_instance(self):
         _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
             _get_engine_inputs()
@@ -181,6 +195,72 @@ class TestEngine:
         engine._save_summary_output.assert_called_once_with()
         crop._delete.assert_not_called()
         assert engine.crop is crop
+
+    def test_crop_finish_deferred_during_step_is_applied_in_same_step(self):
+        """A crop_finish signal raised during the step must finalize on that day.
+
+        Components report crop_finish through the deferred queue, which is flushed
+        at the end of the step, after `calc_rates` has already checked the flag.
+        Without an explicit finalize the crop would be finalized and the summary
+        output taken one day late.
+        """
+        _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            _get_engine_inputs()
+        )
+        engine = Engine(config=config)
+        engine.setup(crop_model_params_provider, weather_data_provider, agro_management_inputs)
+        crop = engine.crop
+        crop.finalize = Mock()
+        engine._save_summary_output = Mock()
+        day = engine.day
+
+        def run_day():
+            # The same path as the phenology module: the signal is delivered by the
+            # deferred queue, not during the step itself.
+            defer(
+                torch.tensor(True),
+                lambda: engine._send_signal(signal=signals.crop_finish, day=day),
+            )
+
+        engine._run_day = run_day
+        engine.run(days=1)
+
+        crop.finalize.assert_called_once_with(day)
+        engine._save_summary_output.assert_called_once_with()
+        assert engine.flag_crop_finish is False
+
+    def test_maturity_finishes_and_terminates_in_the_same_step(self):
+        """A mature crop is finalized and the run terminated in the step it matures.
+
+        With `crop_end_type='maturity'` the crop signals crop_finish from its
+        `integrate()`, and the agromanager answers that signal with terminate. Both
+        are delivered when the deferred queue is flushed at the end of the step, so
+        without explicit handling the run would stop before the crop is finalized
+        and no summary output would be produced.
+        """
+        _, (crop_model_params_provider, weather_data_provider, agro_management_inputs, _) = (
+            _get_engine_inputs()
+        )
+        start_day = min(agro_management_inputs[0])
+        campaign = dict(agro_management_inputs[0][start_day])
+        campaign["CropCalendar"] = dict(
+            campaign["CropCalendar"],
+            crop_end_type="maturity",
+            crop_end_date=start_day.replace(year=start_day.year + 1),
+        )
+        engine = Engine(config=config)
+        engine.setup(crop_model_params_provider, weather_data_provider, [{start_day: campaign}])
+        crop = engine.crop
+        crop.finalize = Mock()
+        engine._save_summary_output = Mock()
+        engine._save_terminal_output = Mock()
+
+        engine.run_till_terminate()
+
+        assert engine.flag_terminate is True
+        crop.finalize.assert_called_once_with(engine.day)
+        engine._save_summary_output.assert_called_once_with()
+        engine._save_terminal_output.assert_called_once_with()
 
     def test_get_params_shape_uses_first_tensor_shape(self):
         parameterprovider = _DummyParameterProvider(

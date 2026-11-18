@@ -6,7 +6,9 @@ from pcse.soil.classic_waterbalance import WaterbalancePP
 from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.leaf_dynamics import WOFOST_Leaf_Dynamics
+from diffwofost.physical_models.crop.root_dynamics import _root_integrate
 from diffwofost.physical_models.crop.wofost72 import Wofost72
+from diffwofost.physical_models.kernels import kernel
 from . import phy_data_folder
 
 
@@ -214,8 +216,56 @@ class TestComputeConfig:
         # 3. Assertions
         assert model1.dtype == torch.float32, "Model 1 should retain float32"
         assert model2.dtype == torch.float64, "Model 2 should use float64"
-        assert model1.states.LV[0].dtype == torch.float32, "Model 1 states should be float32"
-        assert model2.states.LV[0].dtype == torch.float64, "Model 2 states should be float64"
+        assert model1.states.LVCUM[0].dtype == torch.float32, "Model 1 states should be float32"
+        assert model2.states.LVCUM[0].dtype == torch.float64, "Model 2 states should be float64"
 
         # Cleanup
         ComputeConfig.reset_to_defaults()
+
+
+@pytest.mark.usefixtures("fast_mode")
+class TestKernelCompilation:
+    """The torch.compile switch of `diffwofost.physical_models.kernels`."""
+
+    def test_kernel_compiles_only_when_enabled(self, monkeypatch):
+        calls = []
+
+        def fake_compile(fn, **kwargs):
+            calls.append(kwargs)
+            return fn
+
+        monkeypatch.setattr(torch, "compile", fake_compile)
+
+        def add(x, y):
+            return x + y
+
+        add = kernel(add)
+        x = torch.tensor([1.0, 2.0])
+
+        add(x, x)
+        assert calls == []
+
+        ComputeConfig.set_compile(True)
+        try:
+            add(x, x)
+            add(x, x)
+        finally:
+            ComputeConfig.reset_to_defaults()
+
+        # Compiled on first use and then reused from the cache
+        assert len(calls) == 1
+        assert calls[0]["fullgraph"] is True
+
+    def test_compiled_kernel_matches_eager(self, inductor_compiler):
+        """Compiling a kernel must not change its results (see `kernels` docstring)."""
+        args = [torch.tensor([v]) for v in (10.0, 2.0, 20.0, 0.5, 0.25, 0.5)]
+        eager = _root_integrate.eager(*args)
+
+        ComputeConfig.set_compile(True)
+        try:
+            compiled = _root_integrate(*args)
+        finally:
+            ComputeConfig.reset_to_defaults()
+
+        for got, expected in zip(compiled, eager, strict=True):
+            torch.testing.assert_close(got, expected)

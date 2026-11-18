@@ -19,6 +19,7 @@ from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.base import TensorStatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import Afgen
 
@@ -257,7 +258,7 @@ class WaterbalanceFD(SimulationObject):
     _RIRR = Tensor(0.0)
     # Default depth of the upper rooted layer when no crop RD is available (cm)
     DEFAULT_RD = Tensor(10.0)
-    # Increments on W due to forced state updates (list of tensors)
+    # Sum of the increments on W due to forced state updates
     _increments_w = None
 
     class Parameters(TensorParamTemplate):
@@ -364,7 +365,7 @@ class WaterbalanceFD(SimulationObject):
         self.in_crop_cycle = False
         self.rooted_layer_needs_reset = False
         self.NINFTB = Afgen([0.0, 0.0, 0.5, 0.0, 1.5, 1.0])
-        self._increments_w = []
+        self._increments_w = 0.0
 
         # Initialize state and rate variables
         self.states = self.StateVariables(
@@ -423,107 +424,53 @@ class WaterbalanceFD(SimulationObject):
         # Transpiration and maximum evaporation rates from crop module.
         # Before emergence there is no canopy shading yet, so the water balance
         # must fall back to the weather-driven soil and surface evaporation.
-        weather_wtra = torch.zeros_like(drv["ES0"], dtype=dtype, device=device)
-        weather_evwmx = drv["E0"]
-        weather_evsmx = drv["ES0"]
+        crop = None
+        if "TRA" in k:
+            crop = tuple(
+                torch.as_tensor(k[name], dtype=dtype, device=device)
+                for name in ("TRA", "EVWMX", "EVSMX")
+            )
+        dvs = torch.as_tensor(k["DVS"], dtype=dtype, device=device) if "DVS" in k else None
 
-        if "TRA" not in k:
-            r.WTRA = weather_wtra
-            EVWMX = weather_evwmx
-            EVSMX = weather_evsmx
-        else:
-            crop_wtra = torch.as_tensor(k["TRA"], dtype=dtype, device=device)
-            crop_evwmx = torch.as_tensor(k["EVWMX"], dtype=dtype, device=device)
-            crop_evsmx = torch.as_tensor(k["EVSMX"], dtype=dtype, device=device)
-
-            if "DVS" in k:
-                emerged_mask = torch.as_tensor(k["DVS"], dtype=dtype, device=device) >= 0.0
-                r.WTRA = torch.where(emerged_mask, crop_wtra, weather_wtra)
-                EVWMX = torch.where(emerged_mask, crop_evwmx, weather_evwmx)
-                EVSMX = torch.where(emerged_mask, crop_evsmx, weather_evsmx)
-            else:
-                r.WTRA = crop_wtra
-                EVWMX = crop_evwmx
-                EVSMX = crop_evsmx
-
-        # Actual evaporation rates
-        # If SS > 1 cm: evaporate from surface water; else from soil
-        ss_gt_1 = s.SS > 1.0
-        rin_ge_1 = self.RINold >= 1.0
-        DSLR_t = self.DSLR
-        dslr_inc = DSLR_t + 1.0
-        # Soil evaporation as function of days-since-last-rain (DSLR)
-        EVSMXT = EVSMX * (torch.sqrt(dslr_inc) - torch.sqrt(DSLR_t))
-        evs_dslr = torch.minimum(EVSMX, EVSMXT + self.RINold)
-        EVS_no_ss = torch.where(rin_ge_1, EVSMX, evs_dslr)
-
-        r.EVW = torch.where(ss_gt_1, EVWMX, torch.zeros_like(EVWMX))
-        r.EVS = torch.where(ss_gt_1, torch.zeros_like(EVS_no_ss), EVS_no_ss)
-
-        # Update DSLR:
-        #   - SS > 1: unchanged (no soil evaporation)
-        #   - SS <= 1 and RINold >= 1: reset to 1
-        #   - SS <= 1 and RINold < 1: increment by 1
-        self.DSLR = torch.where(
-            ss_gt_1,
-            DSLR_t,
-            torch.where(rin_ge_1, torch.ones_like(DSLR_t), dslr_inc),
+        (
+            r.WTRA,
+            r.EVW,
+            r.EVS,
+            self.DSLR,
+            r.RIN,
+            r.PERC,
+            r.LOSS,
+            r.DW,
+            r.DWLOW,
+            r.DSS,
+            r.DTSR,
+        ) = _waterbalance_rates(
+            crop,
+            dvs,
+            drv["E0"],
+            drv["ES0"],
+            drv["RAIN"],
+            r.RIRR,
+            s.SS,
+            s.SM,
+            s.W,
+            s.WLOW,
+            self.DSLR,
+            self.RINold,
+            self._determine_rooting_depth(),
+            self.RDM,
+            p.NOTINF,
+            p.IFUNRN,
+            p.SOPE,
+            p.SMFCF,
+            p.SM0,
+            p.KSUB,
+            p.SSMAX,
+            self.NINFTB,
         )
-
-        # Potentially infiltrating rainfall
-        RAIN_t = drv["RAIN"]
-        RINPRE_fixed = (1.0 - p.NOTINF) * RAIN_t
-        RINPRE_storm = (1.0 - p.NOTINF * self.NINFTB(RAIN_t)) * RAIN_t
-        # IFUNRN: 0 = fixed non-infiltrating fraction, 1 = function of storm size
-        RINPRE = torch.where(p.IFUNRN == 0, RINPRE_fixed, RINPRE_storm)
-
-        # Second stage: add surface storage and irrigation
-        RINPRE = RINPRE + r.RIRR + s.SS
-        # With surface storage, infiltration is limited by SOPE
-        AVAIL = RINPRE - r.EVW
-        RINPRE = torch.where(s.SS > 0.1, torch.minimum(p.SOPE, AVAIL), RINPRE)
-
-        RD = self._determine_rooting_depth()
-
-        # Equilibrium water in rooted zone
-        WE = p.SMFCF * RD
-        # Percolation: excess moisture above field capacity, capped at SOPE
-        PERC1 = torch.maximum(
-            torch.zeros_like(s.W),
-            torch.minimum(p.SOPE, (s.W - WE) - r.WTRA - r.EVS),
-        )
-
-        # Loss from lower zone
-        WELOW = p.SMFCF * (self.RDM - RD)
-        r.LOSS = torch.maximum(
-            torch.zeros_like(s.WLOW),
-            torch.minimum(p.KSUB, s.WLOW - WELOW + PERC1),
-        )
-
-        # Percolation capped by subsoil uptake capacity
-        PERC2 = (self.RDM - RD) * p.SM0 - s.WLOW + r.LOSS
-        r.PERC = torch.minimum(PERC1, PERC2)
-
-        # Adjusted infiltration rate
-        r.RIN = torch.minimum(RINPRE, (p.SM0 - s.SM) * RD + r.WTRA + r.EVS + r.PERC)
         self.RINold = r.RIN
-
-        # Rates of change in water amounts
-        r.DW = r.RIN - r.WTRA - r.EVS - r.PERC
-        r.DWLOW = r.PERC - r.LOSS
-
-        # Prevent W from going negative by reducing EVS
-        Wtmp = s.W + r.DW
-        under_zero = Wtmp < 0.0
-        r.EVS = torch.where(under_zero, torch.maximum(torch.zeros_like(r.EVS), r.EVS + Wtmp), r.EVS)
-        r.DW = torch.where(under_zero, -s.W, r.DW)
-
-        # Surface storage and runoff
-        SStmp = RAIN_t + r.RIRR - r.EVW - r.RIN
-        r.DSS = torch.minimum(SStmp, p.SSMAX - s.SS)
-        r.DTSR = SStmp - r.DSS
         # incoming rainfall rate
-        r.DRAINT = RAIN_t
+        r.DRAINT = drv["RAIN"]
 
     def integrate(self, day, delt=1.0):
         """Integrate state variables over one time step.
@@ -536,48 +483,31 @@ class WaterbalanceFD(SimulationObject):
         p = self.params
         r = self.rates
 
-        # INTEGRALS OF THE WATERBALANCE: SUMMATIONS AND STATE VARIABLES
-
-        # total transpiration
-        s.WTRAT = s.WTRAT + r.WTRA * delt
-
-        # total evaporation from surface water layer and/or soil
-        s.EVWT = s.EVWT + r.EVW * delt
-        s.EVST = s.EVST + r.EVS * delt
-
-        # totals for rainfall, irrigation and infiltration
-        s.RAINT = s.RAINT + r.DRAINT * delt
-        s.TOTINF = s.TOTINF + r.RIN * delt
-        s.TOTIRR = s.TOTIRR + r.RIRR * delt
-
-        # Update surface storage and total surface runoff (TSR)
-        s.SS = s.SS + r.DSS * delt
-        s.TSR = s.TSR + r.DTSR * delt
-
-        # amount of water in rooted zone
-        s.W = s.W + r.DW * delt
-
-        # total percolation and loss of water by deep leaching
-        s.PERCT = s.PERCT + r.PERC * delt
-        s.LOSST = s.LOSST + r.LOSS * delt
-
-        # amount of water in unrooted, lower part of rootable zone
-        s.WLOW = s.WLOW + r.DWLOW * delt
-        # total amount of water in the whole rootable zone
-        s.WWLOW = s.W + s.WLOW
-
-        # CHANGE OF ROOTZONE SUBSYSTEM BOUNDARY
-
         RD = self._determine_rooting_depth()
-        RDchange = RD - self.RDold
-        self._redistribute_water(RDchange)
-
-        # mean soil moisture content in rooted zone
-        s.SM = s.W / RD
-
-        # Accumulate days since oxygen stress
-        stress_mask = s.SM >= (p.SM0 - p.CRAIRC)
-        s.DSOS = torch.where(stress_mask, s.DSOS + 1.0, torch.zeros_like(s.DSOS))
+        (
+            s.WTRAT,
+            s.EVWT,
+            s.EVST,
+            s.RAINT,
+            s.TOTINF,
+            s.TOTIRR,
+            s.SS,
+            s.TSR,
+            s.W,
+            s.PERCT,
+            s.LOSST,
+            s.WLOW,
+            s.WWLOW,
+            s.WDRT,
+            s.SM,
+            s.DSOS,
+        ) = _waterbalance_integrate(
+            s.WTRAT, s.EVWT, s.EVST, s.RAINT, s.TOTINF, s.TOTIRR, s.SS, s.TSR, s.W, s.PERCT,
+            s.LOSST, s.WLOW, s.WDRT, s.DSOS,
+            r.WTRA, r.EVW, r.EVS, r.DRAINT, r.RIN, r.RIRR, r.DSS, r.DTSR, r.DW, r.PERC, r.LOSS,
+            r.DWLOW,
+            RD, self.RDold, p.RDMSOL, p.SM0, p.CRAIRC, delt,
+        )  # fmt: skip
 
         # save rooting depth
         self.RDold = RD
@@ -586,7 +516,7 @@ class WaterbalanceFD(SimulationObject):
         """Calculate and check water balance checksums at end of simulation."""
         s = self.states
 
-        wbal_increments = sum(self._increments_w) if self._increments_w else 0.0
+        wbal_increments = self._increments_w
 
         # Checksums for rootzone (RT) and whole system (TT)
         s.WBALRT = s.TOTINF + s.WI + s.WDRT - s.EVST - s.WTRAT - s.PERCT - s.W + wbal_increments
@@ -633,46 +563,6 @@ class WaterbalanceFD(SimulationObject):
         device = ComputeConfig.get_device()
         return torch.as_tensor(self.DEFAULT_RD, dtype=dtype, device=device)
 
-    def _redistribute_water(self, RDchange):
-        """Redistribute water between root zone and lower zone after RD changes.
-
-        Redistribution of water is needed when roots grow during the growing season
-        and when the crop is finished and the root zone shifts back from the crop rooted
-        depth to the default depth of the upper (rooted) layer of the water balance.
-        Or when the initial rooting depth of a crop is different from the default one used
-        by the water balance module (10 cm)
-
-        Args:
-            RDchange: Change in root depth (cm); positive = downward growth.
-        """
-        s = self.states
-        p = self.params
-
-        # Safe denominator for downward-growth case
-        rdm_minus_rdold = p.RDMSOL - self.RDold
-        safe_rdm_delta = torch.where(
-            rdm_minus_rdold.abs() > 1e-10,
-            rdm_minus_rdold,
-            torch.ones_like(rdm_minus_rdold),
-        )
-        # Roots grow down: pull water up from subsoil
-        WDR_down = torch.minimum(s.WLOW, s.WLOW * RDchange / safe_rdm_delta)
-
-        # Roots move up (or negligible change): push water down to subsoil
-        safe_rdold = torch.where(
-            self.RDold.abs() > 1e-10,
-            self.RDold,
-            torch.ones_like(self.RDold),
-        )
-        WDR_other = s.W * RDchange / safe_rdold
-
-        WDR = torch.where(RDchange > 0.001, WDR_down, WDR_other)
-
-        apply = WDR.abs() > 0.0
-        s.WLOW = torch.where(apply, s.WLOW - WDR, s.WLOW)
-        s.W = torch.where(apply, s.W + WDR, s.W)
-        s.WDRT = torch.where(apply, s.WDRT + WDR, s.WDRT)
-
     def _on_CROP_START(self):
         self.in_crop_cycle = True
         self.rooted_layer_needs_reset = True
@@ -691,7 +581,7 @@ class WaterbalanceFD(SimulationObject):
     def _set_variable_SM(self, nSM):
         """Force soil moisture to ``nSM`` and record the water increment.
 
-        Updates W and WWLOW consistently, and appends the increment to
+        Updates W and WWLOW consistently, and adds the increment to
         ``_increments_w`` so the water balance checksum in ``finalize()``
         still closes.
         """
@@ -702,5 +592,184 @@ class WaterbalanceFD(SimulationObject):
         s.W = nW
         s.SM = nSM
         s.WWLOW = s.WLOW + s.W
-        self._increments_w.append(nW - oW)
+        self._increments_w = self._increments_w + (nW - oW)
         return {"W": nW - oW, "SM": nSM - oSM}
+
+
+@kernel
+def _waterbalance_rates(
+    crop, dvs, E0, ES0, RAIN, RIRR, SS, SM, W, WLOW, DSLR, RINold, RD, RDM,
+    NOTINF, IFUNRN, SOPE, SMFCF, SM0, KSUB, SSMAX, NINFTB,
+):  # fmt: skip
+    """Rates of the freely-draining water balance, see `WaterbalanceFD.calc_rates`.
+
+    `crop` holds the crop's (TRA, EVWMX, EVSMX), or is None without a crop.
+    """
+    # Transpiration and maximum evaporation rates from crop module.
+    # Before emergence there is no canopy shading yet, so the water balance
+    # must fall back to the weather-driven soil and surface evaporation.
+    weather_wtra = torch.zeros_like(ES0)
+    if crop is None:
+        WTRA, EVWMX, EVSMX = weather_wtra, E0, ES0
+    elif dvs is not None:
+        emerged_mask = dvs >= 0.0
+        WTRA = torch.where(emerged_mask, crop[0], weather_wtra)
+        EVWMX = torch.where(emerged_mask, crop[1], E0)
+        EVSMX = torch.where(emerged_mask, crop[2], ES0)
+    else:
+        WTRA, EVWMX, EVSMX = crop
+
+    # Actual evaporation rates
+    # If SS > 1 cm: evaporate from surface water; else from soil
+    ss_gt_1 = SS > 1.0
+    rin_ge_1 = RINold >= 1.0
+    dslr_inc = DSLR + 1.0
+    # Soil evaporation as function of days-since-last-rain (DSLR)
+    EVSMXT = EVSMX * (torch.sqrt(dslr_inc) - torch.sqrt(DSLR))
+    evs_dslr = torch.minimum(EVSMX, EVSMXT + RINold)
+    EVS_no_ss = torch.where(rin_ge_1, EVSMX, evs_dslr)
+
+    EVW = torch.where(ss_gt_1, EVWMX, torch.zeros_like(EVWMX))
+    EVS = torch.where(ss_gt_1, torch.zeros_like(EVS_no_ss), EVS_no_ss)
+
+    # Update DSLR:
+    #   - SS > 1: unchanged (no soil evaporation)
+    #   - SS <= 1 and RINold >= 1: reset to 1
+    #   - SS <= 1 and RINold < 1: increment by 1
+    DSLR = torch.where(
+        ss_gt_1,
+        DSLR,
+        torch.where(rin_ge_1, torch.ones_like(DSLR), dslr_inc),
+    )
+
+    # Potentially infiltrating rainfall
+    RINPRE_fixed = (1.0 - NOTINF) * RAIN
+    RINPRE_storm = (1.0 - NOTINF * NINFTB(RAIN)) * RAIN
+    # IFUNRN: 0 = fixed non-infiltrating fraction, 1 = function of storm size
+    RINPRE = torch.where(IFUNRN == 0, RINPRE_fixed, RINPRE_storm)
+
+    # Second stage: add surface storage and irrigation
+    RINPRE = RINPRE + RIRR + SS
+    # With surface storage, infiltration is limited by SOPE
+    AVAIL = RINPRE - EVW
+    RINPRE = torch.where(SS > 0.1, torch.minimum(SOPE, AVAIL), RINPRE)
+
+    # Equilibrium water in rooted zone
+    WE = SMFCF * RD
+    # Percolation: excess moisture above field capacity, capped at SOPE
+    PERC1 = torch.maximum(
+        torch.zeros_like(W),
+        torch.minimum(SOPE, (W - WE) - WTRA - EVS),
+    )
+
+    # Loss from lower zone
+    WELOW = SMFCF * (RDM - RD)
+    LOSS = torch.maximum(
+        torch.zeros_like(WLOW),
+        torch.minimum(KSUB, WLOW - WELOW + PERC1),
+    )
+
+    # Percolation capped by subsoil uptake capacity
+    PERC2 = (RDM - RD) * SM0 - WLOW + LOSS
+    PERC = torch.minimum(PERC1, PERC2)
+
+    # Adjusted infiltration rate
+    RIN = torch.minimum(RINPRE, (SM0 - SM) * RD + WTRA + EVS + PERC)
+
+    # Rates of change in water amounts
+    DW = RIN - WTRA - EVS - PERC
+    DWLOW = PERC - LOSS
+
+    # Prevent W from going negative by reducing EVS
+    Wtmp = W + DW
+    under_zero = Wtmp < 0.0
+    EVS = torch.where(under_zero, torch.maximum(torch.zeros_like(EVS), EVS + Wtmp), EVS)
+    DW = torch.where(under_zero, -W, DW)
+
+    # Surface storage and runoff
+    SStmp = RAIN + RIRR - EVW - RIN
+    DSS = torch.minimum(SStmp, SSMAX - SS)
+    DTSR = SStmp - DSS
+    return WTRA, EVW, EVS, DSLR, RIN, PERC, LOSS, DW, DWLOW, DSS, DTSR
+
+
+@kernel
+def _waterbalance_integrate(
+    WTRAT, EVWT, EVST, RAINT, TOTINF, TOTIRR, SS, TSR, W, PERCT, LOSST, WLOW, WDRT, DSOS,
+    WTRA, EVW, EVS, DRAINT, RIN, RIRR, DSS, DTSR, DW, PERC, LOSS, DWLOW,
+    RD, RDold, RDMSOL, SM0, CRAIRC, delt,
+):  # fmt: skip
+    """State integration of the freely-draining water balance, see `WaterbalanceFD.integrate`."""
+    # INTEGRALS OF THE WATERBALANCE: SUMMATIONS AND STATE VARIABLES
+
+    # total transpiration
+    WTRAT = WTRAT + WTRA * delt
+
+    # total evaporation from surface water layer and/or soil
+    EVWT = EVWT + EVW * delt
+    EVST = EVST + EVS * delt
+
+    # totals for rainfall, irrigation and infiltration
+    RAINT = RAINT + DRAINT * delt
+    TOTINF = TOTINF + RIN * delt
+    TOTIRR = TOTIRR + RIRR * delt
+
+    # Update surface storage and total surface runoff (TSR)
+    SS = SS + DSS * delt
+    TSR = TSR + DTSR * delt
+
+    # amount of water in rooted zone
+    W = W + DW * delt
+
+    # total percolation and loss of water by deep leaching
+    PERCT = PERCT + PERC * delt
+    LOSST = LOSST + LOSS * delt
+
+    # amount of water in unrooted, lower part of rootable zone
+    WLOW = WLOW + DWLOW * delt
+    # total amount of water in the whole rootable zone
+    WWLOW = W + WLOW
+
+    # CHANGE OF ROOTZONE SUBSYSTEM BOUNDARY
+    # Redistribution of water is needed when roots grow during the growing season
+    # and when the crop is finished and the root zone shifts back from the crop rooted
+    # depth to the default depth of the upper (rooted) layer of the water balance.
+    # Or when the initial rooting depth of a crop is different from the default one used
+    # by the water balance module (10 cm)
+    RDchange = RD - RDold
+
+    # Safe denominator for downward-growth case
+    rdm_minus_rdold = RDMSOL - RDold
+    safe_rdm_delta = torch.where(
+        rdm_minus_rdold.abs() > 1e-10,
+        rdm_minus_rdold,
+        torch.ones_like(rdm_minus_rdold),
+    )
+    # Roots grow down: pull water up from subsoil
+    WDR_down = torch.minimum(WLOW, WLOW * RDchange / safe_rdm_delta)
+
+    # Roots move up (or negligible change): push water down to subsoil
+    safe_rdold = torch.where(
+        RDold.abs() > 1e-10,
+        RDold,
+        torch.ones_like(RDold),
+    )
+    WDR_other = W * RDchange / safe_rdold
+
+    WDR = torch.where(RDchange > 0.001, WDR_down, WDR_other)
+
+    apply = WDR.abs() > 0.0
+    WLOW = torch.where(apply, WLOW - WDR, WLOW)
+    W = torch.where(apply, W + WDR, W)
+    WDRT = torch.where(apply, WDRT + WDR, WDRT)
+
+    # mean soil moisture content in rooted zone
+    SM = W / RD
+
+    # Accumulate days since oxygen stress
+    stress_mask = SM >= (SM0 - CRAIRC)
+    DSOS = torch.where(stress_mask, DSOS + 1.0, torch.zeros_like(DSOS))
+    return (
+        WTRAT, EVWT, EVST, RAINT, TOTINF, TOTIRR, SS, TSR, W, PERCT, LOSST, WLOW, WWLOW, WDRT,
+        SM, DSOS,
+    )  # fmt: skip

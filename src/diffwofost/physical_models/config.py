@@ -87,6 +87,7 @@ class ComputeConfig:
 
     _device: torch.device = None
     _dtype: torch.dtype = None
+    _compile: bool = False
 
     @classmethod
     def _initialize_defaults(cls):
@@ -145,10 +146,30 @@ class ComputeConfig:
         cls._dtype = dtype
 
     @classmethod
+    def get_compile(cls) -> bool:
+        """Whether the numerical kernels of the components are compiled with torch.compile."""
+        return cls._compile
+
+    @classmethod
+    def set_compile(cls, compile: bool) -> None:
+        """Compile the numerical kernels of the components with torch.compile.
+
+        The kernels are compiled on first use for each device, dtype and tensor shape,
+        which takes a while (compiled kernels are cached on disk by PyTorch); it pays off
+        for long runs and large batches. Results are the same as without compilation,
+        see `diffwofost.physical_models.kernels`.
+
+        Example:
+            >>> ComputeConfig.set_compile(True)
+        """
+        cls._compile = bool(compile)
+
+    @classmethod
     def reset_to_defaults(cls) -> None:
-        """Reset device and dtype to their default values."""
+        """Reset device, dtype and compilation to their default values."""
         cls._device = None
         cls._dtype = None
+        cls._compile = False
         cls._initialize_defaults()
 
 

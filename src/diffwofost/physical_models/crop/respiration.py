@@ -8,6 +8,7 @@ from pcse.base.variablekiosk import VariableKiosk
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
@@ -121,30 +122,14 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
         kk = self.kiosk
         r = self.rates
 
-        Q10 = p.Q10
-        RMR = p.RMR
-        RML = p.RML
-        RMS = p.RMS
-        RMO = p.RMO
-
-        WRT = kk["WRT"]
-        WLV = kk["WLV"]
-        WST = kk["WST"]
-        WSO = kk["WSO"]
         # [!] DVS needs to be broadcasted explicetly because it is used
         # in torch.where and the kiosk does not format it correctly
         # TODO see #22
         DVS = _broadcast_to(kk["DVS"], p.shape, self.dtype, self.device)
-
-        TEMP = drv["TEMP"]
-
-        RMRES = RMR * WRT + RML * WLV + RMS * WST + RMO * WSO
-        RMRES = RMRES * p.RFSETB(DVS)
-        TEFF = Q10 ** ((TEMP - 25.0) / 10.0)
-        PMRES = RMRES * TEFF
-
-        # No maintenance respiration before emergence (DVS < 0).
-        r.PMRES = torch.where(DVS < 0, torch.zeros_like(PMRES), PMRES)
+        r.PMRES = _maintenance_respiration(
+            DVS, kk["WRT"], kk["WLV"], kk["WST"], kk["WSO"], drv["TEMP"],
+            p.Q10, p.RMR, p.RML, p.RMS, p.RMO, p.RFSETB,
+        )  # fmt: skip
 
     def __call__(self, day: datetime.date, drv: dict):
         """Calculate and return maintenance respiration (PMRES)."""
@@ -154,3 +139,15 @@ class WOFOST_Maintenance_Respiration(SimulationObject):
     def integrate(self, day: datetime.date, delt: float = 1.0):
         """No state variables to integrate for this module."""
         return
+
+
+@kernel
+def _maintenance_respiration(DVS, WRT, WLV, WST, WSO, TEMP, Q10, RMR, RML, RMS, RMO, RFSETB):
+    """Potential maintenance respiration rate, see `WOFOST_Maintenance_Respiration`."""
+    RMRES = RMR * WRT + RML * WLV + RMS * WST + RMO * WSO
+    RMRES = RMRES * RFSETB(DVS)
+    TEFF = Q10 ** ((TEMP - 25.0) / 10.0)
+    PMRES = RMRES * TEFF
+
+    # No maintenance respiration before emergence (DVS < 0).
+    return torch.where(DVS < 0, torch.zeros_like(PMRES), PMRES)

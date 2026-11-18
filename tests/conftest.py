@@ -1,4 +1,6 @@
 import re
+import shutil
+import sys
 from pathlib import Path
 import pytest
 import requests
@@ -76,6 +78,21 @@ def download_test_files(request):
 
     for file_name in file_names:
         download_file(file_name)
+
+
+# torch.compile's inductor backend builds the generated kernels as C++ extensions. On
+# Windows that is MSVC, whose `cl` is only on PATH inside a developer prompt; on Linux
+# and macOS it is `c++`. Without that compiler the compilation tests cannot run.
+_INDUCTOR_COMPILER = "cl" if sys.platform == "win32" else "c++"
+
+
+@pytest.fixture(scope="session")
+def inductor_compiler():
+    """Skip a test when inductor has no C++ compiler to build its kernels."""
+    if shutil.which(_INDUCTOR_COMPILER) is None:
+        pytest.skip(
+            f"torch.compile needs a C++ compiler, and {_INDUCTOR_COMPILER!r} is not on PATH"
+        )
 
 
 @pytest.fixture(params=["cpu", "cuda"])

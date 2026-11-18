@@ -1,18 +1,22 @@
 """SimulationObjects implementing |CO2| Assimilation for use with PCSE."""
 
 import datetime
-from collections import deque
 import torch
 from pcse.base import SimulationObject
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
+from pcse.util import doy
 from diffwofost.physical_models.base import TensorParamTemplate
 from diffwofost.physical_models.base import TensorRatesTemplate
 from diffwofost.physical_models.config import ComputeConfig
+from diffwofost.physical_models.deferred import defer
+from diffwofost.physical_models.kernels import kernel
 from diffwofost.physical_models.traitlets import Tensor
 from diffwofost.physical_models.utils import AfgenTrait
 from diffwofost.physical_models.utils import _broadcast_to
-from diffwofost.physical_models.utils import astro
+from diffwofost.physical_models.utils import _raise_latitude_error
+from diffwofost.physical_models.utils import astro_core
+from diffwofost.physical_models.utils import solar_declination_table
 
 # ---------------------------------------------------------------------------
 # Module-level cache: avoids recreating small constant tensors on every call.
@@ -532,15 +536,15 @@ class WOFOST72_Assimilation(SimulationObject):
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, publish=["PGASS"], shape=shape)
 
-        # 7-day running average buffer for TMIN (stored as tensors).
-        self._tmn_window = deque(maxlen=7)
-        self._tmn_window_mask = deque(maxlen=7)
+        # 7-day running average buffer for TMIN: a ring buffer of the last 7 days
+        # (entries of elements that had not emerged, or of days not yet simulated, are 0).
+        self._tmn_window = None
+        self._tmn_window_mask = None
+        self._tmn_days = 0
+
         # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
-        # Cache for astro() results keyed by (day, lat).  astro() only depends
-        # on day and latitude so the same result can be reused across batch
-        # elements (which share the same weather driver).
-        self._astro_cache: dict = {}
+        self._solar = solar_declination_table(self.dtype, self.device)
 
     def calc_rates(self, day: datetime.date, drv: dict) -> torch.Tensor:
         """Compute the potential gross assimilation rate (PGASS)."""
@@ -554,57 +558,37 @@ class WOFOST72_Assimilation(SimulationObject):
         dvs = _broadcast_to(k["DVS"], self.params.shape, dtype=self.dtype, device=self.device)
         lai = _broadcast_to(k["LAI"], self.params.shape, dtype=self.dtype, device=self.device)
 
-        # Weather drivers
-        irrad = drv["IRRAD"]
-        dtemp = drv["DTEMP"]
-        tmin = drv["TMIN"]
-
         # Assimilation is zero before crop emergence (DVS < 0)
         dvs_mask = dvs >= 0
         # 7-day running average of TMIN
-        self._tmn_window.appendleft(tmin * dvs_mask)
-        self._tmn_window_mask.appendleft(dvs_mask)
-        tmin_stack = torch.stack(list(self._tmn_window), dim=0)
-        mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
-        tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
+        tmin = drv["TMIN"] * dvs_mask
 
-        # Astronomical variables computed via vectorized torch astro routine.
-        # latitude and radiation are passed directly – they may be scalars or
-        # tensors; the function returns torch.Tensor results in all cases.
-        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(
-            day, drv["LAT"], drv["IRRAD"], dtype=self.dtype, device=self.device
-        )
+        if self._tmn_window is None:
+            self._tmn_window = torch.zeros((7, *tmin.shape), dtype=self.dtype, device=self.device)
+            self._tmn_window_mask = torch.zeros_like(self._tmn_window)
+        slot = self._tmn_days % 7
+        self._tmn_days += 1
+        self._tmn_window[slot] = tmin
+        self._tmn_window_mask[slot] = dvs_mask
 
-        # Parameter tables
-        amax = p.AMAXTB(dvs)
-        amax = amax * p.TMPFTB(dtemp)
-        kdif = p.KDIFTB(dvs)
-        eff = p.EFFTB(dtemp)
-
-        dtga = totass7(
-            dayl,
-            amax,
-            eff,
+        latitude = torch.as_tensor(drv["LAT"], dtype=self.dtype, device=self.device)
+        defer(torch.any(latitude.abs() > 90.0), _raise_latitude_error)
+        r.PGASS = _potential_assimilation7(
+            dvs,
             lai,
-            kdif,
-            irrad,
-            difpp,
-            dsinbe,
-            sinld,
-            cosld,
-            epsilon=self._epsilon,
-            dtype=self.dtype,
-            device=self.device,
+            torch.as_tensor(drv["IRRAD"], dtype=self.dtype, device=self.device),
+            drv["DTEMP"],
+            self._tmn_window,
+            self._tmn_window_mask,
+            latitude,
+            self._solar[doy(day)],
+            p.AMAXTB,
+            p.TMPFTB,
+            p.KDIFTB,
+            p.EFFTB,
+            p.TMNFTB,
+            self._epsilon,
         )
-
-        # Correction for low minimum temperature potential
-        dtga = dtga * p.TMNFTB(tminra)
-
-        # Convert kg CO2 -> kg CH2O
-        pgass = dtga * (30.0 / 44.0)
-
-        # Assimilation is zero before crop emergence (DVS < 0)
-        r.PGASS = pgass * dvs_mask
         return r.PGASS
 
     def __call__(self, day: datetime.date, drv: dict) -> torch.Tensor:
@@ -614,6 +598,49 @@ class WOFOST72_Assimilation(SimulationObject):
     def integrate(self, day: datetime.date, delt: float = 1.0) -> None:
         """No state variables to integrate for this module."""
         return
+
+
+@kernel
+def _potential_assimilation7(
+    dvs, lai, irrad, dtemp, tmn_window, tmn_window_mask, latitude, solar,
+    AMAXTB, TMPFTB, KDIFTB, EFFTB, TMNFTB, epsilon,
+):  # fmt: skip
+    """Potential gross assimilation rate (PGASS) of one day, see `WOFOST72_Assimilation`."""
+    dvs_mask = dvs >= 0
+    tminra = tmn_window.sum(dim=0) / (tmn_window_mask.sum(dim=0) + 1e-8)
+
+    # Astronomical variables; latitude and radiation may be scalars or tensors.
+    dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro_core(
+        latitude, irrad, solar[0], solar[1], solar[2]
+    )
+
+    # Parameter tables
+    amax = AMAXTB(dvs)
+    amax = amax * TMPFTB(dtemp)
+    kdif = KDIFTB(dvs)
+    eff = EFFTB(dtemp)
+
+    dtga = totass7(
+        dayl,
+        amax,
+        eff,
+        lai,
+        kdif,
+        irrad,
+        difpp,
+        dsinbe,
+        sinld,
+        cosld,
+        epsilon=epsilon,
+        dtype=dvs.dtype,
+        device=dvs.device,
+    )
+
+    # Correction for low minimum temperature potential
+    dtga = dtga * TMNFTB(tminra)
+
+    # Convert kg CO2 -> kg CH2O; assimilation is zero before crop emergence (DVS < 0)
+    return dtga * (30.0 / 44.0) * dvs_mask
 
 
 def _exist_required_external_variables(kiosk):
@@ -721,80 +748,90 @@ class WOFOST81_Assimilation(SimulationObject):
         """Store parameters and the 7-day minimum-temperature window."""
         self._device = ComputeConfig.get_device()
         self._dtype = ComputeConfig.get_dtype()
+
         self.kiosk = kiosk
         self.params = self.Parameters(parvalues, shape=shape)
         self.rates = self.RateVariables(kiosk, publish=["PGASS"], shape=shape)
-        self._tmn_window = deque(maxlen=7)
-        self._tmn_window_mask = deque(maxlen=7)
+
+        # 7-day running average buffer for TMIN: a ring buffer of the last 7 days
+        # (entries of elements that had not emerged, or of days not yet simulated, are 0).
+        self._tmn_window = None
+        self._tmn_window_mask = None
+        self._tmn_days = 0
+
+        # Reused scalar constants
         self._epsilon = torch.tensor(1e-12, dtype=self.dtype, device=self.device)
+        self._solar = solar_declination_table(self.dtype, self.device)
 
     def calc_rates(self, day: datetime.date, drv: dict) -> torch.Tensor:
         """Potential gross assimilation in kg CH2O ha-1 d-1."""
         params = self.params
         rates = self.rates
         kiosk = self.kiosk
+
+        _exist_required_external_variables(kiosk)
+
         # Published states from the kiosk.
         dvs = _broadcast_to(kiosk["DVS"], self.params.shape, dtype=self.dtype, device=self.device)
         lai = _broadcast_to(kiosk["LAI"], self.params.shape, dtype=self.dtype, device=self.device)
         nlv = _broadcast_to(
             kiosk["NamountLV"], self.params.shape, dtype=self.dtype, device=self.device
         )
-        irrad = drv["IRRAD"]
+
         # TMPFTB uses the daily mean temperature. EFFTB uses the daytime
         # temperature, matching PCSE's WOFOST 8.1 assimilation.
         temp = drv["TEMP"]
         dtemp = drv["DTEMP"]
-        tmin = drv["TMIN"]
 
         # 7-day running average of TMIN.
         # PCSE starts filling this window only once Wofost81 leaves the emerging
         # stage and calls assimilation. Pre-emergence days are excluded from the
         # average so a mixed batch does not pollute emerged members.
-        emerged = dvs >= 0
-        self._tmn_window.appendleft(tmin * emerged)
-        self._tmn_window_mask.appendleft(emerged)
-        tmin_stack = torch.stack(list(self._tmn_window), dim=0)
-        mask_stack = torch.stack(list(self._tmn_window_mask), dim=0)
-        tminra = tmin_stack.sum(dim=0) / (mask_stack.sum(dim=0) + 1e-8)
+        # Assimilation is zero before crop emergence (DVS < 0)
+        dvs_mask = dvs >= 0
+        tmin = drv["TMIN"] * dvs_mask
 
-        # Photoperiodic daylength.
-        dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro(
-            day, drv["LAT"], drv["IRRAD"], dtype=self.dtype, device=self.device
-        )
+        # 7-day running average of TMIN
+        if self._tmn_window is None:
+            self._tmn_window = torch.zeros((7, *tmin.shape), dtype=self.dtype, device=self.device)
+            self._tmn_window_mask = torch.zeros_like(self._tmn_window)
+        slot = self._tmn_days % 7
+        self._tmn_days += 1
+        self._tmn_window[slot] = tmin
+        self._tmn_window_mask[slot] = dvs_mask
 
-        # Daily gross assimilation.
-        # CO2 and temperature response factors of AMAX.
-        tmpf = params.TMPFTB(temp)
-        eff = params.EFFTB(dtemp) * params.CO2EFFTB(params.CO2)
+        latitude = torch.as_tensor(drv["LAT"], dtype=self.dtype, device=self.device)
+        defer(torch.any(latitude.abs() > 90.0), _raise_latitude_error)
 
-        # Gross assimilation, then the low-minimum-temperature correction.
-        dtga = totass8(
-            params.AMAX_LNB,
-            params.AMAX_REF,
-            params.AMAX_SLP,
-            dayl,
-            params.CO2AMAXTB(params.CO2),
-            tmpf,
-            eff,
-            params.KN,
-            lai,
-            nlv,
-            params.KDIFTB(dvs),
-            irrad,
-            difpp,
-            dsinbe,
-            sinld,
-            cosld,
-            epsilon=self._epsilon,
-            dtype=self.dtype,
-            device=self.device,
-        )
-        dtga = dtga * params.TMNFTB(tminra)
+        irrad = torch.as_tensor(drv["IRRAD"], dtype=self.dtype, device=self.device)
 
         # Assimilation in kg CH2O per ha.
         # Same as PCSE: no DVS factor here. Wofost81 skips this module while
         # STAGE is emerging for the whole batch.
-        rates.PGASS = dtga * (30.0 / 44.0)
+        rates.PGASS = _potential_assimilation8(
+            dvs,
+            lai,
+            nlv,
+            irrad,
+            dtemp,
+            self._tmn_window,
+            self._tmn_window_mask,
+            latitude,
+            params.CO2,
+            params.AMAX_LNB,
+            params.AMAX_REF,
+            params.AMAX_SLP,
+            params.KN,
+            params.CO2AMAXTB,
+            params.CO2EFFTB,
+            temp,
+            self._solar[doy(day)],
+            params.TMPFTB,
+            params.KDIFTB,
+            params.EFFTB,
+            params.TMNFTB,
+            self._epsilon,
+        )
         return rates.PGASS
 
     def __call__(self, day: datetime.date, drv: dict) -> torch.Tensor:
@@ -804,3 +841,72 @@ class WOFOST81_Assimilation(SimulationObject):
     def integrate(self, day: datetime.date, delt: float = 1.0) -> None:
         """Assimilation has no states to integrate."""
         return
+
+
+@kernel
+def _potential_assimilation8(
+    dvs,
+    lai,
+    nlv,
+    irrad,
+    dtemp,
+    tmn_window,
+    tmn_window_mask,
+    latitude,
+    CO2,
+    AMAX_LNB,
+    AMAX_REF,
+    AMAX_SLP,
+    KN,
+    CO2AMAXTB,
+    CO2EFFTB,
+    temp,
+    solar,
+    TMPFTB,
+    KDIFTB,
+    EFFTB,
+    TMNFTB,
+    epsilon,
+):  # fmt: skip
+    """Potential gross assimilation rate (PGASS) of one day, see `WOFOST72_Assimilation`."""
+    # Astronomical variables; latitude and radiation may be scalars or tensors.
+    dayl, _daylp, sinld, cosld, difpp, _atmtr, dsinbe, _angot = astro_core(
+        latitude, irrad, solar[0], solar[1], solar[2]
+    )
+
+    # Daily gross assimilation.
+    # CO2 and temperature response factors of AMAX.
+    tmpf = TMPFTB(temp)
+    eff = EFFTB(dtemp) * CO2EFFTB(CO2)
+
+    # Gross assimilation, then the low-minimum-temperature correction.
+    dtga = totass8(
+        AMAX_LNB,
+        AMAX_REF,
+        AMAX_SLP,
+        dayl,
+        CO2AMAXTB(CO2),
+        tmpf,
+        eff,
+        KN,
+        lai,
+        nlv,
+        KDIFTB(dvs),
+        irrad,
+        difpp,
+        dsinbe,
+        sinld,
+        cosld,
+        epsilon=epsilon,
+        dtype=dvs.dtype,
+        device=dvs.device,
+    )
+
+    # Correction for low minimum temperature potential
+    tminra = tmn_window.sum(dim=0) / (tmn_window_mask.sum(dim=0) + 1e-8)
+    dtga = dtga * TMNFTB(tminra)
+
+    # Assimilation in kg CH2O per ha.
+    # Same as PCSE: no DVS factor here. Wofost81 skips this module while
+    # STAGE is emerging for the whole batch.
+    return dtga * (30.0 / 44.0)

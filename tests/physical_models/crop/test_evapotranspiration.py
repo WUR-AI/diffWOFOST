@@ -7,6 +7,7 @@ import torch
 from pcse.base.parameter_providers import ParameterProvider
 from pcse.base.variablekiosk import VariableKiosk
 from pcse.models import Wofost72_PP
+from diffwofost.physical_models.config import ComputeConfig
 from diffwofost.physical_models.config import Configuration
 from diffwofost.physical_models.crop.evapotranspiration import Evapotranspiration
 from diffwofost.physical_models.crop.evapotranspiration import EvapotranspirationCO2
@@ -694,6 +695,83 @@ class TestEvapotranspirationVariants:
         tramx_co2 = co2.rates.TRAMX
 
         assert torch.all(tramx_co2 <= tramx_base)
+
+    def _layered_module(self, device):
+        """Layered module with two saturated layers and oxygen stress enabled."""
+        dtype = torch.float64
+        pars = _minimal_parvalues(device, include_co2=True, include_layers=True)
+        pars.set_override("IOX", torch.tensor(1.0, dtype=dtype, device=device), check=False)
+
+        kiosk = VariableKiosk()
+        oid = 0
+        for name in ("DVS", "LAI", "RD", "SM"):
+            kiosk.register_variable(oid, name, type="S", publish=True)
+        kiosk.set_variable(oid, "DVS", torch.tensor(1.0, dtype=dtype, device=device))
+        kiosk.set_variable(oid, "LAI", torch.tensor(3.0, dtype=dtype, device=device))
+        kiosk.set_variable(oid, "RD", torch.tensor(40.0, dtype=dtype, device=device))
+        # Both layers saturated: SM > SM0 - CRAIRC (0.34 and 0.35)
+        kiosk.set_variable(
+            oid,
+            "SM",
+            [torch.tensor(0.39, dtype=dtype, device=device)] * 2,
+        )
+
+        drv = dict(
+            ET0=torch.tensor(0.5, dtype=dtype, device=device),
+            E0=torch.tensor(0.6, dtype=dtype, device=device),
+            ES0=torch.tensor(0.55, dtype=dtype, device=device),
+        )
+        module = EvapotranspirationCO2Layered(datetime.date(2000, 1, 1), kiosk, pars)
+        return module, drv
+
+    def test_layered_dsos_accumulates_across_days(self, device):
+        """The layered oxygen-stress counter must persist between simulated days.
+
+        `DSOS` counts consecutive days with saturated layers, and the reduction of
+        transpiration reaches its maximum after four days. The counter is updated
+        inside `_layered_rates`, so the caller has to store it back on the module;
+        a counter reset every day leaves the reduction at its first-day value.
+        """
+        module, drv = self._layered_module(device)
+
+        # Two saturated layers per day, capped at four days of accumulation
+        module.calc_rates(datetime.date(2000, 1, 2), drv)
+        day1 = module.rates.RFOS.clone()
+        assert module._dsos.item() == 2
+
+        module.calc_rates(datetime.date(2000, 1, 3), drv)
+        day2 = module.rates.RFOS.clone()
+        assert module._dsos.item() == 4
+        assert torch.all(day2 < day1)
+
+        module.calc_rates(datetime.date(2000, 1, 4), drv)
+        assert module._dsos.item() == 4
+        # Maximum reduction: RFOS equals the layer-specific rfosmx
+        rfosmx = [(0.40 - 0.39) / 0.06, (0.41 - 0.39) / 0.06]
+        assert module.rates.RFOS.tolist() == pytest.approx(rfosmx)
+
+    def test_layered_kernel_compiles_and_matches_eager(self, inductor_compiler):
+        """`_layered_rates` must compile with fullgraph=True and give eager results.
+
+        The kernel switches the oxygen-stress branch on parameters and validates the
+        layer count; a Python `if` on a tensor value or a `raise` inside the kernel
+        breaks the graph, which is what this test guards against. Skipped where
+        inductor has no C++ compiler to build the generated kernel.
+        """
+        module, drv = self._layered_module("cpu")
+        module.calc_rates(datetime.date(2000, 1, 2), drv)
+        eager_tra = module.rates.TRA.clone()
+        eager_rfos = module.rates.RFOS.clone()
+
+        ComputeConfig.set_compile(True)
+        try:
+            compiled_module, compiled_drv = self._layered_module("cpu")
+            compiled_module.calc_rates(datetime.date(2000, 1, 2), compiled_drv)
+        finally:
+            ComputeConfig.reset_to_defaults()
+
+        torch.testing.assert_close(compiled_module.rates.TRA, eager_tra)
+        torch.testing.assert_close(compiled_module.rates.RFOS, eager_rfos)
 
 
 @pytest.mark.usefixtures("fast_mode")
